@@ -38,6 +38,23 @@ description: Detect orphaned nodes, broken signal connections, missing @onready 
 6. **Autoload reference correctness**
    - Calls to autoload names not declared in `project.godot`.
 
+7. **Passive Controls absorbing input** (failure-modes.md #9)
+   - Any `Control` subtype meant for display only (backgrounds,
+     HUD labels, debug overlays, decorative panels) must set
+     `mouse_filter = 2` (`MOUSE_FILTER_IGNORE`) in its `.tscn`.
+   - Heuristic audit: for each Control node lacking `mouse_filter`
+     in its scene block, flag it unless the scene is clearly an
+     interactive UI scene (pause menu, character select, etc.).
+   - Quick scan:
+     ```
+     # Find Control-derived nodes that don't set mouse_filter:
+     for f in $(find scenes test -name '*.tscn'); do
+       awk '/type=\"(ColorRect|Label|PanelContainer|MarginContainer|RichTextLabel|TextureRect|Container)\"/ {n=$0; flag=0; next} /^\[node/ {if (n && !flag) print FILENAME":"NR": "n; n=""} /mouse_filter\s*=/ {flag=1}' "$f"
+     done
+     ```
+   - WARN, not FAIL — sometimes a scene's author intentionally wants
+     the default. Surface for review.
+
 ## Report format
 
 ```

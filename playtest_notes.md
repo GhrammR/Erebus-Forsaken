@@ -21,7 +21,16 @@ Format per session (see `.agent_governance/commands/playtest.md`):
 - [done] Headless --verify (regression): ALL PASS, exit 0.
 - [done] combat-validator: all 5 checks PASS.
 - [done] scene-auditor: all 5 checks PASS (8 scenes).
-- [pending] Visual playtest: F6 on test/movement_workbench.tscn.
+- [bug-fixed] Click-to-move appeared broken in the visual playtest. Root
+  cause: passive Control nodes (Background ColorRect, HUD Labels, stat
+  overlay Panel/Margin/Label) all defaulted to mouse_filter = STOP and
+  silently absorbed mouse events before PlayerInput._unhandled_input
+  could see them. Fixed by setting mouse_filter = 2 (IGNORE) on every
+  passive Control. Recorded as failure-modes.md #9; scene-auditor #7
+  now flags it.
+- [done] Visual playtest after fix: click-to-move works.
+- [pending] Stage 2 close also needs: WASD-cancel, sprite flip, pause
+  menu, camera follow confirmed in same session.
   Verify: Myrmidon sprite renders with bronze body + red plume + spear
   + buckler + shadow; click-to-move drives the unit to the click point
   and stops; gold cross-hair marker visible at the target; WASD moves

@@ -7,6 +7,7 @@ layer = 10
 script = ExtResource("1_overlay")
 
 [node name="Panel" type="PanelContainer" parent="."]
+mouse_filter = 2
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
@@ -19,6 +20,7 @@ modulate = Color(1, 1, 1, 0.92)
 
 [node name="Margin" type="MarginContainer" parent="Panel"]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 12
@@ -26,6 +28,7 @@ theme_override_constants/margin_bottom = 10
 
 [node name="Label" type="RichTextLabel" parent="Panel/Margin"]
 layout_mode = 2
+mouse_filter = 2
 bbcode_enabled = true
 fit_content = true
 scroll_active = false

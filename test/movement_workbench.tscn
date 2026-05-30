@@ -12,6 +12,7 @@ y_sort_enabled = true
 script = ExtResource("1_wb")
 
 [node name="Background" type="ColorRect" parent="."]
+mouse_filter = 2
 offset_left = -2000.0
 offset_top = -2000.0
 offset_right = 2000.0
@@ -34,6 +35,7 @@ script = ExtResource("4_marker")
 layer = 5
 
 [node name="Help" type="Label" parent="HUD"]
+mouse_filter = 2
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 1200.0
@@ -42,6 +44,7 @@ theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
 text = ""
 
 [node name="DebugInfo" type="Label" parent="HUD"]
+mouse_filter = 2
 offset_left = 16.0
 offset_top = 690.0
 offset_right = 1200.0

@@ -128,6 +128,45 @@ every occurrence. No mercy.
 
 ---
 
+---
+
+## 9. Control nodes silently eating gameplay input
+
+**Symptom:** Click-to-move "doesn't work." Mouse clicks register nowhere
+in `_unhandled_input`. Often appears after adding a fullscreen background
+`ColorRect`, a HUD `Label`, a `PanelContainer` overlay, or a `Margin`/
+`RichTextLabel`. The symptom is silence — no error, no warning, the
+click just vanishes.
+
+**Root cause:** Every Godot `Control` defaults `mouse_filter = STOP`.
+A `Control` with `STOP` consumes mouse events in its rect before
+`_unhandled_input` ever runs. Passive HUD/overlay/background `Control`s
+are usually not meant to be interactive — but they consume input
+anyway.
+
+**Prevention:**
+- Any `Control` that exists for *display only* must set
+  `mouse_filter = MOUSE_FILTER_IGNORE` (value `2`) in its `.tscn`.
+- This includes: backgrounds (`ColorRect`), HUD `Label`s, debug
+  overlays (`PanelContainer` + children), tooltips, decorative
+  panels.
+- Buttons, scroll bars, and *intentional* click absorbers (the pause
+  menu's dimmer) keep the default `STOP`.
+- Audit: see `skills/scene-auditor/` check #6.
+
+**Recovery:** Find every Control in the offending scene. Decide for
+each whether it should absorb input. For the no's, set
+`mouse_filter = 2`. Re-test the gameplay click path immediately —
+don't trust scenes you haven't clicked through.
+
+**First incident:** Stage 2 movement workbench. The fullscreen
+`Background` `ColorRect`, HUD `Help` and `DebugInfo` labels, and the
+stat overlay's `Panel`/`Margin`/`Label` all defaulted to `STOP`.
+Workbench appeared to ignore mouse clicks entirely until each Control
+was switched to `IGNORE`.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.
