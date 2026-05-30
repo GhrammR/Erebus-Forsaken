@@ -9,13 +9,13 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` complete & playtested
 ---
 
 ## Stage 0 — Bootstrap
-- [~] Godot 4 project created with project.godot configured (window size,
-      stretch mode, main scene) — written, awaiting first editor open
+- [x] Godot 4 project created with project.godot configured (window size,
+      stretch mode, main scene) — verified on Godot 4.6.3-stable
 - [x] Folder structure matches the agreed layout
 - [x] Autoloads registered: GameState, SaveSystem, EventBus, SceneRouter,
       Database (stubs honoring AD-03, AD-06, AD-07, AD-08)
-- [~] `main.tscn` launches to a placeholder splash; quit works — awaiting
-      user playtest in Godot editor
+- [x] `main.tscn` launches to a placeholder splash; quit works
+      (visual playtest 2026-05-30, PASS)
 
 ## Stage 1 — Stats foundation
 - [ ] `Stats` resource implemented with the four attributes and five Act 1

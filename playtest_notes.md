@@ -12,7 +12,12 @@ Format per session (see `.agent_governance/commands/playtest.md`):
 
 ---
 
-## 2026-05-30 — stage 0 (pending user playtest)
+## 2026-05-30 — stage 0
 
-- [pending] Launch project.godot in Godot 4.3+, press F5, confirm black
-  screen with build label and "Stage 0 bootstrap" hint, Esc quits cleanly.
+- [done] Godot 4.6.3-stable installed (Linux x86_64, ~/bin/godot,
+  symlinked into ~/.local/bin).
+- [done] Headless boot: project parses, autoloads instantiate, Database
+  prints `0 classes, 0 items, 0 enemies, 0 skills`, no errors.
+- [done] Visual playtest PASS: build label + Stage 0 hint visible on
+  dark background; Esc quits cleanly.
+- Stage 0 closed.
