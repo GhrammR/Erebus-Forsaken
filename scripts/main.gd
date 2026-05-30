@@ -12,8 +12,11 @@ func _ready() -> void:
 	if "--workbench" in args:
 		add_child(load("res://test/stat_workbench.tscn").instantiate())
 		return
+	if "--movement" in args:
+		add_child(load("res://test/movement_workbench.tscn").instantiate())
+		return
 	_build_label.text = "Erebus Forsaken — build %s" % GameState.BUILD_VERSION
-	_hint_label.text = "Stage 1 — F6 on test/stat_workbench.tscn to exercise Stats. Esc quits."
+	_hint_label.text = "Stage 2 — F6 on test/movement_workbench.tscn to drive the Myrmidon. Esc quits."
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_quit") or event.is_action_pressed("ui_cancel"):

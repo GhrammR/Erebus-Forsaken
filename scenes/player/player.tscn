@@ -1,0 +1,26 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_p"]
+[ext_resource type="Script" path="res://scripts/player/player_input.gd" id="2_pi"]
+
+[sub_resource type="CapsuleShape2D" id="cap_feet"]
+radius = 4.0
+height = 8.0
+
+[node name="Player" type="CharacterBody2D"]
+y_sort_enabled = true
+script = ExtResource("1_p")
+
+[node name="SpriteAnchor" type="Node2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -4)
+rotation = 1.5707964
+shape = SubResource("cap_feet")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position_smoothing_enabled = false
+process_callback = 0
+
+[node name="PlayerInput" type="Node" parent="."]
+script = ExtResource("2_pi")

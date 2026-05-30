@@ -12,6 +12,24 @@ Format per session (see `.agent_governance/commands/playtest.md`):
 
 ---
 
+## 2026-05-30 — stage 2
+
+- [done] Headless --movement: clean boot, Database 4 classes, no errors,
+  no warnings. Sprite scene loads, animations build, no missing
+  AnimationPlayer push_warning.
+- [done] Headless --workbench (regression): clean.
+- [done] Headless --verify (regression): ALL PASS, exit 0.
+- [done] combat-validator: all 5 checks PASS.
+- [done] scene-auditor: all 5 checks PASS (8 scenes).
+- [pending] Visual playtest: F6 on test/movement_workbench.tscn.
+  Verify: Myrmidon sprite renders with bronze body + red plume + spear
+  + buckler + shadow; click-to-move drives the unit to the click point
+  and stops; gold cross-hair marker visible at the target; WASD moves
+  in 4 directions and cancels the click target; sprite flips L/R as
+  intent.x crosses zero; camera follows without sub-pixel shimmer;
+  Esc opens the pause menu and Resume/Quit work; idle and walk
+  animations cycle.
+
 ## 2026-05-30 — stage 1
 
 - [done] Headless --verify: ALL PASS. Per-class derived HP/MP/DEF/AR
