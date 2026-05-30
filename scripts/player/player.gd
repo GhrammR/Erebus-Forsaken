@@ -31,6 +31,7 @@ var _attack_cd_remaining: float = 0.0
 @onready var _health: HealthComponent = $HealthComponent
 @onready var _hurtbox: Area2D = $HurtboxComponent
 @onready var _hitbox: HitboxComponent = $SpriteAnchor/HitboxComponent
+@onready var _inventory: Inventory = $Inventory
 
 var _sprite_anim: AnimationPlayer = null
 var _sprite_root: Node = null
@@ -54,6 +55,10 @@ func assign_class(cd: ClassData) -> void:
 	current_stats = Stats.from_class_data(cd, 1)
 	current_stats.recomputed.connect(_on_stats_recomputed)
 	_health.set_stats(current_stats)
+	# Re-bind inventory to the new Stats (Stage 4)
+	_inventory.stats = current_stats
+	_inventory.class_id = cd.id
+	_inventory._recompute_totals()
 
 	for child in _sprite_anchor.get_children():
 		# Preserve the HitboxComponent — only swap visual children.
@@ -194,6 +199,9 @@ func get_facing_right() -> bool:
 
 func get_health_component() -> HealthComponent:
 	return _health
+
+func get_inventory() -> Inventory:
+	return _inventory
 
 func is_alive() -> bool:
 	return _life == LifeState.ALIVE

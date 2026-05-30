@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1_i"]
+
+[resource]
+script = ExtResource("1_i")
+id = &"shade_bow_starter"
+display_name = "Hunter's Bow"
+slot = 0
+class_mask = 4
+level_req = 1
+base_weapon_ar = 35
+affixes = { &"dexterity": 3 }
+glyph_color = Color(0.4, 0.7, 0.7, 1)
+glyph_shape = 1

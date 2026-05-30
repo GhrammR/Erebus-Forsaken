@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="DropTable" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/drop_table.gd" id="1_dt"]
+
+[resource]
+script = ExtResource("1_dt")
+entries = [
+{ "item_id": &"myrmidon_spear_starter", "weight": 4 },
+{ "item_id": &"pythia_staff_starter",   "weight": 4 },
+{ "item_id": &"shade_bow_starter",      "weight": 4 },
+{ "item_id": &"ossuary_wand_starter",   "weight": 4 },
+{ "item_id": &"round_buckler",          "weight": 3 },
+{ "item_id": &"bronze_plate",           "weight": 3 },
+{ "item_id": &"silken_robe",            "weight": 3 },
+{ "item_id": &"shadowweave_tunic",      "weight": 3 },
+{ "item_id": &"bone_chasuble",          "weight": 3 },
+{ "item_id": &"linen_wrap",             "weight": 5 },
+{ "item_id": &"worn_helm",              "weight": 5 },
+{ "item_id": &"simple_greaves",         "weight": 5 },
+{ "item_id": &"iron_ring",              "weight": 4 },
+{ "item_id": &"silver_amulet",          "weight": 2 },
+]
+no_drop_weight = 0

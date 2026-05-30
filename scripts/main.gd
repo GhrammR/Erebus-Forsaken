@@ -12,6 +12,9 @@ func _ready() -> void:
 	if "--verify3" in args:
 		add_child(load("res://test/stage3_verify.tscn").instantiate())
 		return
+	if "--verify4" in args:
+		add_child(load("res://test/stage4_verify.tscn").instantiate())
+		return
 	if "--workbench" in args:
 		add_child(load("res://test/stat_workbench.tscn").instantiate())
 		return
@@ -21,8 +24,11 @@ func _ready() -> void:
 	if "--combat" in args:
 		add_child(load("res://test/combat_workbench.tscn").instantiate())
 		return
+	if "--loot" in args:
+		add_child(load("res://test/loot_workbench.tscn").instantiate())
+		return
 	_build_label.text = "Erebus Forsaken — build %s" % GameState.BUILD_VERSION
-	_hint_label.text = "Stage 3 — F6 on test/combat_workbench.tscn to fight dummies. Esc quits."
+	_hint_label.text = "Stage 4 — F6 on test/loot_workbench.tscn for loot/inventory/save. Esc quits."
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_quit") or event.is_action_pressed("ui_cancel"):

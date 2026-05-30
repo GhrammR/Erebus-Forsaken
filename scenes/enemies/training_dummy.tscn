@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/enemies/training_dummy.gd" id="1_td"]
 [ext_resource type="PackedScene" path="res://art/procedural/enemies/dummy_sprite.tscn" id="2_dsp"]
 [ext_resource type="Script" path="res://scripts/systems/health_component.gd" id="3_hc"]
 [ext_resource type="Script" path="res://scripts/systems/hurtbox_component.gd" id="4_hb"]
+[ext_resource type="Resource" path="res://data/enemies/training_dummy_drops.tres" id="5_dt"]
 
 [sub_resource type="CapsuleShape2D" id="cap_feet"]
 radius = 5.0
@@ -21,6 +22,7 @@ max_hp = 100
 defense_value = 5
 attack_rating_value = 0
 sprite_scene = ExtResource("2_dsp")
+drop_table = ExtResource("5_dt")
 
 [node name="SpriteAnchor" type="Node2D" parent="."]
 

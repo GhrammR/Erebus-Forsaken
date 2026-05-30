@@ -1,10 +1,11 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_p"]
 [ext_resource type="Script" path="res://scripts/player/player_input.gd" id="2_pi"]
 [ext_resource type="Script" path="res://scripts/systems/health_component.gd" id="3_hc"]
 [ext_resource type="Script" path="res://scripts/systems/hurtbox_component.gd" id="4_hb"]
 [ext_resource type="Script" path="res://scripts/systems/hitbox_component.gd" id="5_hit"]
+[ext_resource type="Script" path="res://scripts/systems/inventory.gd" id="6_inv"]
 
 [sub_resource type="CapsuleShape2D" id="cap_feet"]
 radius = 4.0
@@ -57,3 +58,6 @@ process_callback = 0
 
 [node name="PlayerInput" type="Node" parent="."]
 script = ExtResource("2_pi")
+
+[node name="Inventory" type="Node" parent="."]
+script = ExtResource("6_inv")

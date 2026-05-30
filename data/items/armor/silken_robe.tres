@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1_i"]
+
+[resource]
+script = ExtResource("1_i")
+id = &"silken_robe"
+display_name = "Silken Robe"
+slot = 3
+class_mask = 2
+level_req = 1
+base_armor_defense = 4
+base_resist = 10
+affixes = { &"pneuma": 4 }
+glyph_color = Color(0.65, 0.45, 0.85, 1)
+glyph_shape = 0

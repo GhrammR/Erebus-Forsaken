@@ -1,0 +1,33 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scenes/items/world_item.gd" id="1_wi"]
+[ext_resource type="PackedScene" path="res://art/procedural/items/item_glyph.tscn" id="2_g"]
+
+[sub_resource type="CircleShape2D" id="pickup_circle"]
+radius = 28.0
+
+[node name="WorldItem" type="Node2D"]
+script = ExtResource("1_wi")
+
+[node name="Shadow" type="Polygon2D" parent="."]
+z_index = -1
+
+[node name="Glyph" parent="." instance=ExtResource("2_g")]
+position = Vector2(0, -8)
+
+[node name="NameLabel" type="Label" parent="."]
+mouse_filter = 2
+offset_left = -64.0
+offset_top = -36.0
+offset_right = 64.0
+offset_bottom = -22.0
+theme_override_colors/font_color = Color(0.95, 0.86, 0.58, 1)
+horizontal_alignment = 1
+text = "?"
+
+[node name="PickupArea" type="Area2D" parent="."]
+collision_layer = 128
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PickupArea"]
+shape = SubResource("pickup_circle")

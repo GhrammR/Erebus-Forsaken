@@ -1,0 +1,77 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/inventory_panel.gd" id="1_ip"]
+
+[node name="InventoryPanel" type="CanvasLayer"]
+layer = 40
+script = ExtResource("1_ip")
+
+[node name="Dimmer" type="ColorRect" parent="."]
+mouse_filter = 2
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.35)
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -360.0
+offset_top = -240.0
+offset_right = 360.0
+offset_bottom = 240.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Panel/Margin/VBox/Header"]
+mouse_filter = 2
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.79, 0.7, 0.48, 1)
+text = "INVENTORY"
+
+[node name="Capacity" type="Label" parent="Panel/Margin/VBox/Header"]
+mouse_filter = 2
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+text = "(0 / 24)"
+
+[node name="Cols" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="EquipCol" type="VBoxContainer" parent="Panel/Margin/VBox/Cols"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Panel/Margin/VBox/Cols/EquipCol"]
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+text = "EQUIPPED"
+
+[node name="EquipList" type="VBoxContainer" parent="Panel/Margin/VBox/Cols/EquipCol"]
+
+[node name="BackCol" type="VBoxContainer" parent="Panel/Margin/VBox/Cols"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Panel/Margin/VBox/Cols/BackCol"]
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+text = "BACKPACK"
+
+[node name="BackList" type="VBoxContainer" parent="Panel/Margin/VBox/Cols/BackCol"]

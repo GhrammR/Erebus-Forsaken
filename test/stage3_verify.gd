@@ -76,14 +76,16 @@ func _ready() -> void:
 		myr.physical_damage_bonus(), Stats.new_basic(100, 24).mitigation()])
 	if not ok_helpers: fail += 1
 
-	# Classless Stats short-circuit
+	# Classless Stats — derived stats short-circuit in recompute, so
+	# equipment-contribution calls don't re-derive defense/max_hp/etc.
 	var classless := Stats.new_basic(60, 3, 0)
-	classless.set_equipment_contributions(10, 20, 30)
-	# classless ignores equipment additions since recompute short-circuits
-	# but current_hp should still be clamped, max_hp should stay 60
-	var ok_classless := classless.max_hp == 60 and classless.current_hp == 60 \
+	classless.apply_equipment_totals({
+		&"armor_defense": 10, &"weapon_attack_rating": 20, &"resistance": 30,
+	})
+	var ok_classless: bool = classless.max_hp == 60 and classless.current_hp == 60 \
 		and classless.defense == 3
-	print("[%s] classless Stats untouched by equipment contribs" % ("OK  " if ok_classless else "FAIL"))
+	print("[%s] classless Stats derived values untouched by equip contribs" % (
+		"OK  " if ok_classless else "FAIL"))
 	if not ok_classless: fail += 1
 
 	print("--- Stage 3 verify: %s ---" % ("ALL PASS" if fail == 0 else "%d FAIL" % fail))

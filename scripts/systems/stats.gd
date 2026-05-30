@@ -42,7 +42,13 @@ var buff_dexterity: int = 0
 var buff_vitality: int = 0
 var buff_pneuma: int = 0
 
-# Equipment contributions (Stage 4 populates)
+# Layer 4 — equipment-side attribute bonuses (Stage 4)
+var equip_strength: int = 0
+var equip_dexterity: int = 0
+var equip_vitality: int = 0
+var equip_pneuma: int = 0
+
+# Equipment slot-base + affix totals (Stage 4 populates via Inventory)
 var armor_defense: int = 0
 var weapon_attack_rating: int = 0
 var gear_resistance: int = 0
@@ -58,15 +64,15 @@ var resistance: int = 0
 var current_hp: int = 0
 var current_mp: int = 0
 
-# Effective attributes — sum of all layers. Read-only externally.
+# Effective attributes — sum of all four layers. Read-only externally.
 var strength: int:
-	get: return base_strength + alloc_strength + buff_strength
+	get: return base_strength + alloc_strength + buff_strength + equip_strength
 var dexterity: int:
-	get: return base_dexterity + alloc_dexterity + buff_dexterity
+	get: return base_dexterity + alloc_dexterity + buff_dexterity + equip_dexterity
 var vitality: int:
-	get: return base_vitality + alloc_vitality + buff_vitality
+	get: return base_vitality + alloc_vitality + buff_vitality + equip_vitality
 var pneuma: int:
-	get: return base_pneuma + alloc_pneuma + buff_pneuma
+	get: return base_pneuma + alloc_pneuma + buff_pneuma + equip_pneuma
 
 # ---------------------------------------------------------------- construction
 
@@ -150,10 +156,19 @@ func set_level(new_level: int) -> void:
 		base_pneuma    = cd.base_pneuma    + cd.pne_per_level * steps
 	recompute()
 
-func set_equipment_contributions(armor_def: int, weapon_ar: int, resist: int) -> void:
-	armor_defense = armor_def
-	weapon_attack_rating = weapon_ar
-	gear_resistance = resist
+## Inventory pushes the summed equipment contribution here on every
+## equip/unequip. Dictionary keys (StringName -> int):
+##   &"armor_defense" &"weapon_attack_rating" &"resistance"
+##   &"strength" &"dexterity" &"vitality" &"pneuma"
+## (defense / attack_rating affix keys reserved; not yet wired Stage 4)
+func apply_equipment_totals(totals: Dictionary) -> void:
+	armor_defense        = int(totals.get(&"armor_defense", 0))
+	weapon_attack_rating = int(totals.get(&"weapon_attack_rating", 0))
+	gear_resistance      = int(totals.get(&"resistance", 0))
+	equip_strength       = int(totals.get(&"strength", 0))
+	equip_dexterity      = int(totals.get(&"dexterity", 0))
+	equip_vitality       = int(totals.get(&"vitality", 0))
+	equip_pneuma         = int(totals.get(&"pneuma", 0))
 	recompute()
 
 ## Stage 1: passthrough. Stage 3's DamageResolver will compute final
@@ -189,6 +204,14 @@ func restore_mp(amount: int) -> void:
 
 func is_dead() -> bool:
 	return current_hp <= 0
+
+## Save/load entry point. Clamps and emits exactly once. Used by
+## SaveSystem.load_game so the audit-banned direct writes to
+## current_hp/current_mp never happen outside this file.
+func restore_pools(hp: int, mp: int) -> void:
+	current_hp = clampi(hp, 0, max_hp)
+	current_mp = clampi(mp, 0, max_mp)
+	recomputed.emit()
 
 # ---------------------------------------------------------------- helpers
 # Attribute-derived combat values. Kept inside Stats so DamageResolver

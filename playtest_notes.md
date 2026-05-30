@@ -12,6 +12,32 @@ Format per session (see `.agent_governance/commands/playtest.md`):
 
 ---
 
+## 2026-05-30 — stage 4
+
+- [done] --verify4 (Inventory + Stats apply + SaveSystem round-trip):
+  ALL PASS. Database loads 14 items. Backpack add/remove/cap correct.
+  Class restriction rejects silken_robe for Myrmidon. equip apply path:
+  AR 105->140 (matches expected — weapon +30 + DEX-bonus from amulet
+  +5). Save/load preserves level=3, str=42, position, equipped count.
+  Migration v1->v2 adds inventory + bumps version.
+- [done] --verify (Stage 1 regression): ALL PASS after Stats refactor.
+- [done] --verify3 (Stage 3 regression): ALL PASS after switching the
+  classless-Stats test to apply_equipment_totals.
+- [done] --loot, --combat, --movement, --workbench: clean boot, no
+  warnings.
+- [done] combat-validator + scene-auditor: all PASS.
+- [bug-during-impl] Stats refactor removed set_equipment_contributions,
+  breaking stage1 + stage3 verifiers. Updated both to apply_equipment_totals.
+- [bug-during-impl] Stage 4 verifier's AR expectation didn't account for
+  silver_amulet's +1 DEX (which adds +5 AR via the dex*5 formula).
+  Fixed the expected value.
+- [pending] Visual playtest: F6 on test/loot_workbench.tscn or
+  `godot -- --loot`. Verify: dummies drop items on death and respawn
+  after 2.5s, walk over items to auto-pickup (red flash if full),
+  press I to open inventory and click equip/unequip (Stats overlay
+  updates live), F5 saves, F9 loads (mutate stats/inventory, save,
+  mutate again, load, confirm restoration).
+
 ## 2026-05-30 — stage 3
 
 - [done] --verify3 (DamageResolver verifier): ALL PASS, exit 0. Myrmidon

@@ -2,9 +2,9 @@
 
 A dark-fantasy, Greek-mythology isometric ARPG. Solo development in Godot 4.
 
-> **Status:** Pre-alpha. Stages 0–3 complete (bootstrap, stat foundation,
-> player movement, combat core). Stage 4 (itemization) is next.
-> The project is being built in public from the very first commit.
+> **Status:** Pre-alpha. Stages 0–4 complete (bootstrap, stat foundation,
+> player movement, combat core, itemization). Stage 5 (one skill per class)
+> is next. The project is being built in public from the first commit.
 
 ---
 
@@ -63,6 +63,12 @@ Highlights worth a look:
 - Combat: every hit funnels through `DamageResolver.resolve()` (AD-04).
   `HealthComponent`, `HitboxComponent`, `HurtboxComponent` as composed
   Nodes/Areas, not subclasses. Damage numbers, death state, respawn.
+- Items: `ItemData` Resources for 13 seed items across 7 equipment slots
+  (WEAPON / OFFHAND / HEAD / CHEST / LEGS / RING / AMULET). Fixed-affix
+  bonuses fold into Stats via a fourth `equip_*` layer. `Inventory`
+  is a 24-slot list (AD-10), drops go through `WorldItem` walk-over
+  auto-pickup, and `SaveSystem` v2 round-trips full state to versioned
+  JSON storing item IDs (AD-06), not paths.
 - Procedural sprites only — Myrmidon (player) and training dummies.
   Canonical animation names `idle/walk/attack/cast/hit/die` (AD-11)
   exist on every sprite so the eventual bitmap swap is a node-type
@@ -74,19 +80,21 @@ Highlights worth a look:
 godot --path .
 ```
 
-Plus three workbench flags for the systems built so far:
+Plus four workbench flags for the systems built so far:
 
 ```bash
 godot --path . -- --workbench    # stat workbench (Stage 1)
 godot --path . -- --movement     # movement workbench (Stage 2)
 godot --path . -- --combat       # combat workbench (Stage 3)
+godot --path . -- --loot         # loot + inventory + save/load (Stage 4)
 ```
 
-And two headless verifiers (CI-friendly, exit 0 on pass):
+And three headless verifiers (CI-friendly, exit 0 on pass):
 
 ```bash
 godot --headless --path . -- --verify    # Stats math (Stage 1)
 godot --headless --path . -- --verify3   # DamageResolver math (Stage 3)
+godot --headless --path . -- --verify4   # Inventory + save round-trip (Stage 4)
 ```
 
 Requires Godot 4.6 or newer. No build steps, no package install.

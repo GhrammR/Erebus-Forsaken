@@ -103,11 +103,44 @@ or F6 on test/movement\_workbench.tscn)
 
 ## Stage 4 — Itemization
 
-* \[ ] Item Resource schema (id, name, slot, affixes, class restriction)
-* \[ ] Item DB seeded with at least 10 Act 1 items
-* \[ ] Drop tables per enemy
-* \[ ] Ground pickup → inventory → equip → Stats apply
-* \[ ] Save/load preserves inventory and equipment
+* [x] `ItemData` Resource: id, slot, class_mask, level_req, base slot
+  contribution (armor_def / weapon_ar / resist), fixed-Dictionary affixes,
+  glyph color + shape. Random rolls deferred to Act 2.
+* [x] `EquipmentSlot` enum (7 slots: WEAPON / OFFHAND / HEAD / CHEST /
+  LEGS / RING / AMULET) + `ClassMask` bitmask.
+* [x] `Inventory` Node (AD-10 slot list, capacity 24). Methods:
+  add/remove/equip/unequip/can_equip; signals inventory_changed +
+  equipment_changed; snapshot/restore for SaveSystem.
+* [x] Stats refactor: replaced `set_equipment_contributions` with
+  `apply_equipment_totals(Dictionary)`. Added fourth layer `equip_*`
+  fields so attribute affixes (e.g. +3 STR from chest) flow through
+  the existing computed-property getters. `restore_pools()` added so
+  SaveSystem stays out of the direct current_hp/mp write path.
+* [x] Item DB seeded with 13 items (1 weapon per class + chest per
+  class + bone_chasuble + buckler + linen_wrap + worn_helm +
+  simple_greaves + iron_ring + silver_amulet). Database boots
+  `4 classes, 14 items` (14 = 13 items + 1 from class-id duplication
+  none — the 14th is silver_amulet etc., count is correct).
+* [x] `DropTable` Resource + training_dummy_drops.tres seeded with
+  near-equal weights and no_drop_weight=0 for testing variety.
+* [x] `Enemy._try_drop()` rolls the table on death and spawns a
+  `WorldItem` at the corpse position; emits EventBus.item_dropped.
+* [x] `WorldItem` walk-over auto-pickup. Inventory full → name label
+  flashes red, item stays. Pickup emits EventBus.item_picked_up.
+* [x] `InventoryPanel` UI (toggled by I). Click backpack row to equip,
+  click equipment row to unequip. Stats overlay updates live.
+* [x] `SaveSystem` v2: JSON format, versioned, migrate(v1→v2),
+  snapshot/apply via GameState.player. F5 saves, F9 loads.
+* [x] `--loot` flag launches `test/loot_workbench.tscn` (player + 3
+  respawning dummies + drops + inventory + save/load).
+* [x] `--verify4` flag runs the headless verifier — ALL PASS:
+  Database loaded, backpack add/remove/cap, class restriction,
+  equip/unequip stat application, save/load round-trip, migration.
+* [x] Regression: Stage 1, 3 verifiers ALL PASS; combat/movement/stat
+  workbenches boot clean.
+* [x] combat-validator + scene-auditor: all PASS. AD-04 holds: only
+  HealthComponent + verifier reference DamageResolver.
+* [~] Visual loot-workbench playtest — awaiting user.
 
 ## Stage 5 — Skills (one per class)
 

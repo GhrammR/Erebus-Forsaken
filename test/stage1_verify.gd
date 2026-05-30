@@ -79,13 +79,16 @@ func _ready() -> void:
 		"OK  " if level_ok else "FAIL", hp1, hp5])
 	if not level_ok: fail += 1
 
-	# Equipment contribution path (Stage 4 will populate; here we just
-	# confirm the API exists and recompute responds)
+	# Equipment contribution path via the Stage 4 Dictionary API.
 	var t4 := Stats.from_class_data(Database.get_class_data(&"shade_hunter") as ClassData, 1)
 	var ar_before := t4.attack_rating
 	var def_before := t4.defense
-	t4.set_equipment_contributions(20, 50, 30)
-	var equip_ok := t4.attack_rating == ar_before + 50 \
+	t4.apply_equipment_totals({
+		&"armor_defense": 20,
+		&"weapon_attack_rating": 50,
+		&"resistance": 30,
+	})
+	var equip_ok: bool = t4.attack_rating == ar_before + 50 \
 		and t4.defense == def_before + 20 \
 		and t4.resistance == 30
 	print("[%s] equipment contributions apply (AR %d->%d, DEF %d->%d, RES=%d)" % [

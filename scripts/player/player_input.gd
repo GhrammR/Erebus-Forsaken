@@ -14,6 +14,9 @@ signal click_target_set(world_pos: Vector2)
 signal click_target_cleared
 signal attack_pressed
 signal debug_kill_self_pressed   ## Stage 3 workbench: K to demo death/respawn
+signal inventory_toggle_pressed  ## Stage 4: I toggles inventory
+signal save_pressed              ## Stage 4: F5
+signal load_pressed              ## Stage 4: F9
 
 const ARRIVE_THRESHOLD: float = 4.0
 ## Stuck detection: if click-to-move is active but the body hasn't moved
@@ -49,6 +52,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			attack_pressed.emit()
 		elif ke.keycode == KEY_K:
 			debug_kill_self_pressed.emit()
+		elif ke.keycode == KEY_I:
+			inventory_toggle_pressed.emit()
+		elif ke.keycode == KEY_F5:
+			save_pressed.emit()
+		elif ke.keycode == KEY_F9:
+			load_pressed.emit()
 		elif ke.keycode in [KEY_W, KEY_A, KEY_S, KEY_D]:
 			# WASD overrides click target the moment a key is pressed.
 			if _has_click_target:
