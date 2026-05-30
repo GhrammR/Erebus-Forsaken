@@ -98,7 +98,8 @@ or F6 on test/movement\_workbench.tscn)
 * [x] combat-validator + scene-auditor: all checks PASS.
   Damage math reviewed: only HealthComponent and the verifier call
   DamageResolver.resolve — no inline damage code.
-* [~] Visual combat-workbench playtest — awaiting user.
+* [x] Visual combat-workbench playtest PASS (2026-05-30, after fixes for
+  click-on-collider stuck loop and post-die transform reset).
 
 ## Stage 4 — Itemization
 

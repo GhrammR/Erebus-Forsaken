@@ -16,12 +16,20 @@ signal attack_pressed
 signal debug_kill_self_pressed   ## Stage 3 workbench: K to demo death/respawn
 
 const ARRIVE_THRESHOLD: float = 4.0
+## Stuck detection: if click-to-move is active but the body hasn't moved
+## STUCK_MIN_MOVEMENT pixels per physics frame for STUCK_FRAMES in a row,
+## the target is considered unreachable (e.g., the player clicked on a
+## dummy or inside a wall). The target is cleared.
+const STUCK_FRAMES: int = 20            ## ~0.33 s at 60 fps
+const STUCK_MIN_MOVEMENT: float = 1.0   ## px per physics frame
 
 @export var owner_body: CharacterBody2D
 
 var _click_target: Vector2 = Vector2.ZERO
 var _has_click_target: bool = false
 var _last_intent: Vector2 = Vector2.ZERO
+var _stuck_frames: int = 0
+var _prev_pos: Vector2 = Vector2.ZERO
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
@@ -60,16 +68,34 @@ func _physics_process(_delta: float) -> void:
 		if _has_click_target:
 			_has_click_target = false
 			click_target_cleared.emit()
+		_stuck_frames = 0
 	elif _has_click_target:
 		var to_target := _click_target - owner_body.global_position
 		if to_target.length() <= ARRIVE_THRESHOLD:
 			_has_click_target = false
 			click_target_cleared.emit()
+			_stuck_frames = 0
 			dir = Vector2.ZERO
 		else:
 			dir = to_target.normalized()
+			# Stuck detection: tried to move but isn't actually moving.
+			# Cause: collision with something between us and the target
+			# (e.g., clicking on a dummy or inside a wall).
+			var moved := (owner_body.global_position - _prev_pos).length()
+			if moved < STUCK_MIN_MOVEMENT:
+				_stuck_frames += 1
+				if _stuck_frames >= STUCK_FRAMES:
+					_has_click_target = false
+					click_target_cleared.emit()
+					_stuck_frames = 0
+					dir = Vector2.ZERO
+			else:
+				_stuck_frames = 0
 	else:
 		dir = Vector2.ZERO
+		_stuck_frames = 0
+
+	_prev_pos = owner_body.global_position
 
 	if dir != _last_intent:
 		_last_intent = dir

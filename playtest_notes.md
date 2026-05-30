@@ -25,12 +25,20 @@ Format per session (see `.agent_governance/commands/playtest.md`):
 - [done] combat-validator + scene-auditor: all PASS. AD-04 verified —
   DamageResolver.resolve only called from HealthComponent and the
   verifier.
-- [pending] Visual playtest: F6 on test/combat_workbench.tscn.
-  Verify: Space swings the spear, hitbox arms during the swing window,
-  damage numbers float up over dummies, MISS in grey, hot orange on
-  bigger numbers, dummies fall over and despawn, K kills the player
-  showing the "You died" notice + 1.5s respawn at origin with full
-  HP/MP, no double-hit on a single swing.
+- [bug-fixed] Click-to-move on a dummy caused the player to orbit/jitter
+  forever — collision blocked the player from reaching the click target
+  within ARRIVE_THRESHOLD, and move_and_slide tangent-slid them around.
+  Fix: stuck detection in PlayerInput (STUCK_FRAMES=20, STUCK_MIN_MOVEMENT=1px).
+  Recorded as failure-modes.md #10.
+- [bug-fixed] K-kill respawn left the Myrmidon lying on its side with
+  semi-transparent modulate. The `die` AnimationPlayer track keyed
+  rotation->PI/2 and modulate.a->0.3, and `idle` didn't reset them.
+  Fix: Player._respawn() now resets sprite_root.rotation and modulate,
+  stops AnimationPlayer, then plays `idle`. Recorded as
+  failure-modes.md #11.
+- [done] Visual playtest after fixes: PASS on all checklist items —
+  click-stuck cleanly drops the target, K-respawn produces an upright
+  full-opacity Myrmidon at origin.
 
 ## 2026-05-30 — stage 2
 

@@ -168,7 +168,15 @@ func _respawn() -> void:
 	_hurtbox.set_deferred(&"monitoring", true)
 	_input.set_process_unhandled_input(true)
 	_input.set_physics_process(true)
+	# Reset the sprite root's transform: the `die` animation leaves
+	# rotation=PI/2 and modulate.a=0.3, and `idle` doesn't animate
+	# those properties so they'd persist into the new life.
+	if _sprite_root != null and _sprite_root is Node2D:
+		var sr := _sprite_root as Node2D
+		sr.rotation = 0.0
+		sr.modulate = Color(1, 1, 1, 1)
 	if _sprite_anim != null:
+		_sprite_anim.stop()
 		_sprite_anim.play(&"idle")
 
 func _on_debug_kill_self() -> void:

@@ -167,6 +167,76 @@ was switched to `IGNORE`.
 
 ---
 
+## 10. Click-to-move on a collidable target
+
+**Symptom:** Click-to-move on an enemy, an NPC, a prop, or near a wall
+causes the player to walk into the target and then orbit it or jitter
+in place forever. The click marker stays lit; the player visibly tries
+to keep moving.
+
+**Root cause:** The click target is a world position. Collision between
+the player's body and the target's body prevents the player from
+reaching the target within `ARRIVE_THRESHOLD`. `move_and_slide()`
+slides the player along the contact normal — toward the click direction
+but tangent to the obstacle — producing an orbit. The arrive check
+never trips, so the click target is never cleared.
+
+**Prevention:**
+- Pair `ARRIVE_THRESHOLD` with **stuck detection**: if a click target
+  is active and the body's actual movement per physics frame falls below
+  a threshold for several frames in a row, drop the target. See
+  `scripts/player/player_input.gd` constants `STUCK_FRAMES`,
+  `STUCK_MIN_MOVEMENT`.
+- WASD movement must also reset the stuck counter on every active frame.
+- Once Stage 5's click-on-enemy auto-attack lands, the click handler
+  should detect clicks landing on an enemy hurtbox and switch from
+  "move to point" to "move to attack range then swing." That removes
+  the bug at the source for the enemy case; stuck detection still
+  protects the wall/prop cases.
+
+**Recovery:** Add stuck detection per above. Verify by clicking on a
+training dummy: player should drift toward it for ~1/3 s, then stop
+cleanly with the click marker hidden.
+
+**First incident:** Stage 3 combat workbench. Clicking on a dummy.
+
+---
+
+## 11. Animation leaves persistent transform state on the sprite root
+
+**Symptom:** After a one-shot animation (death, hit, cast) finishes,
+the sprite stays in its end pose — rotated, faded, recolored — even
+when a fresh animation (`idle`, `walk`) starts playing. The character
+respawns "lying down" or semi-transparent.
+
+**Root cause:** `AnimationPlayer` tracks only modify the properties
+they animate. If `die` keys `rotation: 0 → PI/2` and `modulate.a: 1 → 0.3`,
+those endpoint values stay on the node after the animation ends. The
+follow-up animation (`idle`) doesn't reset them because its tracks
+don't touch those properties.
+
+**Prevention:**
+- For respawn/revive paths: explicitly reset the sprite root's
+  `rotation`, `position`, `modulate`, and any other property a destructive
+  one-shot animation might have keyed, *before* playing the resume
+  animation.
+- Stop the AnimationPlayer (`anim.stop()`) before playing the resume
+  animation so the previous track values fully release.
+- Alternative: make every destructive one-shot animation key its
+  properties back to their resting values in a final frame. Less
+  flexible (resting values can drift) — explicit reset on revive is
+  more robust.
+
+**Recovery:** In the revive function, reset every property the
+destructive animation touched. For the Myrmidon: `sprite_root.rotation
+= 0`, `sprite_root.modulate = Color(1,1,1,1)`, then `anim.stop()`,
+then `anim.play("idle")`.
+
+**First incident:** Stage 3 K-kill-self self-test. Player visibly
+respawned on its side and faded.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.
