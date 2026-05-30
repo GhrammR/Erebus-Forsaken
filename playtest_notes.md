@@ -31,12 +31,19 @@ Format per session (see `.agent_governance/commands/playtest.md`):
 - [bug-during-impl] Stage 4 verifier's AR expectation didn't account for
   silver_amulet's +1 DEX (which adds +5 AR via the dex*5 formula).
   Fixed the expected value.
-- [pending] Visual playtest: F6 on test/loot_workbench.tscn or
-  `godot -- --loot`. Verify: dummies drop items on death and respawn
-  after 2.5s, walk over items to auto-pickup (red flash if full),
-  press I to open inventory and click equip/unequip (Stats overlay
-  updates live), F5 saves, F9 loads (mutate stats/inventory, save,
-  mutate again, load, confirm restoration).
+- [bug-fixed] Basic-attack hitbox was a 28x30 rectangle parented under
+  SpriteAnchor at (24, -22). The SpriteAnchor.scale.x flip mirrored it
+  L/R, but nothing covered up/down — dummies directly above or below
+  the player took no damage. Switched the hitbox to a CircleShape2D
+  (radius 40) centered at (0, -22) so the basic attack is
+  omnidirectional cleave (Diablo Whirlwind / Hammer style). Stage 5's
+  Spear Lunge will be properly directional with a facing_dir vector.
+  Recorded as failure-modes.md #12.
+- [known/deferred] Sprite only flips L/R — does not face up/down.
+  Procedural Myrmidon ships only two facings; 8-way directional sprites
+  arrive with bitmap art in Stage 12. The cleave hitbox above means
+  this no longer affects gameplay correctness, only visual feel.
+- [done] Visual loot-workbench playtest PASS after hitbox fix.
 
 ## 2026-05-30 — stage 3
 

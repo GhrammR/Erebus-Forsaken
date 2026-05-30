@@ -4,7 +4,7 @@ This file is the single source of truth for "what is done." Update it at
 the end of every session. If an item is unchecked here, the game is not
 ready to ship — regardless of how the code looks.
 
-Legend: `\\\[ ]` not started · `\\\[\\\~]` in progress · `\\\[x]` complete \& playtested
+Legend: `\\\\\\\[ ]` not started · `\\\\\\\[\\\\\\\~]` in progress · `\\\\\\\[x]` complete \& playtested
 
 \---
 
@@ -27,15 +27,15 @@ Resource.changed)
 * \[x] `ClassData` resource (AD-02) defined with base attributes,
 per-level gains, HP/MP coefficients, and sprite\_scene slot
 (sprite populated in Stage 2)
-* \[x] Per-class base values stored in `data/classes/\\\*.tres` for all four
+* \[x] Per-class base values stored in `data/classes/\\\\\\\*.tres` for all four
 classes (numbers verified PASS by test/stage1\_verify.gd)
-* \[x] `stats\\\_changed` signal emits on attribute or equipment changes
-(local `Stats.recomputed` -> owner forwards to `EventBus.stats\\\_changed`)
-* \[x] Debug overlay shows live Stats values (`scenes/ui/debug\\\_stat\\\_overlay.tscn`)
+* \[x] `stats\\\\\\\_changed` signal emits on attribute or equipment changes
+(local `Stats.recomputed` -> owner forwards to `EventBus.stats\\\\\\\_changed`)
+* \[x] Debug overlay shows live Stats values (`scenes/ui/debug\\\\\\\_stat\\\\\\\_overlay.tscn`)
 * \[x] `combat-validator` skill passes — all five checks (skill regex
 updated to exclude `=%d` format-string false positives)
 * \[x] Stage 0 carry-over closed: `Attack` Resource and `DamageType` enum
-created (AD-05). `damage\\\_type` defaults to `PHYSICAL`; Act 2 will
+created (AD-05). `damage\\\\\\\_type` defaults to `PHYSICAL`; Act 2 will
 add elemental values additively.
 * \[x] Visual workbench playtest — awaiting user (godot --workbench, or
 F6 on test/stat\_workbench.tscn)
@@ -43,7 +43,7 @@ F6 on test/stat\_workbench.tscn)
 ## Stage 2 — Player movement \& camera
 
 * \[x] One placeholder class (Myrmidon) drawn procedurally
-(`art/procedural/classes/myrmidon\_sprite.tscn` — palette: bronze,
+(`art/procedural/classes/myrmidon\\\_sprite.tscn` — palette: bronze,
 bronze-dark, plume-red; AnimationPlayer ships all six AD-11 anim
 names: idle, walk, attack, cast, hit, die — only idle/walk
 exercised this stage)
@@ -54,9 +54,9 @@ land in Stage 6 with the town)
 * \[x] Camera2D follows player; project pixel snap on; smoothing off;
 physics process callback
 * \[x] Pause menu opens / closes on Esc via PlayerInput.pause\_pressed;
-Resume / Quit buttons working; `get\_tree().paused` ownership lives
+Resume / Quit buttons working; `get\\\_tree().paused` ownership lives
 in the pause scene
-* \[x] AD-02 single-player.tscn: `player.assign\_class(ClassData)`
+* \[x] AD-02 single-player.tscn: `player.assign\\\_class(ClassData)`
 swaps sprite subtree, instantiates Stats, wires recomputed -> EventBus
 * \[x] AD-09 click-to-move primary + WASD secondary; WASD pre-empts
 pending click target
@@ -71,76 +71,78 @@ or F6 on test/movement\_workbench.tscn)
 
 ## Stage 3 — Combat core
 
-* [x] HealthComponent, HitboxComponent, HurtboxComponent in place
-  (`scripts/systems/`). HC wraps Stats; Hurtbox auto-resolves sibling HC;
-  Hitbox tracks per-swing hits to prevent double-tap on one swing.
-* [x] DamageResolver (AD-04) lands as the single damage-math entry point.
-  Constants: HIT_FLOOR 30%, HIT_CEIL 95%, DEFENSE_HIT_WEIGHT 2,
-  STR_DAMAGE_DIVISOR 4, DEFENSE_MITIGATION_DIVISOR 8, MIN_DAMAGE 1.
-* [x] Stats helpers: `physical_damage_bonus()` and `mitigation()` keep
-  all attribute math inside stats.gd; classless `Stats.new_basic()` lets
-  dummies skip the ClassData path.
-* [x] Basic attack swings on Space; hitbox arms 0.10s into swing,
-  disarms at 0.25s; cooldown 0.4s.
-* [x] Damage numbers render (`scenes/vfx/damage_number.tscn`); MISS in
-  grey; bigger numbers tint hotter; rises and fades over 0.6s.
-* [x] Training dummy: classless Stats (HP 100, DEF 5), procedural
-  wood-post sprite, plays hit/die anims, queue_frees after corpse linger.
-* [x] Player death state: plays "die" anim, disables input + hurtbox,
-  respawns at `respawn_position` (workbench origin) after 1.5s with
-  full HP/MP. K self-kill demos the loop.
-* [x] EventBus.player_died emits on death; workbench flashes notice.
-* [x] `--combat` cmdline flag launches `test/combat_workbench.tscn`.
-* [x] `--verify3` cmdline flag runs DamageResolver verifier:
-  ALL PASS — Myrmidon 91% hit @ 15 dmg, Pythia 10, Shade-Hunter 11,
-  HIT_FLOOR enforced, classless short-circuit verified.
-* [x] Stage 1 regression: ALL PASS, exit 0.
-* [x] combat-validator + scene-auditor: all checks PASS.
-  Damage math reviewed: only HealthComponent and the verifier call
-  DamageResolver.resolve — no inline damage code.
-* [x] Visual combat-workbench playtest PASS (2026-05-30, after fixes for
-  click-on-collider stuck loop and post-die transform reset).
+* \[x] HealthComponent, HitboxComponent, HurtboxComponent in place
+(`scripts/systems/`). HC wraps Stats; Hurtbox auto-resolves sibling HC;
+Hitbox tracks per-swing hits to prevent double-tap on one swing.
+* \[x] DamageResolver (AD-04) lands as the single damage-math entry point.
+Constants: HIT\_FLOOR 30%, HIT\_CEIL 95%, DEFENSE\_HIT\_WEIGHT 2,
+STR\_DAMAGE\_DIVISOR 4, DEFENSE\_MITIGATION\_DIVISOR 8, MIN\_DAMAGE 1.
+* \[x] Stats helpers: `physical\_damage\_bonus()` and `mitigation()` keep
+all attribute math inside stats.gd; classless `Stats.new\_basic()` lets
+dummies skip the ClassData path.
+* \[x] Basic attack swings on Space; hitbox arms 0.10s into swing,
+disarms at 0.25s; cooldown 0.4s.
+* \[x] Damage numbers render (`scenes/vfx/damage\_number.tscn`); MISS in
+grey; bigger numbers tint hotter; rises and fades over 0.6s.
+* \[x] Training dummy: classless Stats (HP 100, DEF 5), procedural
+wood-post sprite, plays hit/die anims, queue\_frees after corpse linger.
+* \[x] Player death state: plays "die" anim, disables input + hurtbox,
+respawns at `respawn\_position` (workbench origin) after 1.5s with
+full HP/MP. K self-kill demos the loop.
+* \[x] EventBus.player\_died emits on death; workbench flashes notice.
+* \[x] `--combat` cmdline flag launches `test/combat\_workbench.tscn`.
+* \[x] `--verify3` cmdline flag runs DamageResolver verifier:
+ALL PASS — Myrmidon 91% hit @ 15 dmg, Pythia 10, Shade-Hunter 11,
+HIT\_FLOOR enforced, classless short-circuit verified.
+* \[x] Stage 1 regression: ALL PASS, exit 0.
+* \[x] combat-validator + scene-auditor: all checks PASS.
+Damage math reviewed: only HealthComponent and the verifier call
+DamageResolver.resolve — no inline damage code.
+* \[x] Visual combat-workbench playtest PASS (2026-05-30, after fixes for
+click-on-collider stuck loop and post-die transform reset).
 
 ## Stage 4 — Itemization
 
-* [x] `ItemData` Resource: id, slot, class_mask, level_req, base slot
-  contribution (armor_def / weapon_ar / resist), fixed-Dictionary affixes,
-  glyph color + shape. Random rolls deferred to Act 2.
-* [x] `EquipmentSlot` enum (7 slots: WEAPON / OFFHAND / HEAD / CHEST /
-  LEGS / RING / AMULET) + `ClassMask` bitmask.
-* [x] `Inventory` Node (AD-10 slot list, capacity 24). Methods:
-  add/remove/equip/unequip/can_equip; signals inventory_changed +
-  equipment_changed; snapshot/restore for SaveSystem.
-* [x] Stats refactor: replaced `set_equipment_contributions` with
-  `apply_equipment_totals(Dictionary)`. Added fourth layer `equip_*`
-  fields so attribute affixes (e.g. +3 STR from chest) flow through
-  the existing computed-property getters. `restore_pools()` added so
-  SaveSystem stays out of the direct current_hp/mp write path.
-* [x] Item DB seeded with 13 items (1 weapon per class + chest per
-  class + bone_chasuble + buckler + linen_wrap + worn_helm +
-  simple_greaves + iron_ring + silver_amulet). Database boots
-  `4 classes, 14 items` (14 = 13 items + 1 from class-id duplication
-  none — the 14th is silver_amulet etc., count is correct).
-* [x] `DropTable` Resource + training_dummy_drops.tres seeded with
-  near-equal weights and no_drop_weight=0 for testing variety.
-* [x] `Enemy._try_drop()` rolls the table on death and spawns a
-  `WorldItem` at the corpse position; emits EventBus.item_dropped.
-* [x] `WorldItem` walk-over auto-pickup. Inventory full → name label
-  flashes red, item stays. Pickup emits EventBus.item_picked_up.
-* [x] `InventoryPanel` UI (toggled by I). Click backpack row to equip,
-  click equipment row to unequip. Stats overlay updates live.
-* [x] `SaveSystem` v2: JSON format, versioned, migrate(v1→v2),
-  snapshot/apply via GameState.player. F5 saves, F9 loads.
-* [x] `--loot` flag launches `test/loot_workbench.tscn` (player + 3
-  respawning dummies + drops + inventory + save/load).
-* [x] `--verify4` flag runs the headless verifier — ALL PASS:
-  Database loaded, backpack add/remove/cap, class restriction,
-  equip/unequip stat application, save/load round-trip, migration.
-* [x] Regression: Stage 1, 3 verifiers ALL PASS; combat/movement/stat
-  workbenches boot clean.
-* [x] combat-validator + scene-auditor: all PASS. AD-04 holds: only
-  HealthComponent + verifier reference DamageResolver.
-* [~] Visual loot-workbench playtest — awaiting user.
+* \[x] `ItemData` Resource: id, slot, class\_mask, level\_req, base slot
+contribution (armor\_def / weapon\_ar / resist), fixed-Dictionary affixes,
+glyph color + shape. Random rolls deferred to Act 2.
+* \[x] `EquipmentSlot` enum (7 slots: WEAPON / OFFHAND / HEAD / CHEST /
+LEGS / RING / AMULET) + `ClassMask` bitmask.
+* \[x] `Inventory` Node (AD-10 slot list, capacity 24). Methods:
+add/remove/equip/unequip/can\_equip; signals inventory\_changed +
+equipment\_changed; snapshot/restore for SaveSystem.
+* \[x] Stats refactor: replaced `set\_equipment\_contributions` with
+`apply\_equipment\_totals(Dictionary)`. Added fourth layer `equip\_\*`
+fields so attribute affixes (e.g. +3 STR from chest) flow through
+the existing computed-property getters. `restore\_pools()` added so
+SaveSystem stays out of the direct current\_hp/mp write path.
+* \[x] Item DB seeded with 13 items (1 weapon per class + chest per
+class + bone\_chasuble + buckler + linen\_wrap + worn\_helm +
+simple\_greaves + iron\_ring + silver\_amulet). Database boots
+`4 classes, 14 items` (14 = 13 items + 1 from class-id duplication
+none — the 14th is silver\_amulet etc., count is correct).
+* \[x] `DropTable` Resource + training\_dummy\_drops.tres seeded with
+near-equal weights and no\_drop\_weight=0 for testing variety.
+* \[x] `Enemy.\_try\_drop()` rolls the table on death and spawns a
+`WorldItem` at the corpse position; emits EventBus.item\_dropped.
+* \[x] `WorldItem` walk-over auto-pickup. Inventory full → name label
+flashes red, item stays. Pickup emits EventBus.item\_picked\_up.
+* \[x] `InventoryPanel` UI (toggled by I). Click backpack row to equip,
+click equipment row to unequip. Stats overlay updates live.
+* \[x] `SaveSystem` v2: JSON format, versioned, migrate(v1→v2),
+snapshot/apply via GameState.player. F5 saves, F9 loads.
+* \[x] `--loot` flag launches `test/loot\_workbench.tscn` (player + 3
+respawning dummies + drops + inventory + save/load).
+* \[x] `--verify4` flag runs the headless verifier — ALL PASS:
+Database loaded, backpack add/remove/cap, class restriction,
+equip/unequip stat application, save/load round-trip, migration.
+* \[x] Regression: Stage 1, 3 verifiers ALL PASS; combat/movement/stat
+workbenches boot clean.
+* \[x] combat-validator + scene-auditor: all PASS. AD-04 holds: only
+HealthComponent + verifier reference DamageResolver.
+* [x] Visual loot-workbench playtest PASS (2026-05-30, after switching
+  basic-attack hitbox to omnidirectional CircleShape2D — see
+  failure-modes #12).
 
 ## Stage 5 — Skills (one per class)
 
@@ -192,12 +194,12 @@ or F6 on test/movement\_workbench.tscn)
 * \[ ] Procedural sprites replaced with bitmaps where decided
 * \[ ] Audio pass (or explicitly deferred to post-launch)
 * \[ ] Title screen, options (resolution + key rebind), credits stub
-* \[ ] No `push\\\_error` / `push\\\_warning` during a 30-min play session
+* \[ ] No `push\\\\\\\_error` / `push\\\\\\\_warning` during a 30-min play session
 * \[ ] `audit.md` produces all PASS
 
 \---
 
-When every box above is `\\\[x]`, and only then:
+When every box above is `\\\\\\\[x]`, and only then:
 
 * Pay Steam fee.
 * Submit for review.

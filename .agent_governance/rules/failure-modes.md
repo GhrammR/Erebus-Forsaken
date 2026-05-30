@@ -237,6 +237,40 @@ respawned on its side and faded.
 
 ---
 
+## 12. Directional hitbox + insufficient facing model = dead-angle attacks
+
+**Symptom:** Player can attack enemies on the left or right but not
+above or below. The hit registers in some screen directions only.
+
+**Root cause:** A `HitboxComponent` rectangle (or any non-circular shape)
+parented under a Node whose facing transform only encodes L/R (boolean
+`_facing_right` + `scale.x = ±1`). The hitbox mirrors horizontally with
+the sprite, but no rotation / up/down translation happens — the box
+literally has no presence on the up/down axis at swing time.
+
+**Prevention:**
+- For *non-directional* basic attacks (ARPG melee cleave, AoE-around-self),
+  use a `CircleShape2D` centered on the actor's chest. The hitbox is
+  geometrically symmetric so facing does not matter.
+- For *directional* skills (lunge, swing, projectile), introduce a
+  `facing_dir: Vector2` (not a `facing_right: bool`) tracked from the
+  most recent non-zero `_intent` (or click target / aim cursor). Rotate
+  the hitbox to match. This is required for Stage 5 skills (Spear
+  Lunge, Volley, etc.).
+- Sprite art that only ships L/R poses limits the *visual* facing, but
+  do not let that limitation cascade into the *gameplay* hit geometry.
+
+**Recovery:** Replace the directional rectangle with a circle centered
+on the actor; verify by attacking enemies directly above and below.
+
+**First incident:** Stage 4 loot workbench playtest. Player could
+attack dummies to the left/right of the Myrmidon but not above/below.
+Resolved by switching the basic-attack hitbox to a `CircleShape2D`
+(radius 40, centered at player chest). Sprite remained L/R-only; that
+is documented Stage 12 polish, not a regression.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.
