@@ -25,6 +25,13 @@ description: Audit combat-related changes against stat-system invariants. Run be
    - Every assignment to `current_hp` or `current_mp` must clamp via the
      setter, or use the `take_damage` / `spend_mp` method. Direct
      `current_hp = X` outside Stats fails.
+   - Audit regex (excludes `==` comparisons and `=%d` format-string
+     labels; both produced false positives in Stage 1):
+     ```
+     grep -rnE "current_(hp|mp)\s*=[^=%]" --include="*.gd" \
+       scripts/ scenes/ test/ | grep -v "scripts/systems/stats.gd"
+     ```
+     Expected: empty output.
 
 4. **Signal hygiene**
    - Combat signals are declared on emitters and connect via code in

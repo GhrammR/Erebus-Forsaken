@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ClassData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/class_data.gd" id="1_cd"]
+
+[resource]
+script = ExtResource("1_cd")
+id = &"shade_hunter"
+display_name = "Shade-Hunter"
+primary_attribute = &"dexterity"
+base_strength = 15
+base_dexterity = 30
+base_vitality = 20
+base_pneuma = 15
+str_per_level = 1
+dex_per_level = 2
+vit_per_level = 1
+pne_per_level = 1
+base_hp = 40
+vit_per_hp = 3.0
+base_mp = 15
+pne_per_mp = 2.0
+sprite_scene = null

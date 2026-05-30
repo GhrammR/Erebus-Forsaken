@@ -18,12 +18,25 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` complete & playtested
       (visual playtest 2026-05-30, PASS)
 
 ## Stage 1 — Stats foundation
-- [ ] `Stats` resource implemented with the four attributes and five Act 1
-      derived stats
-- [ ] Per-class base values stored in `data/classes/*.tres`
-- [ ] `stats_changed` signal emits on attribute or equipment changes
-- [ ] Debug overlay shows live Stats values
-- [ ] `combat-validator` skill passes
+- [x] `Stats` resource implemented with the four attributes and five Act 1
+      derived stats (layered base/alloc/buff/equipment model;
+      `recomputed` signal renamed from `changed` to avoid shadowing
+      Resource.changed)
+- [x] `ClassData` resource (AD-02) defined with base attributes,
+      per-level gains, HP/MP coefficients, and sprite_scene slot
+      (sprite populated in Stage 2)
+- [x] Per-class base values stored in `data/classes/*.tres` for all four
+      classes (numbers verified PASS by test/stage1_verify.gd)
+- [x] `stats_changed` signal emits on attribute or equipment changes
+      (local `Stats.recomputed` -> owner forwards to `EventBus.stats_changed`)
+- [x] Debug overlay shows live Stats values (`scenes/ui/debug_stat_overlay.tscn`)
+- [x] `combat-validator` skill passes — all five checks (skill regex
+      updated to exclude `=%d` format-string false positives)
+- [x] Stage 0 carry-over closed: `Attack` Resource and `DamageType` enum
+      created (AD-05). `damage_type` defaults to `PHYSICAL`; Act 2 will
+      add elemental values additively.
+- [~] Visual workbench playtest — awaiting user (godot --workbench, or
+      F6 on test/stat_workbench.tscn)
 
 ## Stage 2 — Player movement & camera
 - [ ] One placeholder class (Myrmidon) drawn procedurally

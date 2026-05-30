@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ClassData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/class_data.gd" id="1_cd"]
+
+[resource]
+script = ExtResource("1_cd")
+id = &"pythia"
+display_name = "Pythia"
+primary_attribute = &"pneuma"
+base_strength = 10
+base_dexterity = 20
+base_vitality = 15
+base_pneuma = 30
+str_per_level = 0
+dex_per_level = 1
+vit_per_level = 1
+pne_per_level = 2
+base_hp = 30
+vit_per_hp = 2.0
+base_mp = 25
+pne_per_mp = 3.0
+sprite_scene = null
