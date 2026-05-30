@@ -1,22 +1,55 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1_p"]
 [ext_resource type="Script" path="res://scripts/player/player_input.gd" id="2_pi"]
+[ext_resource type="Script" path="res://scripts/systems/health_component.gd" id="3_hc"]
+[ext_resource type="Script" path="res://scripts/systems/hurtbox_component.gd" id="4_hb"]
+[ext_resource type="Script" path="res://scripts/systems/hitbox_component.gd" id="5_hit"]
 
 [sub_resource type="CapsuleShape2D" id="cap_feet"]
 radius = 4.0
 height = 8.0
 
+[sub_resource type="RectangleShape2D" id="rect_hurt"]
+size = Vector2(16, 50)
+
+[sub_resource type="RectangleShape2D" id="rect_hit"]
+size = Vector2(28, 30)
+
 [node name="Player" type="CharacterBody2D"]
 y_sort_enabled = true
+collision_layer = 2
+collision_mask = 5
 script = ExtResource("1_p")
 
 [node name="SpriteAnchor" type="Node2D" parent="."]
+
+[node name="HitboxComponent" type="Area2D" parent="SpriteAnchor"]
+position = Vector2(24, -22)
+collision_layer = 32
+collision_mask = 16
+script = ExtResource("5_hit")
+base_damage = 8
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SpriteAnchor/HitboxComponent"]
+shape = SubResource("rect_hit")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, -4)
 rotation = 1.5707964
 shape = SubResource("cap_feet")
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("3_hc")
+
+[node name="HurtboxComponent" type="Area2D" parent="."]
+collision_layer = 8
+collision_mask = 64
+script = ExtResource("4_hb")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HurtboxComponent"]
+position = Vector2(0, -25)
+shape = SubResource("rect_hurt")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position_smoothing_enabled = false

@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://art/procedural/enemies/dummy_sprite.gd" id="1_d"]
+
+[node name="DummySprite" type="Node2D"]
+script = ExtResource("1_d")
+
+[node name="Shadow" type="Polygon2D" parent="."]
+z_index = -1
+
+[node name="Body" type="Node2D" parent="."]
+
+[node name="Post" type="Polygon2D" parent="Body"]
+
+[node name="RopeLow" type="Polygon2D" parent="Body"]
+
+[node name="RopeHigh" type="Polygon2D" parent="Body"]
+
+[node name="Head" type="Polygon2D" parent="Body"]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

@@ -17,6 +17,8 @@ signal recomputed                ## Owner Node forwards to EventBus.stats_change
                                 ## Named to avoid shadowing Resource.changed.
 
 const RESIST_CAP: int = 75
+const STR_DAMAGE_DIVISOR: int = 4         ## 1 physical-damage bonus per 4 STR
+const DEFENSE_MITIGATION_DIVISOR: int = 8 ## 1 damage reduced per 8 DEF
 
 # Identity
 @export var class_id: StringName
@@ -68,6 +70,20 @@ var pneuma: int:
 
 # ---------------------------------------------------------------- construction
 
+## Classless construction for entities that don't have a ClassData
+## (training dummies, environmental hazards, etc.). The derived stats
+## are set directly; recompute() short-circuits on classless instances
+## and only clamps the current pools.
+static func new_basic(hp: int, defense_value: int = 0, ar: int = 0) -> Stats:
+	var s := Stats.new()
+	s.class_id = &""
+	s.level = 1
+	s.max_hp = hp
+	s.current_hp = hp
+	s.defense = defense_value
+	s.attack_rating = ar
+	return s
+
 static func from_class_data(cd: ClassData, lvl: int = 1) -> Stats:
 	assert(cd != null, "Stats.from_class_data: ClassData is null")
 	assert(lvl >= 1, "Stats.from_class_data: level must be >= 1")
@@ -90,6 +106,13 @@ static func from_class_data(cd: ClassData, lvl: int = 1) -> Stats:
 ## call this exactly once at the tail of a batch update so `changed`
 ## emits once per logical change.
 func recompute() -> void:
+	if class_id == &"":
+		# Classless: derived values were set directly via new_basic().
+		# Just clamp current pools and emit.
+		current_hp = clampi(current_hp, 0, max_hp)
+		current_mp = clampi(current_mp, 0, max_mp)
+		recomputed.emit()
+		return
 	var cd: ClassData = Database.get_class_data(class_id) as ClassData
 	if cd == null:
 		push_error("Stats.recompute: missing ClassData for id=%s" % class_id)
@@ -113,6 +136,9 @@ func recompute() -> void:
 func set_level(new_level: int) -> void:
 	assert(new_level >= 1)
 	level = new_level
+	if class_id == &"":
+		recompute()
+		return
 	# Per-level base gains are folded in at construction via from_class_data;
 	# on level-up we re-derive bases from class.
 	var cd: ClassData = Database.get_class_data(class_id) as ClassData
@@ -163,3 +189,14 @@ func restore_mp(amount: int) -> void:
 
 func is_dead() -> bool:
 	return current_hp <= 0
+
+# ---------------------------------------------------------------- helpers
+# Attribute-derived combat values. Kept inside Stats so DamageResolver
+# (AD-04) can call them without violating "no attribute math outside
+# stats.gd" (combat-validator check #1).
+
+func physical_damage_bonus() -> int:
+	return strength / STR_DAMAGE_DIVISOR
+
+func mitigation() -> int:
+	return defense / DEFENSE_MITIGATION_DIVISOR

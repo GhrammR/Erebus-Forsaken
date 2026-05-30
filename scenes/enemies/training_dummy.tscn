@@ -1,0 +1,42 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/training_dummy.gd" id="1_td"]
+[ext_resource type="PackedScene" path="res://art/procedural/enemies/dummy_sprite.tscn" id="2_dsp"]
+[ext_resource type="Script" path="res://scripts/systems/health_component.gd" id="3_hc"]
+[ext_resource type="Script" path="res://scripts/systems/hurtbox_component.gd" id="4_hb"]
+
+[sub_resource type="CapsuleShape2D" id="cap_feet"]
+radius = 5.0
+height = 10.0
+
+[sub_resource type="RectangleShape2D" id="rect_body"]
+size = Vector2(16, 50)
+
+[node name="TrainingDummy" type="CharacterBody2D"]
+y_sort_enabled = true
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_td")
+max_hp = 100
+defense_value = 5
+attack_rating_value = 0
+sprite_scene = ExtResource("2_dsp")
+
+[node name="SpriteAnchor" type="Node2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -4)
+rotation = 1.5707964
+shape = SubResource("cap_feet")
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("3_hc")
+
+[node name="HurtboxComponent" type="Area2D" parent="."]
+collision_layer = 16
+collision_mask = 32
+script = ExtResource("4_hb")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HurtboxComponent"]
+position = Vector2(0, -25)
+shape = SubResource("rect_body")

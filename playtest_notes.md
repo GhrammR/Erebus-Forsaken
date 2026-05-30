@@ -12,6 +12,26 @@ Format per session (see `.agent_governance/commands/playtest.md`):
 
 ---
 
+## 2026-05-30 — stage 3
+
+- [done] --verify3 (DamageResolver verifier): ALL PASS, exit 0. Myrmidon
+  91.4% hit rate dealing 15/swing vs DEF=5 dummy. Pythia 10/swing,
+  Shade-Hunter 11/swing. HIT_FLOOR=30% enforced for zero-AR attacker.
+  Stats helpers and classless short-circuit verified.
+- [done] --verify (Stage 1 regression): ALL PASS, exit 0.
+- [done] --combat: clean boot, Database 4 classes, no errors, no warnings.
+  Player + 3 dummies instantiate, components wire up.
+- [done] --movement, --workbench regression: clean.
+- [done] combat-validator + scene-auditor: all PASS. AD-04 verified —
+  DamageResolver.resolve only called from HealthComponent and the
+  verifier.
+- [pending] Visual playtest: F6 on test/combat_workbench.tscn.
+  Verify: Space swings the spear, hitbox arms during the swing window,
+  damage numbers float up over dummies, MISS in grey, hot orange on
+  bigger numbers, dummies fall over and despawn, K kills the player
+  showing the "You died" notice + 1.5s respawn at origin with full
+  HP/MP, no double-hit on a single swing.
+
 ## 2026-05-30 — stage 2
 
 - [done] Headless --movement: clean boot, Database 4 classes, no errors,

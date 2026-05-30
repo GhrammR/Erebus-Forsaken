@@ -12,6 +12,8 @@ signal move_intent_changed(direction: Vector2)
 signal pause_pressed
 signal click_target_set(world_pos: Vector2)
 signal click_target_cleared
+signal attack_pressed
+signal debug_kill_self_pressed   ## Stage 3 workbench: K to demo death/respawn
 
 const ARRIVE_THRESHOLD: float = 4.0
 
@@ -35,6 +37,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if ke.keycode == KEY_ESCAPE:
 			pause_pressed.emit()
 			get_viewport().set_input_as_handled()
+		elif ke.keycode == KEY_SPACE:
+			attack_pressed.emit()
+		elif ke.keycode == KEY_K:
+			debug_kill_self_pressed.emit()
 		elif ke.keycode in [KEY_W, KEY_A, KEY_S, KEY_D]:
 			# WASD overrides click target the moment a key is pressed.
 			if _has_click_target:

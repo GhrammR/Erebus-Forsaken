@@ -2,7 +2,8 @@
 
 A dark-fantasy, Greek-mythology isometric ARPG. Solo development in Godot 4.
 
-> **Status:** Pre-alpha. Stage 0 (bootstrap) complete. Stage 1 (Stats foundation) up next.
+> **Status:** Pre-alpha. Stages 0–3 complete (bootstrap, stat foundation,
+> player movement, combat core). Stage 4 (itemization) is next.
 > The project is being built in public from the very first commit.
 
 ---
@@ -50,18 +51,42 @@ Highlights worth a look:
 ## Current state
 
 - Godot 4.6.3 project, GDScript, GL Compatibility renderer.
-- Boots to a placeholder splash from `scenes/main.tscn`.
-- Five autoloads in place: `GameState`, `SaveSystem` (versioned, AD-07),
+- Five autoloads: `GameState`, `SaveSystem` (versioned, AD-07),
   `EventBus` (whitelisted signals, AD-08), `SceneRouter`, `Database` (AD-03).
-- No gameplay yet. Stage 1 will add the stat system.
-
-There are no screenshots yet because there is nothing yet to screenshot
-beyond a dark window and a label. That will change.
+- Stat system: four attributes (Strength / Dexterity / Vitality / Pneuma),
+  five Act 1 derived stats (MaxHP, MaxMP, Defense, AttackRating, Resistance).
+  All four classes' base values live in `data/classes/`. Stats math
+  goes through one Resource (AD-01); no inline attribute arithmetic.
+- Player: one `CharacterBody2D` scene, class injected at runtime via
+  `assign_class(ClassData)` (AD-02). Click-to-move primary, WASD
+  secondary (AD-09). Pause menu, camera follow, sprite L/R flip.
+- Combat: every hit funnels through `DamageResolver.resolve()` (AD-04).
+  `HealthComponent`, `HitboxComponent`, `HurtboxComponent` as composed
+  Nodes/Areas, not subclasses. Damage numbers, death state, respawn.
+- Procedural sprites only — Myrmidon (player) and training dummies.
+  Canonical animation names `idle/walk/attack/cast/hit/die` (AD-11)
+  exist on every sprite so the eventual bitmap swap is a node-type
+  change, not a code rewrite.
 
 ## Running it
 
 ```bash
 godot --path .
+```
+
+Plus three workbench flags for the systems built so far:
+
+```bash
+godot --path . -- --workbench    # stat workbench (Stage 1)
+godot --path . -- --movement     # movement workbench (Stage 2)
+godot --path . -- --combat       # combat workbench (Stage 3)
+```
+
+And two headless verifiers (CI-friendly, exit 0 on pass):
+
+```bash
+godot --headless --path . -- --verify    # Stats math (Stage 1)
+godot --headless --path . -- --verify3   # DamageResolver math (Stage 3)
 ```
 
 Requires Godot 4.6 or newer. No build steps, no package install.
