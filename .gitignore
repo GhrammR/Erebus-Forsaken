@@ -1,0 +1,32 @@
+# Godot 4
+.godot/
+.import/
+*.translation
+
+# Export
+export.cfg
+export_presets.cfg
+build/
+exports/
+*.pck
+*.exe
+*.dmg
+*.app
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Secrets
+secrets/
+*.env
+*.pem
+*.key
+
+# Logs
+*.log
+logs/
