@@ -15,6 +15,9 @@ func _ready() -> void:
 	if "--verify4" in args:
 		add_child(load("res://test/stage4_verify.tscn").instantiate())
 		return
+	if "--verify5" in args:
+		add_child(load("res://test/stage5_verify.tscn").instantiate())
+		return
 	if "--workbench" in args:
 		add_child(load("res://test/stat_workbench.tscn").instantiate())
 		return

@@ -247,5 +247,12 @@ func get_inventory() -> Inventory:
 func get_skill_1() -> Skill:
 	return _skill_1
 
+## Public API for skills — lets a Skill subclass play one of the
+## canonical AD-11 sprite animation names without reaching into Player
+## internals. No-op if no sprite is bound.
+func play_sprite_anim(anim_name: StringName) -> void:
+	if _sprite_anim != null:
+		_sprite_anim.play(anim_name)
+
 func is_alive() -> bool:
 	return _life == LifeState.ALIVE
