@@ -49,6 +49,7 @@ const _SKILL_BY_CLASS: Dictionary = {
 @onready var _hurtbox: Area2D = $HurtboxComponent
 @onready var _hitbox: HitboxComponent = $SpriteAnchor/HitboxComponent
 @onready var _inventory: Inventory = $Inventory
+@onready var _wallet: Wallet = $Wallet
 
 var _sprite_anim: AnimationPlayer = null
 var _sprite_root: Node = null
@@ -263,6 +264,9 @@ func get_health_component() -> HealthComponent:
 
 func get_inventory() -> Inventory:
 	return _inventory
+
+func get_wallet() -> Wallet:
+	return _wallet
 
 func get_skill_1() -> Skill:
 	return _skill_1

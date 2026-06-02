@@ -172,9 +172,11 @@ func _process(_delta: float) -> void:
 	] if _player.current_stats != null else "-/-"
 	var skill := _player.get_skill_1()
 	var cd_str := "CD %.2fs" % skill.cooldown_remaining() if skill != null else "no skill"
-	_info.text = "pos=(%d,%d)  facing=(%.2f,%.2f)  HP=%s  %s" % [
+	var wallet := _player.get_wallet()
+	var gold_str := "%d g" % wallet.gold if wallet != null else "0 g"
+	_info.text = "pos=(%d,%d)  facing=(%.2f,%.2f)  HP=%s  %s  %s" % [
 		int(_player.global_position.x), int(_player.global_position.y),
-		_player.facing_dir.x, _player.facing_dir.y, hp_str, cd_str,
+		_player.facing_dir.x, _player.facing_dir.y, hp_str, gold_str, cd_str,
 	]
 	if has_t:
 		_click_marker.global_position = t

@@ -1,0 +1,32 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/items/gold_pickup.gd" id="1_gp"]
+
+[sub_resource type="CircleShape2D" id="pickup_circle"]
+radius = 28.0
+
+[node name="GoldPickup" type="Node2D"]
+script = ExtResource("1_gp")
+
+[node name="Visual" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-5, -5, 5, -5, 5, 5, -5, 5)
+color = Color(0.95, 0.84, 0.35, 1)
+position = Vector2(0, -6)
+
+[node name="ValueLabel" type="Label" parent="."]
+mouse_filter = 2
+offset_left = -32.0
+offset_top = -28.0
+offset_right = 32.0
+offset_bottom = -14.0
+theme_override_colors/font_color = Color(0.95, 0.84, 0.35, 1)
+horizontal_alignment = 1
+text = "1 g"
+
+[node name="PickupArea" type="Area2D" parent="."]
+input_pickable = false
+collision_layer = 128
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PickupArea"]
+shape = SubResource("pickup_circle")

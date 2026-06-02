@@ -107,6 +107,7 @@ func _run_save_load_test(fail_in: int) -> int:
 	fake_player.get_inventory().add_item(&"iron_ring")
 	fake_player.get_inventory().equip(&"bronze_plate")
 	fake_player.get_inventory().equip(&"iron_ring")
+	fake_player.get_wallet().add_gold(137)
 	fake_player.global_position = Vector2(123.0, -456.0)
 
 	# Snapshot before save
@@ -115,6 +116,7 @@ func _run_save_load_test(fail_in: int) -> int:
 	var before_pos := fake_player.global_position
 	var before_bp := fake_player.get_inventory().backpack.duplicate()
 	var before_eq := fake_player.get_inventory().equipped.duplicate()
+	var before_gold := fake_player.get_wallet().gold
 
 	# Save via the autoload (uses real SAVE_PATH; fine for this test)
 	var ok_save := SaveSystem.save_game()
@@ -127,6 +129,7 @@ func _run_save_load_test(fail_in: int) -> int:
 	fake_player.get_inventory().backpack.clear()
 	fake_player.get_inventory().equipped.clear()
 	fake_player.get_inventory()._recompute_totals()
+	fake_player.get_wallet().set_gold(0)
 	fake_player.global_position = Vector2.ZERO
 
 	# Load
@@ -137,12 +140,14 @@ func _run_save_load_test(fail_in: int) -> int:
 	var ok_roundtrip: bool = fake_player.current_stats.level == before_lvl \
 		and fake_player.current_stats.strength == before_str \
 		and fake_player.global_position == before_pos \
-		and fake_player.get_inventory().equipped.size() == before_eq.size()
-	print("[%s] round-trip preserves level=%d str=%d pos=(%d,%d) equipped=%d" % [
+		and fake_player.get_inventory().equipped.size() == before_eq.size() \
+		and fake_player.get_wallet().gold == before_gold
+	print("[%s] round-trip preserves level=%d str=%d pos=(%d,%d) equipped=%d gold=%d" % [
 		"OK  " if ok_roundtrip else "FAIL",
 		fake_player.current_stats.level, fake_player.current_stats.strength,
 		int(fake_player.global_position.x), int(fake_player.global_position.y),
-		fake_player.get_inventory().equipped.size()])
+		fake_player.get_inventory().equipped.size(),
+		fake_player.get_wallet().gold])
 	if not ok_roundtrip: fail += 1
 
 	# Per-class loadout isolation: Myrmidon equipment must not appear
@@ -175,8 +180,9 @@ func _run_save_load_test(fail_in: int) -> int:
 		and inv_block.has("loadouts") \
 		and inv_block.has("active_class") \
 		and String(inv_block["active_class"]) == "myrmidon" \
-		and (inv_block["loadouts"] as Dictionary).has("myrmidon")
-	print("[%s] migrate(v1->v%d) bumps version + builds per-class loadouts" % [
+		and (inv_block["loadouts"] as Dictionary).has("myrmidon") \
+		and migrated.has("gold")
+	print("[%s] migrate(v1->v%d) bumps version + per-class loadouts + gold seeded" % [
 		"OK  " if ok_mig else "FAIL", SaveSystem.SAVE_VERSION])
 	if not ok_mig: fail += 1
 

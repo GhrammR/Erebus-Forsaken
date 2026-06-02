@@ -9,6 +9,7 @@ var current_stats: Stats = null
 var class_data: ClassData = null
 
 var _inventory: Inventory = null
+var _wallet: Wallet = null
 
 func setup(class_id: StringName) -> void:
 	class_data = Database.get_class_data(class_id) as ClassData
@@ -19,9 +20,15 @@ func setup(class_id: StringName) -> void:
 	_inventory.stats = current_stats
 	add_child(_inventory)
 	_inventory.set_active_class(class_data.id)
+	_wallet = Wallet.new()
+	_wallet.name = "Wallet"              # SaveSystem looks up via get_node_or_null("Wallet")
+	add_child(_wallet)
 
 func get_inventory() -> Inventory:
 	return _inventory
+
+func get_wallet() -> Wallet:
+	return _wallet
 
 ## Player has assign_class — SaveSystem.load_game calls it. Reuse the
 ## class_data field; rebuild Stats + rebind inventory.

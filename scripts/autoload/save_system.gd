@@ -4,7 +4,7 @@ extends Node
 ## migrate() step. The on-disk format is human-readable so a tester can
 ## hand-edit corruption cases (rules/failure-modes.md #7 leans on this).
 
-const SAVE_VERSION: int = 3
+const SAVE_VERSION: int = 4
 const SAVE_PATH: String = "user://save_slot_1.dat"
 
 signal save_completed(success: bool)
@@ -71,6 +71,8 @@ func migrate(old: Dictionary) -> Dictionary:
 		old = _migrate_v1_to_v2(old)
 	if v < 3:
 		old = _migrate_v2_to_v3(old)
+	if v < 4:
+		old = _migrate_v3_to_v4(old)
 	return old
 
 func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
@@ -99,6 +101,13 @@ func _migrate_v2_to_v3(old: Dictionary) -> Dictionary:
 	old["inventory"] = new_inv
 	return old
 
+func _migrate_v3_to_v4(old: Dictionary) -> Dictionary:
+	# v3 had no Wallet. Seed zero gold.
+	old["version"] = 4
+	if not old.has("gold"):
+		old["gold"] = 0
+	return old
+
 # ---- snapshot / apply ----------------------------------------------------
 
 func _player() -> Node:
@@ -108,6 +117,7 @@ func _snapshot(player: Node) -> Dictionary:
 	var stats: Stats = player.current_stats
 	var cd: ClassData = player.class_data
 	var inv: Inventory = player.get_node_or_null(^"Inventory") as Inventory
+	var wallet: Wallet = player.get_node_or_null(^"Wallet") as Wallet
 	var snap: Dictionary = {
 		"version": SAVE_VERSION,
 		"class_id": String(cd.id) if cd != null else "",
@@ -122,6 +132,7 @@ func _snapshot(player: Node) -> Dictionary:
 		"current_mp": stats.current_mp if stats != null else 0,
 		"position": { "x": player.global_position.x, "y": player.global_position.y },
 		"inventory": inv.snapshot() if inv != null else { "backpack": [], "equipped": {} },
+		"gold": wallet.gold if wallet != null else 0,
 	}
 	return snap
 
@@ -143,6 +154,9 @@ func _apply(player: Node, data: Dictionary) -> void:
 	var inv: Inventory = player.get_node_or_null(^"Inventory") as Inventory
 	if inv != null:
 		inv.restore(data.get("inventory", {}))
+	var wallet: Wallet = player.get_node_or_null(^"Wallet") as Wallet
+	if wallet != null:
+		wallet.set_gold(int(data.get("gold", 0)))
 	# Stats restore needs to happen AFTER inventory restore so equip
 	# bonuses are applied before we set current_hp / mp.
 	if stats != null:

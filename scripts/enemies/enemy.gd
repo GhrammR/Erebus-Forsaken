@@ -11,6 +11,13 @@ class_name Enemy extends CharacterBody2D
 @export var corpse_linger: float = 1.0  ## seconds between die anim and queue_free
 
 const _WORLD_ITEM_SCENE := preload("res://scenes/items/world_item.tscn")
+const _GOLD_PICKUP_SCENE := preload("res://scenes/items/gold_pickup.tscn")
+
+## Stage 6 — gold economy stub. Each kill rolls for a gold drop with
+## a value in [gold_min, gold_max]. gold_drop_chance = 0 disables.
+@export var gold_drop_chance: float = 0.55
+@export var gold_min: int = 1
+@export var gold_max: int = 4
 
 @onready var _sprite_anchor: Node2D = $SpriteAnchor
 @onready var _health: HealthComponent = $HealthComponent
@@ -46,6 +53,7 @@ func _on_died(_killer: Node) -> void:
 	$HurtboxComponent.set_deferred(&"monitoring", false)
 	$CollisionShape2D.set_deferred(&"disabled", true)
 	_try_drop()
+	_try_drop_gold()
 	await get_tree().create_timer(corpse_linger).timeout
 	queue_free()
 
@@ -73,3 +81,19 @@ func _spawn_world_item(id: StringName, at: Vector2) -> void:
 	parent.add_child(item)
 	item.global_position = at
 	EventBus.item_dropped.emit(id, at)
+
+func _try_drop_gold() -> void:
+	if gold_drop_chance <= 0.0 or randf() > gold_drop_chance:
+		return
+	var value := randi_range(gold_min, gold_max)
+	var jitter := Vector2(randf_range(-14, 14), randf_range(-6, 6))
+	_spawn_gold_pickup.call_deferred(value, global_position + jitter)
+
+func _spawn_gold_pickup(value: int, at: Vector2) -> void:
+	var parent := get_parent()
+	if parent == null or not is_instance_valid(parent):
+		return
+	var coin := _GOLD_PICKUP_SCENE.instantiate()
+	coin.value = value
+	parent.add_child(coin)
+	coin.global_position = at
