@@ -82,6 +82,25 @@ UI pixel offsets and shader constants are allowed as locals if commented.
   `SceneRouter` autoload.
 - `var foo = {}` with no schema — define a class or Resource.
 
+## Summon lifecycle
+
+Any node that represents something the player summoned — currently
+only `BoneServantMinion`, future totems / pets / spirits / etc. —
+MUST tie its lifetime to the summoner:
+
+1. Add itself to a `*_summons`-style group on `_ready` so the player
+   (and `Player.assign_class`) can sweep all active summons.
+2. Subscribe to `EventBus.player_died` and route through its own
+   `HealthComponent.kill(self)` so the die animation + cleanup path
+   runs identically to a regular lethal hit.
+3. Be excluded from `SaveSystem` snapshots. Summons re-spawn from
+   skill use after load, never from save data.
+
+Why: in-game expectation is that the player's death ends their
+support entities. Mechanically also avoids zombie minions outliving
+their context (e.g., player dies, respawns, two of the same summon
+now exist). Reference: `scripts/enemies/bone_servant_minion.gd`.
+
 ## Comments
 
 Default to none. Write one only when the *why* is non-obvious — a workaround,

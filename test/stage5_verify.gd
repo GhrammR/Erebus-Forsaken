@@ -170,6 +170,27 @@ func _ready() -> void:
 		str(ok_bs2), minion_count_2])
 	if not (ok_bs2 and minion_count_2 == 1): fail += 1
 
+	# Summon-lifecycle: emitting EventBus.player_died despawns the
+	# active minion. Mirrors the in-game expectation that summons
+	# don't survive their summoner.
+	EventBus.player_died.emit()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	# The minion routes death through HealthComponent.kill -> die anim ->
+	# 0.7s linger -> queue_free. We only need to confirm it has been
+	# marked dead immediately; the queue_free will follow.
+	var minions_after_death := caster.get_tree().get_nodes_in_group(BoneServant.MINION_GROUP)
+	var ok_died: bool = true
+	for m in minions_after_death:
+		var hc: HealthComponent = m.get_node_or_null(^"HealthComponent") as HealthComponent
+		if hc == null or not hc.is_dead():
+			ok_died = false
+			break
+	print("[%s] player_died despawns active minion (n=%d, all dead=%s)" % [
+		"OK  " if ok_died else "FAIL",
+		minions_after_death.size(), str(ok_died)])
+	if not ok_died: fail += 1
+
 	# Save-exclusion: confirm SaveSystem's schema does not include any
 	# minion-related keys. The save snapshot is keyed on Player state;
 	# minions are siblings in the scene and not snapshotted.

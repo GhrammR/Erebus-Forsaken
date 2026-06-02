@@ -41,6 +41,11 @@ func _ready() -> void:
 	_health.died.connect(_on_died)
 	_hitbox.base_damage = ATTACK_DAMAGE
 	_hitbox.owner_body = self
+	# Summon-lifecycle: a minion outlives its summoner only as long as
+	# the summoner is alive. When the player dies, every active summon
+	# despawns. The minion subscribes itself so any future summon class
+	# inherits the rule by following the same pattern.
+	EventBus.player_died.connect(_on_summoner_died)
 	_install_sprite()
 
 func _install_sprite() -> void:
@@ -103,6 +108,13 @@ func _do_attack(dir: Vector2) -> void:
 func _on_damaged(_amount: int, _source: Node) -> void:
 	if _sprite_anim != null and not _health.is_dead():
 		_sprite_anim.play(&"hit")
+
+func _on_summoner_died() -> void:
+	if _health.is_dead():
+		return
+	# Route through HealthComponent.kill so the same die-anim and
+	# cleanup path runs as a normal lethal hit.
+	_health.kill(self)
 
 func _on_died(_killer: Node) -> void:
 	if _sprite_anim != null:
