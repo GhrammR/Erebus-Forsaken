@@ -166,7 +166,11 @@ HealthComponent + verifier reference DamageResolver.
   stage3_verify.gd call DamageResolver.resolve.
 * [x] --verify5 headless verifier covers all four skills + Projectile
   + single-instance + save-exclusion. ALL PASS, exit 0.
-* [~] Visual skills-workbench playtest — awaiting user.
+* [x] Visual skills-workbench playtest — confirmed: all four class
+  cast anims play; inventory `I`/`Esc` open & close; pause `Esc`/`Esc`
+  open & close; per-class loadouts isolated across class swaps;
+  Bone Servant despawns on summoner death; loot drops produce zero
+  physics-flush errors.
 
 ## Stage 6 — Town
 
