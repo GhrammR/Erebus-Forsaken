@@ -182,13 +182,22 @@ HealthComponent + verifier reference DamageResolver.
   interact (E), VendorPanel UI with buy/sell, MerchantStock resource,
   base_price on every ItemData, class-cycling preserved in town
   workbench (M/P/H/O).
-* \[ ] Phase 4 — Eurynome (quest-giver): QuestSystem autoload, single
-  fetch quest with accept / turn-in / reward, QuestPanel UI.
-* \[ ] Phase 5 — Town as respawn point: main.tscn boots into camp;
-  SaveSystem snapshots/restores zone + position.
-* \[ ] Phase 6 — stage6_verify.gd + visual playtest.
+* [x] Phase 4 — Eurynome (quest-giver): QuestSystem autoload, single
+  fetch quest "A Sister's Token" with full state machine and reward.
+  Save schema v5 carries quest state.
+* [x] Phase 5 — Production game entry (scenes/game.tscn): main.tscn
+  default-routes here; auto-loads save_slot_1; --splash retains the
+  title-card; --town flag points at the dev workbench. SaveSystem
+  v6 captures GameState.current_zone_id (defaults legacy saves to
+  threshold_camp).
+* [x] Phase 6 — stage6_verify.gd covers Wallet API, MerchantStock
+  pricing fallbacks, full QuestSystem state machine (incl.
+  COMPLETED -> ACCEPTED revert and turn_in idempotency), and a
+  save round-trip that asserts gold + amulet + quest state + zone.
+  21/21 PASS.
 * \[ ] End-of-Stage-6 polish: click-to-interact on NPCs (walk to NPC
   then auto-open panel — ARPG genre standard).
+* [~] Visual stage-6 playtest — awaiting final user sign-off.
 
 ## Stage 7 — Wilderness
 
