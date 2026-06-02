@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[node name="SelectionRing" type="Node2D"]
+z_index = -1
+z_as_relative = false
+position = Vector2(0, 4)
+
+[node name="Halo" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-28, 0, -24, -8, -14, -12, 0, -13, 14, -12, 24, -8, 28, 0, 24, 8, 14, 12, 0, 13, -14, 12, -24, 8)
+color = Color(1.0, 0.85, 0.30, 0.45)
+
+[node name="Ring" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-22, 0, -19, -6, -11, -9, 0, -10, 11, -9, 19, -6, 22, 0, 19, 6, 11, 9, 0, 10, -11, 9, -19, 6)
+color = Color(1.0, 0.95, 0.55, 1.0)
+
+[node name="Cutout" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-16, 0, -14, -4, -8, -7, 0, -8, 8, -7, 14, -4, 16, 0, 14, 4, 8, 7, 0, 8, -8, 7, -14, 4)
+color = Color(0.07, 0.065, 0.09, 1)

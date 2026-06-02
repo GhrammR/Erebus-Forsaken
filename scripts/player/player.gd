@@ -232,9 +232,15 @@ func _respawn() -> void:
 	_life = LifeState.ALIVE
 	_combat = CombatState.READY
 	_attack_cd_remaining = 0.0
+	_intent = Vector2.ZERO
+	velocity = Vector2.ZERO
 	_hurtbox.set_deferred(&"monitoring", true)
 	_input.set_process_unhandled_input(true)
 	_input.set_physics_process(true)
+	# Clear any click-to-move target queued before death so the
+	# fresh-respawned player doesn't immediately march toward the
+	# spot where they died. See failure-modes #19.
+	_input.clear_click_target()
 	# Reset the sprite root's transform: the `die` animation leaves
 	# rotation=PI/2 and modulate.a=0.3, and `idle` doesn't animate
 	# those properties so they'd persist into the new life.

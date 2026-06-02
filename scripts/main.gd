@@ -2,10 +2,19 @@ extends Node2D
 
 @onready var _build_label: Label = $BuildLabel
 @onready var _hint_label: Label = $HintLabel
+@onready var _background: ColorRect = $Background
 
 func _ready() -> void:
 	# Headless test runners. Pass after "--" so Godot ignores them.
 	var args := OS.get_cmdline_user_args()
+	# Hide the title-screen chrome by default; the --splash branch
+	# re-shows it. Without this, any workbench launched through
+	# main.tscn would render the splash Background ColorRect (a
+	# 1280x720 dark box anchored at world (0,0)) on top of the
+	# scene's geometry — exactly where the player ends up walking.
+	_build_label.hide()
+	_hint_label.hide()
+	_background.hide()
 	if "--verify" in args:
 		add_child(load("res://test/stage1_verify.tscn").instantiate())
 		return
@@ -40,14 +49,15 @@ func _ready() -> void:
 		add_child(load("res://test/town_workbench.tscn").instantiate())
 		return
 	if "--splash" in args:
+		_build_label.show()
+		_hint_label.show()
+		_background.show()
 		_build_label.text = "Erebus Forsaken — build %s" % GameState.BUILD_VERSION
 		_hint_label.text = "Splash. Pass --town for the dev town workbench. Esc quits."
 		return
 	# Default boot — straight into the game (threshold camp, town
 	# auto-resumes from save if one exists). Pass --splash to keep
 	# the title screen, or any workbench flag to bypass.
-	_build_label.hide()
-	_hint_label.hide()
 	add_child(load("res://scenes/game.tscn").instantiate())
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -195,9 +195,15 @@ HealthComponent + verifier reference DamageResolver.
   COMPLETED -> ACCEPTED revert and turn_in idempotency), and a
   save round-trip that asserts gold + amulet + quest state + zone.
   21/21 PASS.
-* \[ ] End-of-Stage-6 polish: click-to-interact on NPCs (walk to NPC
-  then auto-open panel — ARPG genre standard).
-* [~] Visual stage-6 playtest — awaiting final user sign-off.
+* [x] End-of-Stage-6 polish: click-to-interact on NPCs. Tight
+  silhouette hit-test (rectangular, matches sprite footprint),
+  selection ring under feet (toggled via modulate.a, absolute z=-1),
+  auto-interacts on arrival, status text confirms which NPC is
+  targeted, clears on reroute. Same wiring in both game.gd and
+  town_workbench.gd.
+* [x] Visual stage-6 playtest — confirmed: ring renders, NPC click
+  precision tight, Esc opens/closes pause, F5/F9 round-trip, fire
+  pit glow subtle, no leftover splash chrome.
 
 ## Stage 7 — Wilderness
 
@@ -205,6 +211,15 @@ HealthComponent + verifier reference DamageResolver.
 * \[ ] Random spawn director with caps
 * \[ ] Loot dropping in world space
 * \[ ] Portal back to town
+* \[ ] **Death-penalty design decision** (multi-choice prompt before
+  the first wilderness encounter): currently a player dies and
+  respawns at town with full HP/MP and no penalty. Choose between
+  (a) Diablo-style corpse-run: drop all gold + a slot of gear at
+  the death point, must retrieve, (b) lose-gold-only: drop a
+  percentage of gold as a recoverable pile, gear stays, (c) hardcore
+  death-is-death (Act 2 mode only, never default), or (d) soft
+  penalty: experience debt or stat drain that wears off. Until this
+  decision lands, death is consequence-free.
 
 ## Stage 8 — Dungeon
 

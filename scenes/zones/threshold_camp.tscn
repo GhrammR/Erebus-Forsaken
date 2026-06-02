@@ -25,6 +25,8 @@ zone_id = &"threshold_camp"
 
 [node name="VoidBackground" type="ColorRect" parent="."]
 mouse_filter = 2
+z_index = -100
+z_as_relative = false
 offset_left = -2400.0
 offset_top = -1600.0
 offset_right = 2400.0

@@ -594,6 +594,39 @@ in headless tests until `godot --editor --quit` rebuilt the cache.
 
 ---
 
+## 19. Stale input state survives respawn
+
+**Symptom:** Player dies (K self-kill, lethal hit, etc.), the death
+sequence plays, the player respawns at the zone's spawn point — and
+immediately starts walking back toward where they were headed
+before death. Same pattern would apply to any "modal off, fresh
+state" transition (scene change, fast-travel).
+
+**Root cause:** `PlayerInput` holds click-to-move state
+(`_click_target`, `_has_click_target`, `_intent`) that is logically
+"input the player wants" — but the engine has no idea this should
+clear when the player's life resets. The death path sets process
+flags off then on again on respawn; the click-target dictionary in
+between is preserved.
+
+**Prevention:** Any "fresh start" transition on the Player
+(respawn, scene transition, character swap mid-zone) must call
+`PlayerInput.clear_click_target()` (also resets `_intent` and
+emits `click_target_cleared` so the click marker hides). The
+Player should zero `_intent` and `velocity` at the same time so
+the very next physics frame doesn't carry residual motion.
+
+**Recovery:** Add the `clear_click_target` call at the bottom of
+`Player._respawn()` and zero `_intent` / `velocity` immediately
+above it. Verify by self-killing while a click target is active
+in the workbench — the respawned player should stand still.
+
+**First incident:** Stage 6 final playtest. K self-kill while
+walking toward an NPC caused the respawned player to keep walking
+to the pre-death click target. Fix as above.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

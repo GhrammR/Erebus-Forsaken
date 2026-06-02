@@ -1,8 +1,9 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/npc/kallias.gd" id="1_k"]
 [ext_resource type="PackedScene" path="res://art/procedural/npcs/kallias_sprite.tscn" id="2_ks"]
 [ext_resource type="Resource" path="res://data/npc/kallias_stock.tres" id="3_st"]
+[ext_resource type="PackedScene" path="res://art/procedural/npcs/selection_ring.tscn" id="4_sel"]
 
 [sub_resource type="CapsuleShape2D" id="cap_feet"]
 radius = 5.0
@@ -19,6 +20,8 @@ collision_mask = 0
 script = ExtResource("1_k")
 display_name = "Kallias the Salvager"
 stock = ExtResource("3_st")
+
+[node name="SelectionRing" parent="." instance=ExtResource("4_sel")]
 
 [node name="SpriteAnchor" type="Node2D" parent="."]
 

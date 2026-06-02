@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/npc/eurynome.gd" id="1_e"]
 [ext_resource type="PackedScene" path="res://art/procedural/npcs/eurynome_sprite.tscn" id="2_es"]
+[ext_resource type="PackedScene" path="res://art/procedural/npcs/selection_ring.tscn" id="3_sel"]
 
 [sub_resource type="CapsuleShape2D" id="cap_feet"]
 radius = 5.0
@@ -18,6 +19,8 @@ collision_mask = 0
 script = ExtResource("1_e")
 display_name = "Eurynome"
 quest_id = &"eurynome_relic"
+
+[node name="SelectionRing" parent="." instance=ExtResource("3_sel")]
 
 [node name="SpriteAnchor" type="Node2D" parent="."]
 

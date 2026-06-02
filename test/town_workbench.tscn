@@ -16,6 +16,8 @@ script = ExtResource("1_tw")
 
 [node name="Background" type="ColorRect" parent="."]
 mouse_filter = 2
+z_index = -100
+z_as_relative = false
 offset_left = -2000.0
 offset_top = -2000.0
 offset_right = 2000.0

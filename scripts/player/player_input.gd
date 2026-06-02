@@ -121,3 +121,16 @@ func get_click_target() -> Vector2:
 
 func has_click_target() -> bool:
 	return _has_click_target
+
+## Drop any pending click-to-move target. Called on death/respawn
+## (so the player doesn't keep walking toward their pre-death click)
+## and during scene transitions. Emits click_target_cleared if a
+## target was active so the marker hides too.
+func clear_click_target() -> void:
+	if not _has_click_target:
+		return
+	_has_click_target = false
+	_stuck_frames = 0
+	_last_intent = Vector2.ZERO
+	move_intent_changed.emit(Vector2.ZERO)
+	click_target_cleared.emit()

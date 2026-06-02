@@ -15,6 +15,9 @@ extends Node2D
 @onready var _status: Label = $HUD/Status
 @onready var _click_marker: Node2D = $ClickMarker
 
+const _CLICK_NPC_RADIUS: float = 22.0
+var _pending_interact_npc: Npc = null
+
 func _ready() -> void:
 	_help.text = "Click=move  |  WASD  |  E=interact  |  I=inventory  |  M/P/H/O=class  |  F5=save  |  F9=load  |  Esc=pause"
 
@@ -77,9 +80,33 @@ func _set_status(msg: String, ok: bool) -> void:
 func _on_click_target_set(world_pos: Vector2) -> void:
 	_click_marker.global_position = world_pos
 	_click_marker.visible = true
+	_set_pending_npc(_find_npc_at(world_pos))
 
 func _on_click_target_cleared() -> void:
 	_click_marker.visible = false
+
+func _find_npc_at(world_pos: Vector2) -> Npc:
+	if _camp == null:
+		return null
+	var npcs := _camp.find_children("*", "Npc", true, false)
+	for n in npcs:
+		var npc := n as Npc
+		if npc == null:
+			continue
+		if npc.click_hits(world_pos, _CLICK_NPC_RADIUS):
+			return npc
+	return null
+
+func _set_pending_npc(npc: Npc) -> void:
+	if _pending_interact_npc == npc:
+		return
+	if _pending_interact_npc != null and is_instance_valid(_pending_interact_npc):
+		_pending_interact_npc.set_selected(false)
+	_pending_interact_npc = npc
+	if npc != null:
+		npc.set_selected(true)
+		_status.text = "Targeting %s" % npc.display_name
+		_status.modulate = Color(1.0, 0.85, 0.30, 1)
 
 func _on_interact_pressed() -> void:
 	# Forward E to the nearest in-range NPC. Range checks are owned
@@ -129,6 +156,13 @@ func _switch_class(id: StringName) -> void:
 func _process(_delta: float) -> void:
 	if _player == null:
 		return
+	if _pending_interact_npc != null:
+		if not is_instance_valid(_pending_interact_npc):
+			_pending_interact_npc = null
+		elif _pending_interact_npc.is_in_range():
+			var n := _pending_interact_npc
+			_set_pending_npc(null)
+			n.interact()
 	var w := _player.get_wallet()
 	var gold_str := "%d g" % w.gold if w != null else "0 g"
 	_info.text = "pos=(%d,%d)   zone=%s   %s" % [
