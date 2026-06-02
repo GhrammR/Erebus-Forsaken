@@ -15,9 +15,11 @@ const _GOLD_PICKUP_SCENE := preload("res://scenes/items/gold_pickup.tscn")
 
 ## Stage 6 — gold economy stub. Each kill rolls for a gold drop with
 ## a value in [gold_min, gold_max]. gold_drop_chance = 0 disables.
-@export var gold_drop_chance: float = 0.55
+## Stage 7 will tune per enemy type; for now training dummies use
+## an aggressive default so the pickup pipeline is easy to validate.
+@export_range(0.0, 1.0, 0.05) var gold_drop_chance: float = 0.9
 @export var gold_min: int = 1
-@export var gold_max: int = 4
+@export var gold_max: int = 5
 
 @onready var _sprite_anchor: Node2D = $SpriteAnchor
 @onready var _health: HealthComponent = $HealthComponent
@@ -68,7 +70,9 @@ func _try_drop() -> void:
 	# synchronously here would attach its PickupArea Area2D mid-flush,
 	# triggering "Can't change this state while flushing queries".
 	# Defer to the next idle frame. See failure-modes #17.
-	var jitter := Vector2(randf_range(-12, 12), randf_range(-6, 6))
+	# Items drop above the corpse so their name labels don't overlap
+	# with the gold "Xg" label (which drops below). See _try_drop_gold.
+	var jitter := Vector2(randf_range(-14, 14), randf_range(-18, -6))
 	var drop_pos := global_position + jitter
 	_spawn_world_item.call_deferred(id, drop_pos)
 
@@ -86,7 +90,10 @@ func _try_drop_gold() -> void:
 	if gold_drop_chance <= 0.0 or randf() > gold_drop_chance:
 		return
 	var value := randi_range(gold_min, gold_max)
-	var jitter := Vector2(randf_range(-14, 14), randf_range(-6, 6))
+	# Bias gold below the corpse, items above. Their labels render
+	# upward from the pickup position; separating them in y stops the
+	# "1g" / item-name labels stacking on top of each other.
+	var jitter := Vector2(randf_range(-10, 10), randf_range(22, 32))
 	_spawn_gold_pickup.call_deferred(value, global_position + jitter)
 
 func _spawn_gold_pickup(value: int, at: Vector2) -> void:
