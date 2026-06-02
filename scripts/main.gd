@@ -27,6 +27,9 @@ func _ready() -> void:
 	if "--loot" in args:
 		add_child(load("res://test/loot_workbench.tscn").instantiate())
 		return
+	if "--skills" in args:
+		add_child(load("res://test/skills_workbench.tscn").instantiate())
+		return
 	_build_label.text = "Erebus Forsaken — build %s" % GameState.BUILD_VERSION
 	_hint_label.text = "Stage 4 — F6 on test/loot_workbench.tscn for loot/inventory/save. Esc quits."
 

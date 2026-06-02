@@ -20,11 +20,28 @@ var class_data: ClassData = null
 var current_stats: Stats = null
 var respawn_position: Vector2 = Vector2.ZERO
 
+## Stage 5: directional facing for skills. `_facing_right` stays for
+## the L/R sprite flip (visual). `facing_dir` is the unit Vector2 that
+## skills aim along. Updated from movement intent; preserved when idle
+## so a stationary skill cast still aims sensibly.
+## See failure-modes #12 and gap-log Stage 4 -> Stage 5 carry-over.
+var facing_dir: Vector2 = Vector2.RIGHT
+
 var _intent: Vector2 = Vector2.ZERO
 var _facing_right: bool = true
 var _life: LifeState = LifeState.ALIVE
 var _combat: CombatState = CombatState.READY
 var _attack_cd_remaining: float = 0.0
+
+## Stage 5: primary skill slot. Swapped in assign_class.
+var _skill_1: Skill = null
+
+const _SKILL_BY_CLASS: Dictionary = {
+	&"myrmidon":       preload("res://scripts/skills/spear_lunge.gd"),
+	&"pythia":         preload("res://scripts/skills/oracle_bolt.gd"),
+	&"shade_hunter":   preload("res://scripts/skills/volley.gd"),
+	&"ossuary_priest": preload("res://scripts/skills/bone_servant.gd"),
+}
 
 @onready var _sprite_anchor: Node2D = $SpriteAnchor
 @onready var _input: PlayerInput = $PlayerInput
@@ -45,6 +62,7 @@ func _ready() -> void:
 	_input.owner_body = self
 	_input.move_intent_changed.connect(_on_move_intent_changed)
 	_input.attack_pressed.connect(_on_attack_pressed)
+	_input.skill_1_pressed.connect(_on_skill_1_pressed)
 	_input.debug_kill_self_pressed.connect(_on_debug_kill_self)
 	_health.damaged.connect(_on_damaged)
 	_health.died.connect(_on_died)
@@ -64,6 +82,16 @@ func assign_class(cd: ClassData) -> void:
 	_inventory.stats = current_stats
 	_inventory.class_id = cd.id
 	_inventory._recompute_totals()
+
+	# Stage 5 — swap the primary skill slot for the new class.
+	if _skill_1 != null:
+		_skill_1.queue_free()
+		_skill_1 = null
+	var skill_script: Script = _SKILL_BY_CLASS.get(cd.id, null)
+	if skill_script != null:
+		_skill_1 = skill_script.new()
+		_skill_1.name = "Skill1"
+		add_child(_skill_1)
 
 	for child in _sprite_anchor.get_children():
 		# Preserve the HitboxComponent — only swap visual children.
@@ -112,6 +140,14 @@ func _update_facing() -> void:
 
 func _on_move_intent_changed(direction: Vector2) -> void:
 	_intent = direction
+	# Update directional facing; preserve last-known when intent is zero.
+	if direction != Vector2.ZERO:
+		facing_dir = direction
+
+func _on_skill_1_pressed() -> void:
+	if _life != LifeState.ALIVE or _skill_1 == null:
+		return
+	_skill_1.try_activate(self, facing_dir)
 
 func _on_stats_recomputed() -> void:
 	EventBus.stats_changed.emit(self)
@@ -207,6 +243,9 @@ func get_health_component() -> HealthComponent:
 
 func get_inventory() -> Inventory:
 	return _inventory
+
+func get_skill_1() -> Skill:
+	return _skill_1
 
 func is_alive() -> bool:
 	return _life == LifeState.ALIVE

@@ -13,6 +13,7 @@ signal pause_pressed
 signal click_target_set(world_pos: Vector2)
 signal click_target_cleared
 signal attack_pressed
+signal skill_1_pressed           ## Stage 5: 1 fires the class's primary skill
 signal debug_kill_self_pressed   ## Stage 3 workbench: K to demo death/respawn
 signal inventory_toggle_pressed  ## Stage 4: I toggles inventory
 signal save_pressed              ## Stage 4: F5
@@ -50,6 +51,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		elif ke.keycode == KEY_SPACE:
 			attack_pressed.emit()
+		elif ke.keycode == KEY_1:
+			skill_1_pressed.emit()
 		elif ke.keycode == KEY_K:
 			debug_kill_self_pressed.emit()
 		elif ke.keycode == KEY_I:
