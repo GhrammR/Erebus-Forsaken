@@ -414,6 +414,62 @@ culprits in a single pass.
 
 ---
 
+## 15. Per-frame anim updater clobbers one-shot animations
+
+**Symptom:** A skill, basic attack, or hit-reaction visibly doesn't
+animate. The character stays in idle or walk. The AnimationPlayer is
+correctly receiving `.play("attack")` calls — you can confirm it with
+a print — but the animation never actually plays a single frame on
+screen. Often the only animation that "works" is the one that already
+forces a movement lock (so the per-frame updater bails out before
+overwriting).
+
+**Root cause:** Many actor scripts (`Player`, future `Enemy` with
+behavior) call an `_update_anim()` from `_physics_process`, which
+picks `walk` or `idle` based on movement intent and immediately
+plays it. This runs ~60×/second. A one-shot call like
+`play("attack")` survives for a single frame before the per-frame
+update re-plays `idle`/`walk` from the top — the one-shot never gets
+a chance to render.
+
+**Prevention:**
+- The per-frame anim updater must guard against in-progress one-shot
+  anims:
+  ```gdscript
+  const _ONESHOT_ANIMS: Array[StringName] = [&"attack", &"cast", &"hit", &"die"]
+  func _update_anim() -> void:
+      if _sprite_anim == null: return
+      if _sprite_anim.current_animation in _ONESHOT_ANIMS \
+              and _sprite_anim.is_playing():
+          return  # let the one-shot finish before resuming idle/walk
+      var anim_name := &"walk" if _intent != Vector2.ZERO else &"idle"
+      if _sprite_anim.current_animation != anim_name:
+          _sprite_anim.play(anim_name)
+  ```
+- Why this works: idle and walk are loop anims; `is_playing()` stays
+  true forever, so they never short-circuit themselves. Attack/cast/
+  hit/die are one-shots; `is_playing()` flips to false the moment the
+  animation ends, and the updater resumes idle/walk seamlessly.
+- This is the **only** AD-11-mandated guard for movement-not-locked
+  skills. If the skill DOES lock movement (sets a combat state and
+  early-returns from `_physics_process`), the guard is redundant but
+  doesn't hurt.
+
+**Recovery:** Add the `_ONESHOT_ANIMS` constant + early-return
+to every actor's `_update_anim` function. Visually verify each
+canonical anim (attack/cast/hit/die) by triggering it in the workbench.
+
+**First incident:** Stage 5 close. Skills called
+`play_sprite_anim("cast")` / `"attack"` on every class but no
+animation ever played because `Player._update_anim` was re-firing
+idle/walk every physics frame. The basic-attack animation worked
+because the player's `_combat = ATTACKING` state caused
+`_physics_process` to early-return before calling `_update_anim` —
+masking the bug entirely. Fix: the guard above on `Player._update_anim`.
+Skills now visibly animate.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

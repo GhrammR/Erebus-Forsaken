@@ -132,8 +132,18 @@ func _physics_process(delta: float) -> void:
 	_update_anim()
 	_update_facing()
 
+## Canonical AD-11 one-shot anim names that `_update_anim` will not
+## interrupt while they are still playing. Once is_playing() goes
+## false the player resumes idle/walk normally. This is what lets a
+## skill's `play_sprite_anim("cast")` actually be visible — without
+## this guard the per-frame _update_anim overwrites it instantly.
+const _ONESHOT_ANIMS: Array[StringName] = [&"attack", &"cast", &"hit", &"die"]
+
 func _update_anim() -> void:
 	if _sprite_anim == null:
+		return
+	# Let any in-progress one-shot finish on its own.
+	if _sprite_anim.current_animation in _ONESHOT_ANIMS and _sprite_anim.is_playing():
 		return
 	var anim_name := &"walk" if _intent != Vector2.ZERO else &"idle"
 	if _sprite_anim.current_animation != anim_name:

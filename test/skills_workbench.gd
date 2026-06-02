@@ -17,6 +17,7 @@ const DUMMY_RESPAWN_DELAY: float = 2.5
 @onready var _grid: Node2D = $GridGuides
 @onready var _skill_label: Label = $HUD/SkillLabel
 @onready var _skill_status: Label = $HUD/SkillStatus
+@onready var _inventory_panel: CanvasLayer = $InventoryPanel
 
 const SPAWN_OFFSETS: Array[Vector2] = [
 	Vector2(160, 0),
@@ -30,17 +31,21 @@ const CLASS_CYCLE: Array[StringName] = [
 var _current_class_idx: int = 0
 
 func _ready() -> void:
-	_help.text = "Click=move  |  WASD  |  Space=attack  |  1=skill  |  M/P/H/O=switch class  |  K=self-kill  |  Esc=pause"
+	_help.text = "Click=move  |  WASD  |  Space=attack  |  1=skill  |  I=inventory  |  F5=save  |  F9=load  |  M/P/H/O=class  |  Esc=pause"
 	_grid.queue_redraw()
 	_apply_class(CLASS_CYCLE[_current_class_idx])
 	_player.global_position = Vector2.ZERO
 	_player.respawn_position = Vector2.ZERO
 	GameState.player = _player
+	_inventory_panel.bind_inventory(_player.get_inventory())
 
 	var pi := _player.get_input()
 	pi.pause_pressed.connect(_pause.toggle)
 	pi.click_target_set.connect(_on_click_target_set)
 	pi.click_target_cleared.connect(_on_click_target_cleared)
+	pi.inventory_toggle_pressed.connect(_inventory_panel.toggle)
+	pi.save_pressed.connect(_on_save_pressed)
+	pi.load_pressed.connect(_on_load_pressed)
 	_click_marker.visible = false
 
 	for offset in SPAWN_OFFSETS:
@@ -114,6 +119,28 @@ func _on_skill_used(name: String) -> void:
 func _on_skill_failed(reason: String) -> void:
 	_skill_status.text = "Skill failed: %s" % reason
 	_skill_status.modulate = Color(0.9, 0.4, 0.4, 1)
+
+func _on_save_pressed() -> void:
+	var ok := SaveSystem.save_game()
+	_skill_status.text = "Saved." if ok else "Save failed."
+	_skill_status.modulate = Color(0.9, 0.85, 0.5, 1) if ok else Color(0.9, 0.4, 0.4, 1)
+
+func _on_load_pressed() -> void:
+	var ok := SaveSystem.load_game()
+	if ok:
+		_inventory_panel.bind_inventory(_player.get_inventory())
+		_overlay.bind_stats(_player.current_stats)
+		# Re-wire the skill — the load path re-ran assign_class which
+		# replaced the skill node.
+		var skill := _player.get_skill_1()
+		if skill != null:
+			if not skill.skill_used.is_connected(_on_skill_used):
+				skill.skill_used.connect(_on_skill_used)
+			if not skill.skill_failed.is_connected(_on_skill_failed):
+				skill.skill_failed.connect(_on_skill_failed)
+		_refresh_skill_label()
+	_skill_status.text = "Loaded." if ok else "No save / load failed."
+	_skill_status.modulate = Color(0.9, 0.85, 0.5, 1) if ok else Color(0.9, 0.4, 0.4, 1)
 
 func _unhandled_input(event: InputEvent) -> void:
 	var ke := event as InputEventKey

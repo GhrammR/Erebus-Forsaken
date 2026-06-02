@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://test/skills_workbench.gd" id="1_sw"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://test/click_marker.gd" id="4_marker"]
 [ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="5_pause"]
 [ext_resource type="PackedScene" path="res://scenes/ui/debug_stat_overlay.tscn" id="6_overlay"]
+[ext_resource type="PackedScene" path="res://scenes/ui/inventory_panel.tscn" id="7_inv"]
 
 [node name="SkillsWorkbench" type="Node2D"]
 y_sort_enabled = true
@@ -31,6 +32,8 @@ script = ExtResource("4_marker")
 z_index = 10
 
 [node name="DebugStatOverlay" parent="." instance=ExtResource("6_overlay")]
+
+[node name="InventoryPanel" parent="." instance=ExtResource("7_inv")]
 
 [node name="PauseMenu" parent="." instance=ExtResource("5_pause")]
 
