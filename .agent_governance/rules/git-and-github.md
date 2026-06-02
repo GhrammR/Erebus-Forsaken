@@ -102,3 +102,18 @@ script that runs the `audit` checks listed in
   before staging.
 - Never `git add -A` or `git add .` — stage files by name so generated
   caches do not slip in.
+
+## Commit message trailers — forbidden
+
+- **No `Co-Authored-By:` trailer for the AI agent.** It is widely
+  understood that AI assistance is part of this project's workflow;
+  attributing co-authorship in every commit gives the agent
+  disproportionate credit for what is one person's project.
+- **No `Generated with Claude Code` / `Generated with <AI tool>` /
+  similar footer lines.** Same reason.
+- Other trailers (`Signed-off-by`, `Fixes #N`) remain allowed when
+  applicable.
+
+If the user explicitly asks for a Co-Authored-By line on a specific
+commit (e.g., joint work with another human), include it. Default is
+to omit.

@@ -1,0 +1,169 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/zones/threshold_camp.gd" id="1_camp"]
+[ext_resource type="PackedScene" path="res://art/procedural/zones/fire_pit.tscn" id="2_pit"]
+[ext_resource type="PackedScene" path="res://art/procedural/zones/tent.tscn" id="3_tent"]
+
+[sub_resource type="RectangleShape2D" id="rect_n"]
+size = Vector2(1400, 40)
+
+[sub_resource type="RectangleShape2D" id="rect_s"]
+size = Vector2(1400, 40)
+
+[sub_resource type="RectangleShape2D" id="rect_e"]
+size = Vector2(40, 800)
+
+[sub_resource type="RectangleShape2D" id="rect_w"]
+size = Vector2(40, 800)
+
+[node name="ThresholdCamp" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_camp")
+zone_id = &"threshold_camp"
+
+[node name="VoidBackground" type="ColorRect" parent="."]
+mouse_filter = 2
+offset_left = -2400.0
+offset_top = -1600.0
+offset_right = 2400.0
+offset_bottom = 1600.0
+color = Color(0.018, 0.015, 0.027, 1)
+
+[node name="LitGround" type="Polygon2D" parent="."]
+z_index = -10
+polygon = PackedVector2Array(-560, -260, -440, -340, -240, -380, 40, -400, 280, -380, 460, -320, 560, -220, 600, -60, 580, 100, 500, 240, 340, 340, 120, 380, -120, 380, -340, 340, -480, 240, -560, 100, -600, -60, -600, -180)
+color = Color(0.07, 0.065, 0.09, 1)
+
+[node name="LitGlow" type="Polygon2D" parent="."]
+z_index = -9
+modulate = Color(1, 1, 1, 0.18)
+polygon = PackedVector2Array(-360, -160, -200, -240, 0, -260, 220, -240, 360, -160, 400, -40, 380, 80, 280, 200, 120, 260, -120, 260, -280, 200, -380, 80, -400, -40)
+color = Color(0.16, 0.13, 0.10, 1)
+
+[node name="FirePit" parent="." instance=ExtResource("2_pit")]
+position = Vector2(0, 0)
+
+[node name="Tents" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="Tent1" parent="Tents" instance=ExtResource("3_tent")]
+position = Vector2(-220, -120)
+
+[node name="Tent2" parent="Tents" instance=ExtResource("3_tent")]
+position = Vector2(220, -80)
+scale = Vector2(-1, 1)
+
+[node name="Tent3" parent="Tents" instance=ExtResource("3_tent")]
+position = Vector2(-60, 200)
+scale = Vector2(0.9, 0.9)
+
+[node name="Braziers" type="Node2D" parent="."]
+
+[node name="B0" type="Polygon2D" parent="Braziers"]
+position = Vector2(-540, -40)
+polygon = PackedVector2Array(-4, -4, 4, -4, 6, 8, -6, 8)
+color = Color(0.22, 0.18, 0.12, 1)
+
+[node name="F0" type="Polygon2D" parent="Braziers"]
+position = Vector2(-540, -16)
+polygon = PackedVector2Array(-3, -8, 0, -14, 3, -8, 4, -2, -4, -2)
+color = Color(1.0, 0.55, 0.18, 1)
+
+[node name="B1" type="Polygon2D" parent="Braziers"]
+position = Vector2(-380, -300)
+polygon = PackedVector2Array(-4, -4, 4, -4, 6, 8, -6, 8)
+color = Color(0.22, 0.18, 0.12, 1)
+
+[node name="F1" type="Polygon2D" parent="Braziers"]
+position = Vector2(-380, -276)
+polygon = PackedVector2Array(-3, -8, 0, -14, 3, -8, 4, -2, -4, -2)
+color = Color(1.0, 0.55, 0.18, 1)
+
+[node name="B2" type="Polygon2D" parent="Braziers"]
+position = Vector2(0, -360)
+polygon = PackedVector2Array(-4, -4, 4, -4, 6, 8, -6, 8)
+color = Color(0.22, 0.18, 0.12, 1)
+
+[node name="F2" type="Polygon2D" parent="Braziers"]
+position = Vector2(0, -336)
+polygon = PackedVector2Array(-3, -8, 0, -14, 3, -8, 4, -2, -4, -2)
+color = Color(1.0, 0.55, 0.18, 1)
+
+[node name="B3" type="Polygon2D" parent="Braziers"]
+position = Vector2(380, -300)
+polygon = PackedVector2Array(-4, -4, 4, -4, 6, 8, -6, 8)
+color = Color(0.22, 0.18, 0.12, 1)
+
+[node name="F3" type="Polygon2D" parent="Braziers"]
+position = Vector2(380, -276)
+polygon = PackedVector2Array(-3, -8, 0, -14, 3, -8, 4, -2, -4, -2)
+color = Color(1.0, 0.55, 0.18, 1)
+
+[node name="B4" type="Polygon2D" parent="Braziers"]
+position = Vector2(540, -40)
+polygon = PackedVector2Array(-4, -4, 4, -4, 6, 8, -6, 8)
+color = Color(0.22, 0.18, 0.12, 1)
+
+[node name="F4" type="Polygon2D" parent="Braziers"]
+position = Vector2(540, -16)
+polygon = PackedVector2Array(-3, -8, 0, -14, 3, -8, 4, -2, -4, -2)
+color = Color(1.0, 0.55, 0.18, 1)
+
+[node name="B5" type="Polygon2D" parent="Braziers"]
+position = Vector2(380, 240)
+polygon = PackedVector2Array(-4, -4, 4, -4, 6, 8, -6, 8)
+color = Color(0.22, 0.18, 0.12, 1)
+
+[node name="F5" type="Polygon2D" parent="Braziers"]
+position = Vector2(380, 264)
+polygon = PackedVector2Array(-3, -8, 0, -14, 3, -8, 4, -2, -4, -2)
+color = Color(1.0, 0.55, 0.18, 1)
+
+[node name="B6" type="Polygon2D" parent="Braziers"]
+position = Vector2(0, 320)
+polygon = PackedVector2Array(-4, -4, 4, -4, 6, 8, -6, 8)
+color = Color(0.22, 0.18, 0.12, 1)
+
+[node name="F6" type="Polygon2D" parent="Braziers"]
+position = Vector2(0, 344)
+polygon = PackedVector2Array(-3, -8, 0, -14, 3, -8, 4, -2, -4, -2)
+color = Color(1.0, 0.55, 0.18, 1)
+
+[node name="B7" type="Polygon2D" parent="Braziers"]
+position = Vector2(-380, 240)
+polygon = PackedVector2Array(-4, -4, 4, -4, 6, 8, -6, 8)
+color = Color(0.22, 0.18, 0.12, 1)
+
+[node name="F7" type="Polygon2D" parent="Braziers"]
+position = Vector2(-380, 264)
+polygon = PackedVector2Array(-3, -8, 0, -14, 3, -8, 4, -2, -4, -2)
+color = Color(1.0, 0.55, 0.18, 1)
+
+[node name="PerimeterWalls" type="StaticBody2D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="N" type="CollisionShape2D" parent="PerimeterWalls"]
+position = Vector2(0, -400)
+shape = SubResource("rect_n")
+
+[node name="S" type="CollisionShape2D" parent="PerimeterWalls"]
+position = Vector2(0, 400)
+shape = SubResource("rect_s")
+
+[node name="E" type="CollisionShape2D" parent="PerimeterWalls"]
+position = Vector2(640, 0)
+shape = SubResource("rect_e")
+
+[node name="W" type="CollisionShape2D" parent="PerimeterWalls"]
+position = Vector2(-640, 0)
+shape = SubResource("rect_w")
+
+[node name="SpawnPoint" type="Marker2D" parent="."]
+position = Vector2(0, 140)
+
+[node name="VendorSpot" type="Marker2D" parent="."]
+position = Vector2(220, -60)
+
+[node name="QuestSpot" type="Marker2D" parent="."]
+position = Vector2(-220, -100)
