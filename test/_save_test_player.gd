@@ -17,8 +17,8 @@ func setup(class_id: StringName) -> void:
 	_inventory = Inventory.new()
 	_inventory.name = "Inventory"        # SaveSystem looks up via get_node_or_null("Inventory")
 	_inventory.stats = current_stats
-	_inventory.class_id = class_data.id
 	add_child(_inventory)
+	_inventory.set_active_class(class_data.id)
 
 func get_inventory() -> Inventory:
 	return _inventory
@@ -29,5 +29,4 @@ func assign_class(cd: ClassData) -> void:
 	class_data = cd
 	current_stats = Stats.from_class_data(cd, 1)
 	_inventory.stats = current_stats
-	_inventory.class_id = cd.id
-	_inventory._recompute_totals()
+	_inventory.set_active_class(cd.id)

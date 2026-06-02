@@ -87,10 +87,11 @@ func assign_class(cd: ClassData) -> void:
 	current_stats = Stats.from_class_data(cd, 1)
 	current_stats.recomputed.connect(_on_stats_recomputed)
 	_health.set_stats(current_stats)
-	# Re-bind inventory to the new Stats (Stage 4)
+	# Re-bind inventory to the new Stats, then swap to this class's
+	# per-class loadout (stashes the outgoing class's items so they
+	# come back next time we switch to that class).
 	_inventory.stats = current_stats
-	_inventory.class_id = cd.id
-	_inventory._recompute_totals()
+	_inventory.set_active_class(cd.id)
 
 	# Stage 5 — swap the primary skill slot for the new class.
 	if _skill_1 != null:

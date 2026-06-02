@@ -12,8 +12,16 @@ signal equipment_changed(slot: int, item: ItemData)
 var stats: Stats = null
 var class_id: StringName = &""
 
-var backpack: Array[StringName] = []          # item ids
-var equipped: Dictionary = {}                  # int slot -> StringName item_id
+var backpack: Array[StringName] = []          # item ids (active class)
+var equipped: Dictionary = {}                  # int slot -> StringName item_id (active class)
+
+## Per-class loadouts. Keyed by class_id (StringName) -> Dictionary
+## with shape { "backpack": Array[StringName], "equipped": Dictionary }.
+## `backpack` and `equipped` above are the *active* class's live
+## containers; on class swap we snapshot them back here and load the
+## new class's pair. This is the source of item truth across class
+## swaps — a Pythia staff never ends up on a Myrmidon.
+var loadouts: Dictionary = {}
 
 # ---- backpack -------------------------------------------------------------
 
@@ -117,25 +125,94 @@ static func _add(d: Dictionary, key: StringName, value: int) -> void:
 		return
 	d[key] = int(d.get(key, 0)) + value
 
+# ---- per-class loadouts ----------------------------------------------------
+
+## Snapshot the active backpack + equipped pair into loadouts[class_id].
+## Called before swapping the active class.
+func _stash_active_loadout() -> void:
+	if class_id == &"":
+		return
+	loadouts[class_id] = {
+		"backpack": backpack.duplicate(),
+		"equipped": equipped.duplicate(),
+	}
+
+## Load loadouts[new_class_id] into the active backpack + equipped, or
+## clear them if this class has no saved loadout yet. Does NOT stash
+## the current active set — caller must do that first if needed.
+func _load_loadout(new_class_id: StringName) -> void:
+	backpack.clear()
+	equipped.clear()
+	var saved: Dictionary = loadouts.get(new_class_id, {})
+	var bp: Array = saved.get("backpack", [])
+	for id in bp:
+		backpack.append(id)
+	var eq: Dictionary = saved.get("equipped", {})
+	for k in eq.keys():
+		equipped[int(k)] = eq[k]
+
+## Atomic class-swap entry point. Stash the outgoing class's loadout,
+## switch active class_id, load the incoming class's loadout (or empty
+## if first time), recompute totals against the (now new) Stats, and
+## re-emit signals so any bound UI rebuilds. Player.assign_class calls
+## this after re-binding `stats`.
+func set_active_class(new_class_id: StringName) -> void:
+	if new_class_id == class_id and not loadouts.is_empty():
+		# Same class as before — just recompute against (possibly new) Stats.
+		_recompute_totals()
+		inventory_changed.emit()
+		return
+	_stash_active_loadout()
+	class_id = new_class_id
+	_load_loadout(new_class_id)
+	_recompute_totals()
+	inventory_changed.emit()
+	for slot_id in equipped.keys():
+		var item: ItemData = Database.get_item(equipped[slot_id]) as ItemData
+		equipment_changed.emit(int(slot_id), item)
+
 # ---- serialization (used by SaveSystem) ------------------------------------
 
 func snapshot() -> Dictionary:
-	var eq: Dictionary = {}
-	for slot_id in equipped.keys():
-		eq[str(slot_id)] = String(equipped[slot_id])
-	var bp: Array = []
-	for id in backpack:
-		bp.append(String(id))
-	return { "backpack": bp, "equipped": eq }
+	# Make sure the live containers are reflected in loadouts before we
+	# serialize, so the active class's current state isn't lost.
+	_stash_active_loadout()
+	var out_loadouts: Dictionary = {}
+	for cid in loadouts.keys():
+		var entry: Dictionary = loadouts[cid]
+		var eq_out: Dictionary = {}
+		for slot_id in entry.get("equipped", {}).keys():
+			eq_out[str(slot_id)] = String(entry["equipped"][slot_id])
+		var bp_out: Array = []
+		for id in entry.get("backpack", []):
+			bp_out.append(String(id))
+		out_loadouts[String(cid)] = { "backpack": bp_out, "equipped": eq_out }
+	return {
+		"active_class": String(class_id),
+		"loadouts": out_loadouts,
+	}
 
 func restore(data: Dictionary) -> void:
+	loadouts.clear()
 	backpack.clear()
 	equipped.clear()
-	for s in data.get("backpack", []):
-		backpack.append(StringName(s))
-	var eq: Dictionary = data.get("equipped", {})
-	for k in eq.keys():
-		equipped[int(k)] = StringName(eq[k])
+	var raw: Dictionary = data.get("loadouts", {})
+	for cid_s in raw.keys():
+		var entry: Dictionary = raw[cid_s]
+		var bp_in: Array[StringName] = []
+		for s in entry.get("backpack", []):
+			bp_in.append(StringName(s))
+		var eq_in: Dictionary = {}
+		var eq_raw: Dictionary = entry.get("equipped", {})
+		for k in eq_raw.keys():
+			eq_in[int(k)] = StringName(eq_raw[k])
+		loadouts[StringName(cid_s)] = { "backpack": bp_in, "equipped": eq_in }
+	# The caller (SaveSystem) already re-ran assign_class which will
+	# have called set_active_class. We re-load against the restored
+	# loadouts dict to pick up the freshly-deserialized contents.
+	var active := StringName(data.get("active_class", class_id))
+	class_id = active
+	_load_loadout(active)
 	_recompute_totals()
 	inventory_changed.emit()
 	for slot_id in equipped.keys():

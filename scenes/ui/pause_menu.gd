@@ -52,3 +52,19 @@ func _on_quit() -> void:
 	get_tree().paused = false
 	quit_requested.emit()
 	get_tree().quit()
+
+## Esc closes the pause menu while paused. PlayerInput lives on the
+## Player which uses the default pausable process mode, so its
+## `_unhandled_input` stops firing while `get_tree().paused == true` —
+## the open key never reaches it. The CanvasLayer for this scene is
+## set to `WHEN_PAUSED`, so `_input` here continues to receive events.
+## See testing.md "Modal UI — Esc-to-close contract".
+func _input(event: InputEvent) -> void:
+	if not visible:
+		return
+	var ke := event as InputEventKey
+	if ke == null or not ke.pressed or ke.echo:
+		return
+	if ke.keycode == KEY_ESCAPE:
+		_on_resume()
+		get_viewport().set_input_as_handled()

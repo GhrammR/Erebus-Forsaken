@@ -470,6 +470,39 @@ Skills now visibly animate.
 
 ---
 
+## 16. Paused PlayerInput swallows the unpause key
+
+**Symptom:** Pressing Esc opens the pause menu. Pressing Esc again
+does nothing — the pause menu stays up. The Resume button still works.
+Same pattern would apply to any "modal opens via PlayerInput, then
+pauses the tree" UI.
+
+**Root cause:** `PlayerInput` is a child of `Player` which inherits
+the default `PROCESS_MODE_PAUSABLE`. The moment something sets
+`get_tree().paused = true`, `PlayerInput._unhandled_input` stops
+firing. The signal that opened the modal can never fire to close it
+because the input source is itself paused.
+
+**Prevention:**
+- Modals that pause the tree (currently just PauseMenu) MUST close
+  themselves on Esc via their own `_input` override. The CanvasLayer
+  hosting the modal must have `process_mode = WHEN_PAUSED` (or
+  `ALWAYS`) so `_input` still fires while paused.
+- See testing.md "Modal UI — Esc-to-close contract" for the
+  reference pattern. Both `inventory_panel.gd` (non-pausing modal)
+  and `pause_menu.gd` (pausing modal) implement it.
+
+**Recovery:** If a future pausing modal exhibits this symptom, add
+`_input(event)` that consumes Esc while `visible` and calls
+`get_viewport().set_input_as_handled()`. Verify the modal's
+CanvasLayer is `WHEN_PAUSED` in the .tscn.
+
+**First incident:** Visual playtest after Stage 5 cleanup. Pause
+menu opened on Esc but Esc failed to close it because PlayerInput
+was paused. Fix: `PauseMenu._input` handles Esc directly.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

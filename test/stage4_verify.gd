@@ -145,13 +145,39 @@ func _run_save_load_test(fail_in: int) -> int:
 		fake_player.get_inventory().equipped.size()])
 	if not ok_roundtrip: fail += 1
 
-	# Migration shim
+	# Per-class loadout isolation: Myrmidon equipment must not appear
+	# on Pythia, and switching back to Myrmidon restores it exactly.
+	fake_player.assign_class(Database.get_class_data(&"myrmidon"))
+	fake_player.get_inventory().add_item(&"bronze_plate")
+	fake_player.get_inventory().equip(&"bronze_plate")
+	var myr_eq_before := fake_player.get_inventory().equipped.duplicate()
+	var myr_bp_before := fake_player.get_inventory().backpack.duplicate()
+	fake_player.assign_class(Database.get_class_data(&"pythia"))
+	var pyt_empty_eq: bool = fake_player.get_inventory().equipped.is_empty()
+	var pyt_empty_bp: bool = fake_player.get_inventory().backpack.is_empty()
+	fake_player.assign_class(Database.get_class_data(&"myrmidon"))
+	var myr_eq_after := fake_player.get_inventory().equipped.duplicate()
+	var myr_bp_after := fake_player.get_inventory().backpack.duplicate()
+	var ok_loadout: bool = pyt_empty_eq and pyt_empty_bp \
+		and myr_eq_before == myr_eq_after \
+		and myr_bp_before == myr_bp_after
+	print("[%s] per-class loadout isolated: pythia empty=%s, myr restored=%s" % [
+		"OK  " if ok_loadout else "FAIL",
+		pyt_empty_eq and pyt_empty_bp,
+		myr_eq_before == myr_eq_after and myr_bp_before == myr_bp_after])
+	if not ok_loadout: fail += 1
+
+	# Migration shim — v1 jumps through every step up to SAVE_VERSION.
 	var v1: Dictionary = {"version": 1, "class_id": "myrmidon", "level": 1}
 	var migrated := SaveSystem.migrate(v1)
-	var ok_mig: bool = int(migrated.get("version", 0)) == 2 \
-		and migrated.has("inventory")
-	print("[%s] migrate(v1->v2) adds inventory and bumps version" % (
-		"OK  " if ok_mig else "FAIL"))
+	var inv_block: Dictionary = migrated.get("inventory", {})
+	var ok_mig: bool = int(migrated.get("version", 0)) == SaveSystem.SAVE_VERSION \
+		and inv_block.has("loadouts") \
+		and inv_block.has("active_class") \
+		and String(inv_block["active_class"]) == "myrmidon" \
+		and (inv_block["loadouts"] as Dictionary).has("myrmidon")
+	print("[%s] migrate(v1->v%d) bumps version + builds per-class loadouts" % [
+		"OK  " if ok_mig else "FAIL", SaveSystem.SAVE_VERSION])
 	if not ok_mig: fail += 1
 
 	# Cleanup test save so we don't leave litter for real runs

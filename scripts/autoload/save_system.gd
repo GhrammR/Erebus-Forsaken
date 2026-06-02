@@ -4,7 +4,7 @@ extends Node
 ## migrate() step. The on-disk format is human-readable so a tester can
 ## hand-edit corruption cases (rules/failure-modes.md #7 leans on this).
 
-const SAVE_VERSION: int = 2
+const SAVE_VERSION: int = 3
 const SAVE_PATH: String = "user://save_slot_1.dat"
 
 signal save_completed(success: bool)
@@ -69,6 +69,8 @@ func migrate(old: Dictionary) -> Dictionary:
 		return old
 	if v < 2:
 		old = _migrate_v1_to_v2(old)
+	if v < 3:
+		old = _migrate_v2_to_v3(old)
 	return old
 
 func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
@@ -76,6 +78,25 @@ func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
 	old["version"] = 2
 	if not old.has("inventory"):
 		old["inventory"] = { "backpack": [], "equipped": {} }
+	return old
+
+func _migrate_v2_to_v3(old: Dictionary) -> Dictionary:
+	# v2 had a single inventory block shared across class swaps. v3
+	# replaces it with per-class loadouts. The v2 block becomes the
+	# loadout for whichever class the save was last on.
+	old["version"] = 3
+	var legacy: Dictionary = old.get("inventory", {})
+	var active := String(old.get("class_id", ""))
+	var new_inv: Dictionary = {
+		"active_class": active,
+		"loadouts": {},
+	}
+	if active != "":
+		new_inv["loadouts"][active] = {
+			"backpack": legacy.get("backpack", []),
+			"equipped": legacy.get("equipped", {}),
+		}
+	old["inventory"] = new_inv
 	return old
 
 # ---- snapshot / apply ----------------------------------------------------
