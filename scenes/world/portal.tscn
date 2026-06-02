@@ -1,0 +1,112 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/portal.gd" id="1_p"]
+[ext_resource type="PackedScene" path="res://art/procedural/npcs/selection_ring.tscn" id="2_sel"]
+
+[sub_resource type="CapsuleShape2D" id="cap_feet"]
+radius = 6.0
+height = 10.0
+
+[sub_resource type="CircleShape2D" id="interact_circle"]
+radius = 70.0
+
+[sub_resource type="Animation" id="anim_pulse"]
+length = 1.6
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Body/Glyph:modulate")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0.0, 0.8, 1.6),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Color(0.85, 0.65, 1.0, 1), Color(1.0, 0.95, 1.0, 1), Color(0.85, 0.65, 1.0, 1)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Body/Halo:modulate")
+tracks/1/interp = 2
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0.0, 0.8, 1.6),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Color(0.6, 0.4, 0.9, 0.16), Color(0.75, 0.55, 1.0, 0.26), Color(0.6, 0.4, 0.9, 0.16)]
+}
+
+[sub_resource type="AnimationLibrary" id="anim_lib"]
+_data = {
+"pulse": SubResource("anim_pulse")
+}
+
+[node name="Portal" type="StaticBody2D"]
+y_sort_enabled = true
+input_pickable = false
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("1_p")
+display_name = "Threshold"
+
+[node name="SelectionRing" parent="." instance=ExtResource("2_sel")]
+
+[node name="Body" type="Node2D" parent="."]
+
+[node name="Halo" type="Polygon2D" parent="Body"]
+z_index = -2
+modulate = Color(0.6, 0.4, 0.9, 0.18)
+position = Vector2(0, -18)
+polygon = PackedVector2Array(-36, -28, -20, -40, 20, -40, 36, -28, 40, -10, 32, 10, 16, 24, -16, 24, -32, 10, -40, -10)
+color = Color(0.55, 0.35, 0.95, 1)
+
+[node name="StoneBase" type="Polygon2D" parent="Body"]
+position = Vector2(0, 4)
+polygon = PackedVector2Array(-18, -4, -22, 6, -16, 12, 16, 12, 22, 6, 18, -4)
+color = Color(0.18, 0.16, 0.22, 1)
+
+[node name="StonePillar" type="Polygon2D" parent="Body"]
+position = Vector2(0, -16)
+polygon = PackedVector2Array(-14, -22, -16, 16, 16, 16, 14, -22, 8, -26, -8, -26)
+color = Color(0.22, 0.20, 0.28, 1)
+
+[node name="Glyph" type="Polygon2D" parent="Body"]
+position = Vector2(0, -22)
+polygon = PackedVector2Array(0, -10, 6, -2, 4, 6, -4, 6, -6, -2)
+color = Color(0.85, 0.65, 1.0, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -2)
+rotation = 1.5707964
+shape = SubResource("cap_feet")
+
+[node name="InteractArea" type="Area2D" parent="."]
+input_pickable = false
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractArea"]
+position = Vector2(0, -16)
+shape = SubResource("interact_circle")
+
+[node name="InteractPrompt" type="Label" parent="."]
+z_index = 100
+z_as_relative = false
+mouse_filter = 2
+offset_left = -90.0
+offset_top = -86.0
+offset_right = 90.0
+offset_bottom = -64.0
+theme_override_colors/font_color = Color(0.85, 0.75, 1.0, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+horizontal_alignment = 1
+text = "[E] enter"
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+autoplay = "pulse"
+libraries = {
+"": SubResource("anim_lib")
+}

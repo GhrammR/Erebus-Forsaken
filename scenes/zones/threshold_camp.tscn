@@ -1,10 +1,11 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/zones/threshold_camp.gd" id="1_camp"]
 [ext_resource type="PackedScene" path="res://art/procedural/zones/fire_pit.tscn" id="2_pit"]
 [ext_resource type="PackedScene" path="res://art/procedural/zones/tent.tscn" id="3_tent"]
 [ext_resource type="PackedScene" path="res://scenes/npc/kallias.tscn" id="4_kal"]
 [ext_resource type="PackedScene" path="res://scenes/npc/eurynome.tscn" id="5_eur"]
+[ext_resource type="PackedScene" path="res://scenes/world/portal.tscn" id="6_portal"]
 
 [sub_resource type="RectangleShape2D" id="rect_n"]
 size = Vector2(1400, 40)
@@ -177,3 +178,8 @@ position = Vector2(-220, -100)
 
 [node name="QuestSpot" type="Marker2D" parent="."]
 position = Vector2(-220, -100)
+
+[node name="WildernessPortal" parent="." instance=ExtResource("6_portal")]
+position = Vector2(0, 350)
+display_name = "Blighted Reach"
+target_zone = &"blighted_reach"

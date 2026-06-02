@@ -62,6 +62,16 @@ func _ready() -> void:
 	# acquires/loses the required item out of vendor flow.
 	_player.get_inventory().inventory_changed.connect(_reevaluate_quests)
 
+	# Workbench is a dev scene — intercept SceneRouter transit calls
+	# so portals in the camp don't blow the workbench away.
+	SceneRouter.set_zone_host(self)
+
+func _exit_tree() -> void:
+	SceneRouter.clear_zone_host(self)
+
+func transit_to_zone(zone_id: StringName) -> void:
+	_set_status("Workbench: portal would transit to %s (no-op here)." % zone_id, true)
+
 func _on_save_pressed() -> void:
 	var ok := SaveSystem.save_game()
 	_set_status("Saved." if ok else "Save failed.", ok)
