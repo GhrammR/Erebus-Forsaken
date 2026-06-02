@@ -11,6 +11,7 @@ entries = [
 { "item_id": &"worn_helm", "price": 0 },
 { "item_id": &"silken_robe", "price": 0 },
 { "item_id": &"simple_greaves", "price": 0 },
+{ "item_id": &"silver_amulet", "price": 0 },
 { "item_id": &"myrmidon_spear_starter", "price": 0 },
 { "item_id": &"pythia_staff_starter", "price": 0 },
 { "item_id": &"shade_bow_starter", "price": 0 },

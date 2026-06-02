@@ -9,8 +9,10 @@ extends Node2D
 @onready var _overlay: CanvasLayer = $DebugStatOverlay
 @onready var _inventory_panel: CanvasLayer = $InventoryPanel
 @onready var _vendor_panel: CanvasLayer = $VendorPanel
+@onready var _quest_panel: CanvasLayer = $QuestPanel
 @onready var _help: Label = $HUD/Help
 @onready var _info: Label = $HUD/DebugInfo
+@onready var _status: Label = $HUD/Status
 @onready var _click_marker: Node2D = $ClickMarker
 
 func _ready() -> void:
@@ -49,13 +51,28 @@ func _ready() -> void:
 	if k != null and not k.vendor_open_requested.is_connected(_on_vendor_open):
 		k.vendor_open_requested.connect(_on_vendor_open)
 
+	var eur := _camp.get_node_or_null(^"Eurynome") as Eurynome
+	if eur != null and not eur.quest_open_requested.is_connected(_on_quest_open):
+		eur.quest_open_requested.connect(_on_quest_open)
+
+	# Keep the QuestSystem's completion flag in sync as the player
+	# acquires/loses the required item out of vendor flow.
+	_player.get_inventory().inventory_changed.connect(_reevaluate_quests)
+
 func _on_save_pressed() -> void:
-	SaveSystem.save_game()
+	var ok := SaveSystem.save_game()
+	_set_status("Saved." if ok else "Save failed.", ok)
 
 func _on_load_pressed() -> void:
-	if SaveSystem.load_game():
+	var ok := SaveSystem.load_game()
+	if ok:
 		_inventory_panel.bind_inventory(_player.get_inventory())
 		_overlay.bind_stats(_player.current_stats)
+	_set_status("Loaded." if ok else "No save / load failed.", ok)
+
+func _set_status(msg: String, ok: bool) -> void:
+	_status.text = msg
+	_status.modulate = Color(0.85, 0.95, 0.65, 1) if ok else Color(0.95, 0.55, 0.45, 1)
 
 func _on_click_target_set(world_pos: Vector2) -> void:
 	_click_marker.global_position = world_pos
@@ -78,6 +95,16 @@ func _on_vendor_open(npc: Kallias) -> void:
 	if npc == null or npc.stock == null:
 		return
 	_vendor_panel.open_for(npc.display_name, npc.stock, _player.get_inventory(), _player.get_wallet())
+
+func _on_quest_open(npc: Eurynome) -> void:
+	if npc == null:
+		return
+	_quest_panel.open_for(npc.quest_id, _player.get_inventory(), _player.get_wallet())
+
+func _reevaluate_quests() -> void:
+	# Cheap pass: evaluate the only known quest. With more quests
+	# we'd track active ids on QuestSystem and iterate them.
+	QuestSystem.evaluate(&"eurynome_relic", _player.get_inventory())
 
 func _unhandled_input(event: InputEvent) -> void:
 	var ke := event as InputEventKey

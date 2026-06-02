@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="QuestData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/quest_data.gd" id="1_qd"]
+
+[resource]
+script = ExtResource("1_qd")
+id = &"eurynome_relic"
+title = "A Sister's Token"
+offer_text = "My sister was taken into the dark. She wore silver — a small amulet, all our mother left us. If you find one out here, bring it to me. I will pay what I have."
+in_progress_text = "Any silver yet? Kallias often pulls amulets off bodies the dark sends back. He may have one."
+turn_in_text = "You found it. Bless the dim flame for that. Take this gold — and this ring. I have no further need of it."
+required_item_id = &"silver_amulet"
+required_count = 1
+reward_gold = 60
+reward_item_id = &"iron_ring"

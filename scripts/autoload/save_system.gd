@@ -4,7 +4,7 @@ extends Node
 ## migrate() step. The on-disk format is human-readable so a tester can
 ## hand-edit corruption cases (rules/failure-modes.md #7 leans on this).
 
-const SAVE_VERSION: int = 4
+const SAVE_VERSION: int = 5
 const SAVE_PATH: String = "user://save_slot_1.dat"
 
 signal save_completed(success: bool)
@@ -73,6 +73,8 @@ func migrate(old: Dictionary) -> Dictionary:
 		old = _migrate_v2_to_v3(old)
 	if v < 4:
 		old = _migrate_v3_to_v4(old)
+	if v < 5:
+		old = _migrate_v4_to_v5(old)
 	return old
 
 func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
@@ -108,6 +110,13 @@ func _migrate_v3_to_v4(old: Dictionary) -> Dictionary:
 		old["gold"] = 0
 	return old
 
+func _migrate_v4_to_v5(old: Dictionary) -> Dictionary:
+	# v4 had no quest state. Seed empty.
+	old["version"] = 5
+	if not old.has("quests"):
+		old["quests"] = {}
+	return old
+
 # ---- snapshot / apply ----------------------------------------------------
 
 func _player() -> Node:
@@ -133,6 +142,7 @@ func _snapshot(player: Node) -> Dictionary:
 		"position": { "x": player.global_position.x, "y": player.global_position.y },
 		"inventory": inv.snapshot() if inv != null else { "backpack": [], "equipped": {} },
 		"gold": wallet.gold if wallet != null else 0,
+		"quests": QuestSystem.snapshot(),
 	}
 	return snap
 
@@ -157,6 +167,7 @@ func _apply(player: Node, data: Dictionary) -> void:
 	var wallet: Wallet = player.get_node_or_null(^"Wallet") as Wallet
 	if wallet != null:
 		wallet.set_gold(int(data.get("gold", 0)))
+	QuestSystem.restore(data.get("quests", {}))
 	# Stats restore needs to happen AFTER inventory restore so equip
 	# bonuses are applied before we set current_hp / mp.
 	if stats != null:

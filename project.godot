@@ -23,6 +23,7 @@ SaveSystem="*res://scripts/autoload/save_system.gd"
 EventBus="*res://scripts/autoload/event_bus.gd"
 SceneRouter="*res://scripts/autoload/scene_router.gd"
 Database="*res://scripts/autoload/database.gd"
+QuestSystem="*res://scripts/autoload/quest_system.gd"
 
 [display]
 

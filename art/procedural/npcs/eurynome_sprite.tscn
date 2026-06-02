@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+[node name="EurynomeSprite" type="Node2D"]
+
+[node name="Shadow" type="Polygon2D" parent="."]
+z_index = -1
+polygon = PackedVector2Array(-8, 0, 8, 0, 6, 4, -6, 4)
+color = Color(0, 0, 0, 0.5)
+
+[node name="Robe" type="Polygon2D" parent="."]
+position = Vector2(0, -22)
+polygon = PackedVector2Array(-9, 22, -7, -4, 7, -4, 9, 22)
+color = Color(0.30, 0.32, 0.42, 1)
+
+[node name="Mantle" type="Polygon2D" parent="."]
+position = Vector2(0, -22)
+polygon = PackedVector2Array(-9, -2, -10, 8, -6, 6, 6, 6, 10, 8, 9, -2)
+color = Color(0.20, 0.22, 0.30, 1)
+
+[node name="Brooch" type="Polygon2D" parent="."]
+position = Vector2(0, -16)
+polygon = PackedVector2Array(-2, -1, 2, -1, 2, 1, -2, 1)
+color = Color(0.85, 0.85, 0.95, 1)
+
+[node name="Head" type="Polygon2D" parent="."]
+position = Vector2(0, -36)
+polygon = PackedVector2Array(-5, -6, 5, -6, 6, 0, 5, 6, -5, 6, -6, 0)
+color = Color(0.75, 0.60, 0.55, 1)
+
+[node name="Hair" type="Polygon2D" parent="."]
+position = Vector2(0, -42)
+polygon = PackedVector2Array(-6, -2, -7, 6, -2, 6, 2, 6, 7, 6, 6, -2)
+color = Color(0.12, 0.15, 0.22, 1)
