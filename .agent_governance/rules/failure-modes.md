@@ -503,6 +503,62 @@ was paused. Fix: `PauseMenu._input` handles Esc directly.
 
 ---
 
+## 17. Area2D added (or its state changed) mid-physics-flush
+
+**Symptom:** Errors printed during combat:
+`ERROR: Can't change this state while flushing queries. Use
+call_deferred() or set_deferred() to change monitoring state instead.`
+Gameplay continues — usually nothing visibly breaks — but the log
+fills up. The errors typically come in bursts that correlate with
+something dying or a hit landing.
+
+**Root cause:** A node tree containing an `Area2D` is added to the
+scene tree (or an `Area2D`'s `monitoring` / `monitorable` /
+`collision_layer` / `collision_mask` / shape `disabled` is mutated
+synchronously) from inside a callback chain that originated in a
+physics flush. The chain looks like:
+`Area2D.area_entered/body_entered (physics flush)` →
+`HealthComponent.take_damage` → `died` signal →
+`_on_died` handler → `add_child(thing_with_an_Area2D)` — and the new
+Area2D's automatic registration with the physics server happens
+synchronously while the server is still flushing the prior query.
+
+**Prevention:**
+- Any `add_child` of a scene that contains an `Area2D` (HurtboxComponent,
+  HitboxComponent, PickupArea, etc.) inside a damage/death callback
+  must be wrapped in `call_deferred`:
+  ```gdscript
+  _spawn_thing.call_deferred(args...)
+  func _spawn_thing(...): get_parent().add_child(thing)
+  ```
+- Any direct mutation of an Area2D's `monitoring`, `monitorable`,
+  `collision_layer`, `collision_mask`, or a CollisionShape2D's
+  `disabled` must use `set_deferred` if it could conceivably run
+  inside a physics callback. Default to deferred in component
+  `_ready`s as well, since the component author can't predict whether
+  the component will later be spawned mid-flush.
+
+**Recovery:** Search for direct (non-deferred) physics-state writes:
+```
+grep -rn "\.disabled\s*=\|\.monitoring\s*=\|\.monitorable\s*=\
+\|\.collision_layer\s*=\|\.collision_mask\s*=" scripts scenes \
+  | grep -vE "set_deferred|^\s*#"
+```
+For `add_child` calls of Area2D-bearing scenes, audit each
+`_on_died` / `_on_damaged` / `area_entered` / `body_entered`
+handler and any signal handler reachable from them.
+
+**First incident:** Stage 5 visual playtest. `Enemy._try_drop` was
+called from `_on_died` (fired during a physics flush) and
+synchronously `add_child`ed a `WorldItem` whose `PickupArea` Area2D
+registered with the physics server mid-flush. Fix: route the spawn
+through `_spawn_world_item.call_deferred(...)`. Also tightened
+`HitboxComponent._ready` to set its shape's `disabled` deferred,
+since hitbox components are spawned from skill code and may run
+under callback contexts in future skills.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

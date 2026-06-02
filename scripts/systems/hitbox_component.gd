@@ -14,7 +14,12 @@ class_name HitboxComponent extends Area2D
 var _hit_this_swing: Array[Node] = []
 
 func _ready() -> void:
-	_shape.disabled = true
+	# Always defer collision-shape state changes. If a hitbox is added
+	# to the tree during a physics callback (e.g., a skill spawning a
+	# follow-up hitbox from a hit signal), a synchronous `disabled = ...`
+	# triggers "Can't change this state while flushing queries". See
+	# failure-modes #17.
+	_shape.set_deferred(&"disabled", true)
 	# AD-09 lives or dies by this: Area2D.input_pickable defaults to true
 	# and would silently consume mouse clicks within the hitbox.
 	# A 40-radius cleave circle around the player would otherwise create

@@ -55,10 +55,21 @@ func _try_drop() -> void:
 	var id: StringName = drop_table.roll()
 	if id == &"":
 		return
+	# _on_died runs from inside a physics-flush callback chain
+	# (area_entered -> take_damage -> died). Adding a WorldItem
+	# synchronously here would attach its PickupArea Area2D mid-flush,
+	# triggering "Can't change this state while flushing queries".
+	# Defer to the next idle frame. See failure-modes #17.
+	var jitter := Vector2(randf_range(-12, 12), randf_range(-6, 6))
+	var drop_pos := global_position + jitter
+	_spawn_world_item.call_deferred(id, drop_pos)
+
+func _spawn_world_item(id: StringName, at: Vector2) -> void:
+	var parent := get_parent()
+	if parent == null or not is_instance_valid(parent):
+		return
 	var item := _WORLD_ITEM_SCENE.instantiate()
 	item.item_id = id
-	# Small random offset so multi-drop doesn't perfectly stack.
-	var jitter := Vector2(randf_range(-12, 12), randf_range(-6, 6))
-	get_parent().add_child(item)
-	item.global_position = global_position + jitter
-	EventBus.item_dropped.emit(id, item.global_position)
+	parent.add_child(item)
+	item.global_position = at
+	EventBus.item_dropped.emit(id, at)
