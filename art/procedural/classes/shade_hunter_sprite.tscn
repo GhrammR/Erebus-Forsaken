@@ -1,0 +1,31 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://art/procedural/classes/shade_hunter_sprite.gd" id="1_sh"]
+
+[node name="ShadeHunterSprite" type="Node2D"]
+script = ExtResource("1_sh")
+
+[node name="Shadow" type="Polygon2D" parent="."]
+z_index = -1
+
+[node name="Body" type="Node2D" parent="."]
+
+[node name="Cloak" type="Polygon2D" parent="Body"]
+z_index = -1
+
+[node name="Legs" type="Polygon2D" parent="Body"]
+
+[node name="Torso" type="Polygon2D" parent="Body"]
+
+[node name="Hood" type="Polygon2D" parent="Body"]
+
+[node name="EyeGlow" type="Polygon2D" parent="Body"]
+
+[node name="BowArm" type="Node2D" parent="."]
+position = Vector2(12, -28)
+
+[node name="Bow" type="Polygon2D" parent="BowArm"]
+
+[node name="String" type="Polygon2D" parent="BowArm"]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

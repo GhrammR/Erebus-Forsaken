@@ -73,6 +73,15 @@ func assign_class(cd: ClassData) -> void:
 	assert(cd != null, "Player.assign_class: ClassData is null")
 	class_data = cd
 
+	# Stage 5: any class change is also a fresh start for skills. Sweep
+	# persistent skill entities — currently just BoneServantMinion via
+	# its group. Also handles the save-load path (SaveSystem calls
+	# assign_class), satisfying the gap-log "minions don't persist
+	# across saves" invariant.
+	for m in get_tree().get_nodes_in_group(&"bone_servant_minions"):
+		if is_instance_valid(m):
+			m.queue_free()
+
 	if current_stats != null and current_stats.recomputed.is_connected(_on_stats_recomputed):
 		current_stats.recomputed.disconnect(_on_stats_recomputed)
 	current_stats = Stats.from_class_data(cd, 1)

@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://art/procedural/classes/ossuary_priest_sprite.gd" id="1_op"]
+
+[node name="OssuaryPriestSprite" type="Node2D"]
+script = ExtResource("1_op")
+
+[node name="Shadow" type="Polygon2D" parent="."]
+z_index = -1
+
+[node name="Body" type="Node2D" parent="."]
+
+[node name="Robe" type="Polygon2D" parent="Body"]
+
+[node name="Torso" type="Polygon2D" parent="Body"]
+
+[node name="ShoulderLeft" type="Polygon2D" parent="Body"]
+
+[node name="ShoulderRight" type="Polygon2D" parent="Body"]
+
+[node name="Hood" type="Polygon2D" parent="Body"]
+z_index = -1
+
+[node name="Head" type="Polygon2D" parent="Body"]
+
+[node name="WandArm" type="Node2D" parent="."]
+position = Vector2(10, -28)
+
+[node name="Shaft" type="Polygon2D" parent="WandArm"]
+
+[node name="Glow" type="Polygon2D" parent="WandArm"]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
