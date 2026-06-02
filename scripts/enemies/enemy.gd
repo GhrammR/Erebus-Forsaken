@@ -22,6 +22,9 @@ func _ready() -> void:
 	# Enemy body is a CharacterBody2D; disable mouse picking so it
 	# doesn't eat click-to-move events (failure-modes.md #13).
 	input_pickable = false
+	# Stage 5: ally minions (BoneServantMinion) look up valid targets
+	# via this group. Every Enemy joins it on _ready.
+	add_to_group(&"enemies")
 	current_stats = Stats.new_basic(max_hp, defense_value, attack_rating_value)
 	_health.set_stats(current_stats)
 	_health.damaged.connect(_on_damaged)

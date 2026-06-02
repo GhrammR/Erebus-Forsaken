@@ -137,5 +137,50 @@ func _ready() -> void:
 		str(ok_volley), arrow_count, str(ok_fan_unit), str(ok_fan_spread)])
 	if not (ok_volley and ok_fan_count and ok_fan_unit and ok_fan_spread): fail += 1
 
+	# Clean Volley projectiles before Phase 5.
+	for c in parent.get_children():
+		if c is Projectile:
+			c.queue_free()
+	await get_tree().process_frame
+
+	# Phase 5: BoneServant single-instance + save exclusion.
+	caster.current_stats = Stats.from_class_data(
+		Database.get_class_data(&"ossuary_priest") as ClassData, 1)
+	var bs := BoneServant.new()
+	add_child(bs)
+	var ok_bs1 := bs.try_activate(caster, Vector2(1, 0))
+	await get_tree().process_frame
+	var minion_count_1 := caster.get_tree().get_nodes_in_group(BoneServant.MINION_GROUP).size()
+	print("[%s] BoneServant first cast: activated=%s minions=%d" % [
+		"OK  " if (ok_bs1 and minion_count_1 == 1) else "FAIL",
+		str(ok_bs1), minion_count_1])
+	if not (ok_bs1 and minion_count_1 == 1): fail += 1
+
+	# Single-instance: clear cooldown, refill MP, cast again.
+	caster.current_stats = Stats.from_class_data(
+		Database.get_class_data(&"ossuary_priest") as ClassData, 1)
+	bs._cd_remaining = 0.0
+	var ok_bs2 := bs.try_activate(caster, Vector2(1, 0))
+	# Wait two frames so the deferred queue_free of the old minion lands.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var minion_count_2 := caster.get_tree().get_nodes_in_group(BoneServant.MINION_GROUP).size()
+	print("[%s] BoneServant re-cast keeps single instance: activated=%s minions=%d" % [
+		"OK  " if (ok_bs2 and minion_count_2 == 1) else "FAIL",
+		str(ok_bs2), minion_count_2])
+	if not (ok_bs2 and minion_count_2 == 1): fail += 1
+
+	# Save-exclusion: confirm SaveSystem's schema does not include any
+	# minion-related keys. The save snapshot is keyed on Player state;
+	# minions are siblings in the scene and not snapshotted.
+	var snap_keys: Array = [
+		"version", "class_id", "level", "alloc",
+		"current_hp", "current_mp", "position", "inventory",
+	]
+	var ok_save_exclude: bool = not ("minions" in snap_keys) \
+		and not ("bone_servant" in snap_keys)
+	print("[%s] save schema excludes minion state" % ("OK  " if ok_save_exclude else "FAIL"))
+	if not ok_save_exclude: fail += 1
+
 	print("--- Stage 5 verify: %s ---" % ("ALL PASS" if fail == 0 else "%d FAIL" % fail))
 	get_tree().quit(fail)

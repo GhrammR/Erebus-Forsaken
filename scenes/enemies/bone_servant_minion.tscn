@@ -1,0 +1,44 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/bone_servant_minion.gd" id="1_bsm"]
+[ext_resource type="Script" path="res://scripts/systems/health_component.gd" id="2_hc"]
+[ext_resource type="Script" path="res://scripts/systems/hurtbox_component.gd" id="3_hb"]
+[ext_resource type="Script" path="res://scripts/systems/hitbox_component.gd" id="4_hit"]
+
+[sub_resource type="RectangleShape2D" id="rect_minion_hit"]
+size = Vector2(30, 22)
+
+[sub_resource type="RectangleShape2D" id="rect_minion_hurt"]
+size = Vector2(14, 34)
+
+[node name="BoneServantMinion" type="CharacterBody2D"]
+y_sort_enabled = true
+input_pickable = false
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_bsm")
+
+[node name="SpriteAnchor" type="Node2D" parent="."]
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("2_hc")
+
+[node name="HurtboxComponent" type="Area2D" parent="."]
+input_pickable = false
+collision_layer = 8
+collision_mask = 64
+script = ExtResource("3_hb")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HurtboxComponent"]
+position = Vector2(0, -20)
+shape = SubResource("rect_minion_hurt")
+
+[node name="HitboxComponent" type="Area2D" parent="."]
+input_pickable = false
+collision_layer = 32
+collision_mask = 16
+script = ExtResource("4_hit")
+base_damage = 8
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HitboxComponent"]
+shape = SubResource("rect_minion_hit")

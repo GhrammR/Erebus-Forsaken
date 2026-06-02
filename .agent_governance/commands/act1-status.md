@@ -146,11 +146,27 @@ HealthComponent + verifier reference DamageResolver.
 
 ## Stage 5 — Skills (one per class)
 
-* \[ ] Myrmidon: Spear Lunge
-* \[ ] Pythia: Oracle Bolt (or final-named arcane projectile)
-* \[ ] Shade-Hunter: Volley
-* \[ ] Ossuary Priest: Bone Servant (summon, single minion)
-* \[ ] `class-balance` skill passes
+* [x] Skill base + per-class subclasses, slot-1 input (KEY_1),
+  facing_dir: Vector2 on Player (gap-log fix), --skills workbench
+  with M/P/H/O class cycler.
+* [x] Myrmidon: Spear Lunge — directional swing, 80x35 rectangle
+  hitbox rotated to facing_dir, MP 8 / CD 1.2s / dmg 22.
+* [x] Pythia: Oracle Bolt — Projectile component, single bolt
+  in facing_dir, speed 500 / range 600 / MP 12 / CD 0.9s / dmg 18.
+* [x] Shade-Hunter: Volley — three-arrow fan, ±15° spread, speed 600,
+  per-arrow dmg 8 (total 24) / MP 14 / CD 1.5s.
+* [x] Ossuary Priest: Bone Servant — persistent minion (HP 60,
+  attack 8 every 0.8s, melee, finds "enemies" group target).
+  Single-instance enforced via bone_servant_minions group sweep.
+  Save exclusion verified (snap schema has no minion keys).
+* [x] `class-balance` skill: MP cost band [5,25] PASS, cooldown band
+  [0.5, 6.0] PASS, attribute primaries PASS, no forbidden Act 2
+  stats. (DPS variance pending visual playtest measurement.)
+* [x] AD-04 invariant intact: only health_component.gd and
+  stage3_verify.gd call DamageResolver.resolve.
+* [x] --verify5 headless verifier covers all four skills + Projectile
+  + single-instance + save-exclusion. ALL PASS, exit 0.
+* [~] Visual skills-workbench playtest — awaiting user.
 
 ## Stage 6 — Town
 

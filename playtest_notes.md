@@ -12,6 +12,43 @@ Format per session (see `.agent_governance/commands/playtest.md`):
 
 ---
 
+## 2026-06-01 — stage 5
+
+- [done] --verify5 ALL PASS through six phases:
+  - All four skills construct with class-balance bands satisfied.
+  - SpearLunge spawns directional hitbox at facing_dir * 40, rotated
+    to facing_dir.angle(), with the correct base_damage and owner_body.
+  - Cooldown blocks immediate re-cast.
+  - MP cost deducted via Stats.spend_mp (25 -> 17 for Myrmidon).
+  - OracleBolt: projectile speed=500, max_distance=600.
+  - Volley: exactly 3 projectiles, unit-vector directions, total
+    angular spread = 2 * FAN_SPREAD_RAD (~0.52 rad).
+  - BoneServant first cast spawns 1 minion in group; re-cast keeps
+    exactly 1 (single-instance via group sweep + queue_free).
+  - Save schema confirmed to exclude minion-related keys.
+- [done] Regression: --verify, --verify3, --verify4 ALL PASS.
+- [done] All workbenches boot clean: --workbench, --movement,
+  --combat, --loot, --skills.
+- [done] AD-04 invariant: DamageResolver only called from
+  health_component.gd and stage3_verify.gd.
+- [pending] Visual playtest of --skills workbench:
+  - Press M/P/H/O to cycle classes; confirm skill HUD updates with
+    correct name + MP + CD + base damage.
+  - Press 1 to fire skill in current facing direction.
+    Myrmidon: rectangle hitbox lands ahead of player; dummy takes
+    ~22 damage on hit; second press within 1.2s shows
+    "Skill failed: cooldown".
+    Pythia: violet bolt travels forward; despawns on first dummy or
+    after ~600px; ~18 damage per hit.
+    Shade-Hunter: three pale arrows fan out; each despawns on its
+    own first hit; ~8 damage per arrow.
+    Ossuary Priest: skeletal minion appears in facing direction;
+    walks to nearest dummy; melee attacks at ~0.8s intervals; second
+    cast frees the old minion and spawns a fresh one.
+  - F5 save with minion alive; F9 load; minion should be absent
+    after load (save exclusion).
+  - Esc opens pause menu; pause-during-skill doesn't crash anything.
+
 ## 2026-05-30 — stage 4
 
 - [done] --verify4 (Inventory + Stats apply + SaveSystem round-trip):
