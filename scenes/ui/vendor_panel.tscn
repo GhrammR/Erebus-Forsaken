@@ -1,0 +1,93 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/vendor_panel.gd" id="1_vp"]
+
+[node name="VendorPanel" type="CanvasLayer"]
+layer = 45
+script = ExtResource("1_vp")
+
+[node name="Dimmer" type="ColorRect" parent="."]
+mouse_filter = 2
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.45)
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -400.0
+offset_top = -260.0
+offset_right = 400.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Margin"]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Panel/Margin/VBox/Header"]
+mouse_filter = 2
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.79, 0.7, 0.48, 1)
+text = "Vendor"
+
+[node name="Gold" type="Label" parent="Panel/Margin/VBox/Header"]
+mouse_filter = 2
+layout_mode = 2
+theme_override_colors/font_color = Color(1.0, 0.85, 0.25, 1)
+text = "0 g"
+
+[node name="HelpHint" type="Label" parent="Panel/Margin/VBox"]
+mouse_filter = 2
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.55, 0.6, 1)
+text = "Click a ware to buy. Click a backpack row to sell. [Esc] or [E] closes."
+
+[node name="Cols" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="WaresCol" type="VBoxContainer" parent="Panel/Margin/VBox/Cols"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Panel/Margin/VBox/Cols/WaresCol"]
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+text = "WARES"
+
+[node name="WaresList" type="VBoxContainer" parent="Panel/Margin/VBox/Cols/WaresCol"]
+
+[node name="BackCol" type="VBoxContainer" parent="Panel/Margin/VBox/Cols"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Panel/Margin/VBox/Cols/BackCol"]
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+text = "BACKPACK (sell)"
+
+[node name="BackList" type="VBoxContainer" parent="Panel/Margin/VBox/Cols/BackCol"]
+
+[node name="Footer" type="HBoxContainer" parent="Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Status" type="Label" parent="Panel/Margin/VBox/Footer"]
+mouse_filter = 2
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.85, 0.85, 0.7, 1)
+text = ""

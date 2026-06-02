@@ -15,3 +15,4 @@ base_resist = 0
 affixes = { &"strength": 2 }
 glyph_color = Color(0.72, 0.5, 0.2, 1)
 glyph_shape = 1
+base_price = 18

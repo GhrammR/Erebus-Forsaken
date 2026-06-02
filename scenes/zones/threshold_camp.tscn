@@ -1,8 +1,9 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/zones/threshold_camp.gd" id="1_camp"]
 [ext_resource type="PackedScene" path="res://art/procedural/zones/fire_pit.tscn" id="2_pit"]
 [ext_resource type="PackedScene" path="res://art/procedural/zones/tent.tscn" id="3_tent"]
+[ext_resource type="PackedScene" path="res://scenes/npc/kallias.tscn" id="4_kal"]
 
 [sub_resource type="RectangleShape2D" id="rect_n"]
 size = Vector2(1400, 40)
@@ -163,6 +164,9 @@ shape = SubResource("rect_w")
 position = Vector2(0, 140)
 
 [node name="VendorSpot" type="Marker2D" parent="."]
+position = Vector2(220, -60)
+
+[node name="Kallias" parent="." instance=ExtResource("4_kal")]
 position = Vector2(220, -60)
 
 [node name="QuestSpot" type="Marker2D" parent="."]

@@ -12,3 +12,4 @@ level_req = 1
 base_armor_defense = 5
 glyph_color = Color(0.55, 0.5, 0.4, 1)
 glyph_shape = 0
+base_price = 22

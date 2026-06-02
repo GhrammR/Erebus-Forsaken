@@ -8,12 +8,13 @@ extends Node2D
 @onready var _pause: CanvasLayer = $PauseMenu
 @onready var _overlay: CanvasLayer = $DebugStatOverlay
 @onready var _inventory_panel: CanvasLayer = $InventoryPanel
+@onready var _vendor_panel: CanvasLayer = $VendorPanel
 @onready var _help: Label = $HUD/Help
 @onready var _info: Label = $HUD/DebugInfo
 @onready var _click_marker: Node2D = $ClickMarker
 
 func _ready() -> void:
-	_help.text = "Click=move  |  WASD  |  I=inventory  |  F5=save  |  F9=load  |  Esc=pause"
+	_help.text = "Click=move  |  WASD  |  E=interact  |  I=inventory  |  M/P/H/O=class  |  F5=save  |  F9=load  |  Esc=pause"
 
 	# Bind player to Myrmidon for first walk-through.
 	var cd: ClassData = Database.get_class_data(&"myrmidon") as ClassData
@@ -32,7 +33,21 @@ func _ready() -> void:
 	pi.load_pressed.connect(_on_load_pressed)
 	pi.click_target_set.connect(_on_click_target_set)
 	pi.click_target_cleared.connect(_on_click_target_cleared)
+	pi.interact_pressed.connect(_on_interact_pressed)
 	_click_marker.visible = false
+
+	# Seed gold so the vendor loop is immediately testable.
+	_player.get_wallet().add_gold(80)
+
+	# Wire any Kallias NPC in the camp to the VendorPanel.
+	for n in get_tree().get_nodes_in_group(&"vendors"):
+		if n is Kallias:
+			(n as Kallias).vendor_open_requested.connect(_on_vendor_open)
+	# The camp's Kallias isn't in a group yet — connect by name as a
+	# fallback.
+	var k := _camp.get_node_or_null(^"Kallias") as Kallias
+	if k != null and not k.vendor_open_requested.is_connected(_on_vendor_open):
+		k.vendor_open_requested.connect(_on_vendor_open)
 
 func _on_save_pressed() -> void:
 	SaveSystem.save_game()
@@ -48,6 +63,41 @@ func _on_click_target_set(world_pos: Vector2) -> void:
 
 func _on_click_target_cleared() -> void:
 	_click_marker.visible = false
+
+func _on_interact_pressed() -> void:
+	# Forward E to the nearest in-range NPC. Range checks are owned
+	# by the NPC's InteractArea; we just iterate the camp's NPCs.
+	var npcs := _camp.find_children("*", "Npc", true, false)
+	for n in npcs:
+		var npc := n as Npc
+		if npc != null and npc.is_in_range():
+			npc.interact()
+			return
+
+func _on_vendor_open(npc: Kallias) -> void:
+	if npc == null or npc.stock == null:
+		return
+	_vendor_panel.open_for(npc.display_name, npc.stock, _player.get_inventory(), _player.get_wallet())
+
+func _unhandled_input(event: InputEvent) -> void:
+	var ke := event as InputEventKey
+	if ke == null or not ke.pressed or ke.echo:
+		return
+	match ke.keycode:
+		KEY_M: _switch_class(&"myrmidon")
+		KEY_P: _switch_class(&"pythia")
+		KEY_H: _switch_class(&"shade_hunter")
+		KEY_O: _switch_class(&"ossuary_priest")
+
+func _switch_class(id: StringName) -> void:
+	var cd: ClassData = Database.get_class_data(id) as ClassData
+	if cd == null:
+		return
+	_player.assign_class(cd)
+	_overlay.bind_stats(_player.current_stats)
+	# set_active_class on the inventory already fired; rebind the
+	# panel so the visible columns refresh for the new class.
+	_inventory_panel.bind_inventory(_player.get_inventory())
 
 func _process(_delta: float) -> void:
 	if _player == null:

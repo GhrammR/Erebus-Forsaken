@@ -18,6 +18,7 @@ signal debug_kill_self_pressed   ## Stage 3 workbench: K to demo death/respawn
 signal inventory_toggle_pressed  ## Stage 4: I toggles inventory
 signal save_pressed              ## Stage 4: F5
 signal load_pressed              ## Stage 4: F9
+signal interact_pressed          ## Stage 6: E to talk to nearest in-range NPC
 
 const ARRIVE_THRESHOLD: float = 4.0
 ## Stuck detection: if click-to-move is active but the body hasn't moved
@@ -61,6 +62,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			save_pressed.emit()
 		elif ke.keycode == KEY_F9:
 			load_pressed.emit()
+		elif ke.keycode == KEY_E:
+			interact_pressed.emit()
 		elif ke.keycode in [KEY_W, KEY_A, KEY_S, KEY_D]:
 			# WASD overrides click target the moment a key is pressed.
 			if _has_click_target:

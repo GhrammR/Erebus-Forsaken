@@ -559,6 +559,41 @@ under callback contexts in future skills.
 
 ---
 
+## 18. New `class_name`s not picked up in headless verifier runs
+
+**Symptom:** Add a new GDScript with `class_name Foo extends Node`,
+reference `Foo` from another script, then run a headless verifier:
+`SCRIPT ERROR: Parse Error: Could not find type "Foo" in the
+current scope.` The editor (if opened separately) finds the class
+fine; only the headless run breaks.
+
+**Root cause:** Godot 4 maintains a `class_name` registry in
+`.godot/global_script_class_cache.cfg`. Headless invocations
+(`godot --headless …`) do not refresh this cache; only an editor
+session does. New `class_name` declarations are invisible to a
+headless run until the editor has scanned the project once.
+
+**Prevention:**
+- After adding any new `class_name` declaration, run
+  `godot --headless --editor --path . --quit` once before invoking
+  the headless verifier. The editor refreshes the cache and exits
+  cleanly in roughly the time it would take to import any new
+  binary assets.
+- Do **not** hand-edit `.godot/global_script_class_cache.cfg`. It's
+  a generated file; manual edits work locally but never persist
+  (the `.godot/` directory is gitignored) and they can desync if
+  the file is touched by both you and the engine.
+
+**Recovery:** If a headless run is throwing "Identifier X not
+declared" or "Could not find type X" for a class that obviously
+exists, run the one-shot editor bootstrap above and retry.
+
+**First incident:** Stage 6 Phase 3. Added `Wallet`, `Zone`,
+`ThresholdCamp`, `Npc`, `Kallias`, `MerchantStock` — none resolved
+in headless tests until `godot --editor --quit` rebuilt the cache.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

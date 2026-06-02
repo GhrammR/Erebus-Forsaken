@@ -14,3 +14,4 @@ base_resist = 5
 affixes = { &"pneuma": 3 }
 glyph_color = Color(0.85, 0.85, 0.75, 1)
 glyph_shape = 0
+base_price = 22

@@ -13,3 +13,4 @@ base_weapon_ar = 35
 affixes = { &"dexterity": 3 }
 glyph_color = Color(0.4, 0.7, 0.7, 1)
 glyph_shape = 1
+base_price = 18

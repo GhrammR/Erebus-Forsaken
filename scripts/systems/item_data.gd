@@ -23,3 +23,9 @@ class_name ItemData extends Resource
 @export_group("Display (Stage 4 procedural)")
 @export var glyph_color: Color = Color(0.85, 0.78, 0.55)
 @export var glyph_shape: ItemGlyph.Shape = ItemGlyph.Shape.SQUARE
+
+@export_group("Economy (Stage 6)")
+## Base shop price in gold. Vendors buy at half this value, sell at
+## this value (a flat 2x spread for now; market dynamics come later).
+## A value of 0 means non-sellable and not stocked by vendors.
+@export var base_price: int = 0

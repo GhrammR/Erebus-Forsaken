@@ -13,3 +13,4 @@ base_armor_defense = 12
 affixes = { &"strength": 3 }
 glyph_color = Color(0.72, 0.5, 0.2, 1)
 glyph_shape = 0
+base_price = 22

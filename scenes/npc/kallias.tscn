@@ -1,0 +1,53 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/npc/kallias.gd" id="1_k"]
+[ext_resource type="PackedScene" path="res://art/procedural/npcs/kallias_sprite.tscn" id="2_ks"]
+[ext_resource type="Resource" path="res://data/npc/kallias_stock.tres" id="3_st"]
+
+[sub_resource type="CapsuleShape2D" id="cap_feet"]
+radius = 5.0
+height = 8.0
+
+[sub_resource type="CircleShape2D" id="interact_circle"]
+radius = 60.0
+
+[node name="Kallias" type="StaticBody2D"]
+y_sort_enabled = true
+input_pickable = false
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("1_k")
+display_name = "Kallias the Salvager"
+stock = ExtResource("3_st")
+
+[node name="SpriteAnchor" type="Node2D" parent="."]
+
+[node name="KalliasSprite" parent="SpriteAnchor" instance=ExtResource("2_ks")]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -4)
+rotation = 1.5707964
+shape = SubResource("cap_feet")
+
+[node name="InteractArea" type="Area2D" parent="."]
+input_pickable = false
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractArea"]
+position = Vector2(0, -22)
+shape = SubResource("interact_circle")
+
+[node name="InteractPrompt" type="Label" parent="."]
+z_index = 100
+z_as_relative = false
+mouse_filter = 2
+offset_left = -80.0
+offset_top = -96.0
+offset_right = 80.0
+offset_bottom = -74.0
+theme_override_colors/font_color = Color(0.95, 0.86, 0.58, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+horizontal_alignment = 1
+text = "[E] talk"

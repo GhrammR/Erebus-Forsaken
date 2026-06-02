@@ -174,10 +174,21 @@ HealthComponent + verifier reference DamageResolver.
 
 ## Stage 6 — Town
 
-* \[ ] Town zone with collision and traversable layout
-* \[ ] One vendor NPC: buy/sell loop, gold currency, inventory exchange
-* \[ ] One quest-giver NPC: single quest, accept/turn-in flow
-* \[ ] Town is the respawn point
+* [x] Phase 1 — Currency: Wallet, gold pickups, save round-trip,
+  enemy drop hook (verified Stage 4 verifier).
+* [x] Phase 2 — Threshold camp zone: animated fire pit, three tents,
+  perimeter braziers, invisible perimeter walls, named NPC markers.
+* [x] Phase 3 — NPC base + Kallias the Salvager (vendor): proximity
+  interact (E), VendorPanel UI with buy/sell, MerchantStock resource,
+  base_price on every ItemData, class-cycling preserved in town
+  workbench (M/P/H/O).
+* \[ ] Phase 4 — Eurynome (quest-giver): QuestSystem autoload, single
+  fetch quest with accept / turn-in / reward, QuestPanel UI.
+* \[ ] Phase 5 — Town as respawn point: main.tscn boots into camp;
+  SaveSystem snapshots/restores zone + position.
+* \[ ] Phase 6 — stage6_verify.gd + visual playtest.
+* \[ ] End-of-Stage-6 polish: click-to-interact on NPCs (walk to NPC
+  then auto-open panel — ARPG genre standard).
 
 ## Stage 7 — Wilderness
 

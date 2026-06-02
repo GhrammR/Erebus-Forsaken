@@ -12,3 +12,4 @@ level_req = 1
 affixes = { &"vitality": 2 }
 glyph_color = Color(0.7, 0.7, 0.75, 1)
 glyph_shape = 3
+base_price = 14
