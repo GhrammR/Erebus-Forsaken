@@ -47,6 +47,21 @@ func toggle() -> void:
 	if visible:
 		_refresh()
 
+## Esc closes the inventory without opening the pause menu. We use
+## `_input` (priority above `_unhandled_input`) so we can mark the
+## event handled before PlayerInput sees it and emits pause_pressed.
+## Same pattern applies to any future modal UI — close yourself on
+## Esc and mark the event handled.
+func _input(event: InputEvent) -> void:
+	if not visible:
+		return
+	var ke := event as InputEventKey
+	if ke == null or not ke.pressed or ke.echo:
+		return
+	if ke.keycode == KEY_ESCAPE:
+		toggle()
+		get_viewport().set_input_as_handled()
+
 func _refresh() -> void:
 	if _inventory == null:
 		return

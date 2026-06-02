@@ -10,9 +10,10 @@ extends Node2D
 @onready var _click_marker: Node2D = $ClickMarker
 @onready var _grid: Node2D = $GridGuides
 @onready var _overlay: CanvasLayer = $DebugStatOverlay
+@onready var _inventory_panel: CanvasLayer = $InventoryPanel
 
 func _ready() -> void:
-	_help.text = "Click to move  |  WASD secondary  |  Esc pauses  |  WASD cancels current click target"
+	_help.text = "Click=move  |  WASD  |  I=inventory  |  F5=save  |  F9=load  |  Esc=pause"
 
 	# Assign Myrmidon class — sprite, stats, and signals all flow from this.
 	var cd: ClassData = Database.get_class_data(&"myrmidon") as ClassData
@@ -21,12 +22,16 @@ func _ready() -> void:
 		return
 	_player.assign_class(cd)
 	_overlay.bind_stats(_player.current_stats)
+	_inventory_panel.bind_inventory(_player.get_inventory())
 
-	# Hook input -> pause menu.
+	# Hook input -> pause menu, inventory, save/load.
 	var pi := _player.get_input()
 	pi.pause_pressed.connect(_pause.toggle)
 	pi.click_target_set.connect(_on_click_target_set)
 	pi.click_target_cleared.connect(_on_click_target_cleared)
+	pi.inventory_toggle_pressed.connect(_inventory_panel.toggle)
+	pi.save_pressed.connect(_on_save_pressed)
+	pi.load_pressed.connect(_on_load_pressed)
 	_click_marker.visible = false
 
 	# Spawn player at world origin.
@@ -55,3 +60,11 @@ func _on_click_target_set(world_pos: Vector2) -> void:
 
 func _on_click_target_cleared() -> void:
 	_click_marker.visible = false
+
+func _on_save_pressed() -> void:
+	SaveSystem.save_game()
+
+func _on_load_pressed() -> void:
+	if SaveSystem.load_game():
+		_inventory_panel.bind_inventory(_player.get_inventory())
+		_overlay.bind_stats(_player.current_stats)

@@ -16,6 +16,7 @@ const DAMAGE_NUMBER := preload("res://scenes/vfx/damage_number.tscn")
 @onready var _dn_layer: Node2D = $DamageNumberLayer
 @onready var _grid: Node2D = $GridGuides
 @onready var _death_label: Label = $HUD/DeathLabel
+@onready var _inventory_panel: CanvasLayer = $InventoryPanel
 
 const SPAWN_OFFSETS: Array[Vector2] = [
 	Vector2(160, 0),
@@ -24,7 +25,7 @@ const SPAWN_OFFSETS: Array[Vector2] = [
 ]
 
 func _ready() -> void:
-	_help.text = "Click to move  |  WASD secondary  |  Space attack  |  K self-kill  |  Esc pauses"
+	_help.text = "Click=move  |  WASD  |  Space=attack  |  K=self-kill  |  I=inventory  |  F5=save  |  F9=load  |  Esc=pause"
 	_death_label.visible = false
 	_grid.queue_redraw()
 
@@ -35,12 +36,16 @@ func _ready() -> void:
 	_player.global_position = Vector2.ZERO
 	_player.respawn_position = Vector2.ZERO
 	_overlay.bind_stats(_player.current_stats)
+	_inventory_panel.bind_inventory(_player.get_inventory())
 
-	# Wire player input to pause + click marker.
+	# Wire player input to pause, inventory, save/load + click marker.
 	var pi := _player.get_input()
 	pi.pause_pressed.connect(_pause.toggle)
 	pi.click_target_set.connect(_on_click_target_set)
 	pi.click_target_cleared.connect(_on_click_target_cleared)
+	pi.inventory_toggle_pressed.connect(_inventory_panel.toggle)
+	pi.save_pressed.connect(_on_save_pressed)
+	pi.load_pressed.connect(_on_load_pressed)
 	_click_marker.visible = false
 
 	# Spawn dummies and wire their damage/death signals for VFX.
@@ -81,6 +86,14 @@ func _on_player_died() -> void:
 	_death_label.visible = true
 	await get_tree().create_timer(1.4).timeout
 	_death_label.visible = false
+
+func _on_save_pressed() -> void:
+	SaveSystem.save_game()
+
+func _on_load_pressed() -> void:
+	if SaveSystem.load_game():
+		_inventory_panel.bind_inventory(_player.get_inventory())
+		_overlay.bind_stats(_player.current_stats)
 
 func _process(_delta: float) -> void:
 	if _player == null:

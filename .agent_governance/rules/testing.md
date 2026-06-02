@@ -60,12 +60,16 @@ them.
 
 ## Workbench UI-parity rule
 
-Every workbench (`test/*_workbench.tscn`) MUST instantiate the full
-persistent UI suite, not just the system under test. Skill, combat, loot,
-and stat workbenches all share the same player and the same input map, so
-they must all expose the same surfaces — otherwise a workbench passes its
-own narrow test while quietly breaking save/load, inventory, or pause from
-the player's perspective.
+Every workbench (`test/*_workbench.tscn`) that contains a `Player`
+instance MUST instantiate the full persistent UI suite, not just the
+system under test. They all share the same player and the same input
+map, so they must all expose the same surfaces — otherwise a workbench
+passes its own narrow test while quietly breaking save/load, inventory,
+or pause from the player's perspective.
+
+Workbenches without a Player (e.g., `stat_workbench` which exercises
+Stats directly) are exempt from the UI-parity rule but should still use
+non-conflicting keybinds.
 
 Required nodes in every workbench scene:
 
@@ -97,3 +101,21 @@ Why this rule exists: the skills workbench shipped without an
 invisible to the skill-specific verifier — workbench tests verify the
 system under test, not the cross-cutting UI. The rule is the only place
 this gets caught.
+
+## Modal UI — Esc-to-close contract
+
+Every modal UI (inventory, future stash/quest log/character sheet/etc.)
+MUST close itself on Esc without opening the pause menu underneath.
+
+The mechanism: the modal overrides `_input(event)` (NOT
+`_unhandled_input` — priority matters) and, while `visible`, intercepts
+`KEY_ESCAPE`, calls its own close path, then calls
+`get_viewport().set_input_as_handled()`. This consumes the event before
+`PlayerInput._unhandled_input` runs, so `pause_pressed` never fires.
+
+The modal's open-key (e.g., `I` for inventory) continues to be routed
+via `PlayerInput`'s signal to the panel's `toggle()` — handling open
+and close on the same key is symmetric and free. Only Esc needs the
+priority interception.
+
+Reference implementation: `scenes/ui/inventory_panel.gd::_input`.
