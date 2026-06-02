@@ -14,6 +14,7 @@ class_name Zone extends Node2D
 
 func _ready() -> void:
 	if zone_id != &"":
+		GameState.current_zone_id = zone_id
 		EventBus.zone_changed.emit(zone_id)
 
 ## Where the player appears on first entry / after death. Subclasses

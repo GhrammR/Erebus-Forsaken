@@ -4,7 +4,7 @@ extends Node
 ## migrate() step. The on-disk format is human-readable so a tester can
 ## hand-edit corruption cases (rules/failure-modes.md #7 leans on this).
 
-const SAVE_VERSION: int = 5
+const SAVE_VERSION: int = 6
 const SAVE_PATH: String = "user://save_slot_1.dat"
 
 signal save_completed(success: bool)
@@ -75,6 +75,8 @@ func migrate(old: Dictionary) -> Dictionary:
 		old = _migrate_v3_to_v4(old)
 	if v < 5:
 		old = _migrate_v4_to_v5(old)
+	if v < 6:
+		old = _migrate_v5_to_v6(old)
 	return old
 
 func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
@@ -117,6 +119,14 @@ func _migrate_v4_to_v5(old: Dictionary) -> Dictionary:
 		old["quests"] = {}
 	return old
 
+func _migrate_v5_to_v6(old: Dictionary) -> Dictionary:
+	# v5 had no zone tracking. Default legacy saves to the
+	# threshold camp — the only zone shipped in Act 1 so far.
+	old["version"] = 6
+	if not old.has("zone_id"):
+		old["zone_id"] = "threshold_camp"
+	return old
+
 # ---- snapshot / apply ----------------------------------------------------
 
 func _player() -> Node:
@@ -143,6 +153,7 @@ func _snapshot(player: Node) -> Dictionary:
 		"inventory": inv.snapshot() if inv != null else { "backpack": [], "equipped": {} },
 		"gold": wallet.gold if wallet != null else 0,
 		"quests": QuestSystem.snapshot(),
+		"zone_id": String(GameState.current_zone_id),
 	}
 	return snap
 
@@ -168,6 +179,7 @@ func _apply(player: Node, data: Dictionary) -> void:
 	if wallet != null:
 		wallet.set_gold(int(data.get("gold", 0)))
 	QuestSystem.restore(data.get("quests", {}))
+	GameState.current_zone_id = StringName(data.get("zone_id", "threshold_camp"))
 	# Stats restore needs to happen AFTER inventory restore so equip
 	# bonuses are applied before we set current_hp / mp.
 	if stats != null:

@@ -33,8 +33,19 @@ func _ready() -> void:
 	if "--skills" in args:
 		add_child(load("res://test/skills_workbench.tscn").instantiate())
 		return
-	_build_label.text = "Erebus Forsaken — build %s" % GameState.BUILD_VERSION
-	_hint_label.text = "Stage 4 — F6 on test/loot_workbench.tscn for loot/inventory/save. Esc quits."
+	if "--town" in args:
+		add_child(load("res://test/town_workbench.tscn").instantiate())
+		return
+	if "--splash" in args:
+		_build_label.text = "Erebus Forsaken — build %s" % GameState.BUILD_VERSION
+		_hint_label.text = "Splash. Pass --town for the dev town workbench. Esc quits."
+		return
+	# Default boot — straight into the game (threshold camp, town
+	# auto-resumes from save if one exists). Pass --splash to keep
+	# the title screen, or any workbench flag to bypass.
+	_build_label.hide()
+	_hint_label.hide()
+	add_child(load("res://scenes/game.tscn").instantiate())
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_quit") or event.is_action_pressed("ui_cancel"):
