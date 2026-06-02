@@ -13,6 +13,7 @@ extends Node2D
 
 func _ready() -> void:
 	_help.text = "Click to move  |  WASD secondary  |  Esc pauses  |  WASD cancels current click target"
+
 	# Assign Myrmidon class — sprite, stats, and signals all flow from this.
 	var cd: ClassData = Database.get_class_data(&"myrmidon") as ClassData
 	if cd == null:

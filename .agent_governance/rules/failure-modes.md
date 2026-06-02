@@ -271,6 +271,149 @@ is documented Stage 12 polish, not a regression.
 
 ---
 
+## 13. CollisionObject2D silently eating gameplay mouse clicks
+
+**Symptom:** Click-to-move "dead zones" appear around things. The
+biggest, most visible one is the area around the player; smaller ones
+appear wherever enemies stand. Apparently "random patches" of unclickable
+ground is the giveaway — those patches are the bodies' colliders.
+Clicks inside the dead zone do nothing; clicks just outside work. No
+errors fire.
+
+**Root cause:** `CollisionObject2D` — the parent of `Area2D`, `StaticBody2D`,
+`RigidBody2D`, **and `CharacterBody2D`** — defaults `input_pickable = true`.
+Any picked collider consumes mouse events before they reach
+`_unhandled_input`, even when no `input_event` handler is connected.
+This means *every* physics body silently swallows click-to-move events
+within its collision shape, not just `Area2D`s.
+
+This is the physics analogue of failure-modes #9 (passive Controls
+swallowing input via `mouse_filter = STOP`).
+
+**Prevention:**
+- Every `CollisionObject2D` subclass that is *not* meant to receive
+  mouse input must set `input_pickable = false` — either in `.tscn` or
+  in `_ready()`.
+- Applies to **all** `CharacterBody2D` (player, enemies, NPCs),
+  **all** `Area2D` (hitboxes, hurtboxes, pickup zones, triggers),
+  **all** `StaticBody2D`/`RigidBody2D` (props, walls). Until a body
+  *needs* mouse picking, default to off.
+- For project-wide actors, do it in the actor's base script `_ready`
+  so every subclass and instance gets the override automatically.
+  This project does it in `Player._ready`, `Enemy._ready`,
+  `HitboxComponent._ready`, `HurtboxComponent._ready`,
+  and `WorldItem._ready`.
+- Reserve `input_pickable = true` for cases where you actively *want*
+  the body to be clickable (e.g., a future "click on enemy to attack"
+  handler — Stage 5+ may opt into this, deliberately, on enemy hurtboxes).
+- Audit: scene-auditor check #8.
+
+**Recovery:** Find every gameplay `CollisionObject2D` in the scene
+tree (grep for `type="CharacterBody2D"`, `type="Area2D"`,
+`type="StaticBody2D"`, `type="RigidBody2D"`). For each, decide
+whether it needs to receive mouse input. For the no's, set
+`input_pickable = false` (script `_ready` if it's a reusable actor;
+`.tscn` property if it's a one-off). Re-test click movement directly
+on top of every collider in the scene.
+
+**First incident:** Stage 4 close. Triggered by two layers — first,
+the 40-radius `CircleShape2D` hitbox change (failure-modes #12) made
+the dead zone around the player large and obvious; second, after
+patching the Area2D components, the player's and dummies' own
+`CharacterBody2D` colliders still consumed clicks. The first fix
+covered `HitboxComponent` / `HurtboxComponent` / `WorldItem.PickupArea`;
+the second fix added `input_pickable = false` to `Player._ready`
+and `Enemy._ready`. **Lesson:** treat `CollisionObject2D` as the
+unit of concern, not `Area2D` specifically.
+
+---
+
+## 14. CanvasLayer.visible = false does not disable child Control input
+
+**Symptom:** A pause menu, inventory panel, or any other CanvasLayer-
+based UI is hidden via `hide()` / `visible = false` and looks gone, but
+its Control children **still consume mouse clicks within their rects**.
+The result is invisible click dead zones, often fullscreen ones when
+a Dimmer ColorRect with `anchors_preset = 15` is involved.
+
+This is failure-mode #9 (Control mouse_filter STOP) and #13
+(CollisionObject2D input_pickable) compounded into one. The bug is
+that the *visible flag on the CanvasLayer* affects rendering but not
+the input-handling status of its child Controls — they keep absorbing
+clicks even while invisible.
+
+Confirmed by Stage 4 close diagnostic: walking the scene tree and
+listing every Control whose `mouse_filter != IGNORE` surfaced:
+- `Main/Background` (1280×720, STOP, visible) — main scene background.
+- `PauseMenu/Dimmer` (1280×720, STOP, visible — *but inside a hidden
+  CanvasLayer*).
+- `PauseMenu/Panel` (240×160, STOP, visible — same).
+
+The "fullscreen dead zone" reported in the workbench was the union of
+the Background and the still-active hidden-PauseMenu Dimmer.
+
+**Root cause:** In Godot 4 the `CanvasLayer.visible` flag controls
+drawing, not input. The CanvasLayer skips its render pass, but the
+underlying Control nodes still report themselves to the GUI input
+pipeline and consume events as their `mouse_filter` dictates.
+`mouse_filter = STOP` (the Control default) eats every click within
+the rect.
+
+**Prevention:**
+- Every Control in a hideable UI scene (pause menu, inventory panel,
+  dialog, tooltip, modal) must either:
+  1. Set `mouse_filter = MOUSE_FILTER_IGNORE` in `.tscn` AND keep it
+     that way while hidden, OR
+  2. Have its script flip `mouse_filter` between STOP and IGNORE in
+     concert with `show()` / `hide()` via an `_set_input_active()`
+     helper that walks the subtree recursively (see `pause_menu.gd`
+     and `inventory_panel.gd` for the pattern).
+- For the *pause menu specifically*, set the CanvasLayer's
+  `process_mode = PROCESS_MODE_WHEN_PAUSED` (value `2` in `.tscn`).
+  When the game isn't paused, the menu and all its children stop
+  processing input entirely. Combine with the `_set_input_active`
+  toggle as belt-and-suspenders.
+- For *backgrounds* and *decorative panels*, set `mouse_filter = 2`
+  in the `.tscn` from the start. There is no reason for a background
+  to be a STOP filter.
+
+**Recovery:** Walk the entire scene tree at startup and print every
+Control whose `mouse_filter != IGNORE`, including its rect and parent
+chain. That diagnostic surfaces the culprits instantly:
+
+```gdscript
+func _walk_for_input_culprits(n: Node) -> void:
+    if n is Control:
+        var c := n as Control
+        if c.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+            print(c.get_path(), " filter=", c.mouse_filter,
+                  " rect=", c.get_global_rect())
+    for child in n.get_children():
+        _walk_for_input_culprits(child)
+```
+
+**First incident:** Stage 4 close. Took five separate sessions of
+diagnosis spanning click-on-collider stuck loops (#10), post-die
+transform reset (#11), directional hitbox (#12), and CollisionObject2D
+input_pickable (#13) before this one surfaced as the actual primary
+cause of "click-to-move has dead zones near the player." Each prior
+fix was a real bug, but none was the root of the screen-edge dead
+zones — those were the main-scene Background and the hidden pause
+menu's Dimmer. The walk-the-tree diagnostic identified all three
+culprits in a single pass.
+
+**Lessons applied to governance:**
+- scene-auditor check #9 added: walk the tree at workbench startup,
+  fail on any Control with `mouse_filter != IGNORE` that isn't either
+  an active button or explicitly opt-in.
+- `pause_menu.gd` and `inventory_panel.gd` now own their input-active
+  state through an `_set_input_active(bool)` method that recurses
+  into children; called from `_ready`, `open`, and `hide` paths.
+- `scenes/main.tscn` Background + labels: `mouse_filter = 2`.
+- `pause_menu.tscn` CanvasLayer: `process_mode = 2 (WHEN_PAUSED)`.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

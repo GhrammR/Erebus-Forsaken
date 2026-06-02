@@ -26,6 +26,7 @@ horizontal_alignment = 1
 text = "?"
 
 [node name="PickupArea" type="Area2D" parent="."]
+input_pickable = false
 collision_layer = 128
 collision_mask = 2
 

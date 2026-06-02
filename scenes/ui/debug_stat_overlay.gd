@@ -4,9 +4,20 @@ extends CanvasLayer
 ## owner matches.
 
 @onready var _label: RichTextLabel = $Panel/Margin/Label
+@onready var _panel: PanelContainer = $Panel
+@onready var _margin: MarginContainer = $Panel/Margin
 
 var _stats: Stats = null
 var _title: String = ""
+
+func _ready() -> void:
+	# Belt-and-suspenders: force MOUSE_FILTER_IGNORE on every Control in
+	# the chain at runtime. RichTextLabel in particular has been seen to
+	# silently revert .tscn-level mouse_filter under some conditions.
+	# See failure-modes.md #14.
+	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func bind_stats(stats: Stats, title: String = "") -> void:
 	if _stats == stats:

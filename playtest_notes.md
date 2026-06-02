@@ -44,6 +44,38 @@ Format per session (see `.agent_governance/commands/playtest.md`):
   arrive with bitmap art in Stage 12. The cleave hitbox above means
   this no longer affects gameplay correctness, only visual feel.
 - [done] Visual loot-workbench playtest PASS after hitbox fix.
+- [bug-fixed] Click-to-move dead zones, particularly an 80-pixel circle
+  around the player. Root cause: Area2D.input_pickable defaults to true
+  and silently consumes mouse events inside the area, even with no
+  input_event handler. The new 40-radius cleave hitbox + the
+  HurtboxComponents + WorldItem.PickupArea all stole clicks. Fix:
+  input_pickable=false in HitboxComponent._ready / HurtboxComponent._ready
+  / WorldItem._ready. Recorded as failure-modes.md #13; scene-auditor
+  check #8 added.
+
+## 2026-06-01 — stage 4 close (dead-zone bug, definitive fix)
+
+- [bug-fixed] Persistent screen-quadrant click dead zones. Several
+  sessions of diagnosis (false leads: stretch_mode, panel auto-grow,
+  RichTextLabel selection). A tree-walking diagnostic that listed
+  every Control with mouse_filter != IGNORE surfaced the actual
+  culprits in one pass: (1) main scene's Background ColorRect
+  (1280x720, STOP); (2) hidden PauseMenu's Dimmer ColorRect (1280x720,
+  STOP, visible=true on the Control despite parent CanvasLayer.visible
+  = false); (3) hidden PauseMenu's centered Panel (240x160, STOP).
+  Root cause: Godot 4 CanvasLayer.visible=false stops rendering but
+  does NOT disable child Control input.
+- [fix] (a) main.tscn Background + labels get mouse_filter=2;
+  (b) pause_menu CanvasLayer process_mode set to WHEN_PAUSED so it
+  processes nothing while the game is unpaused; (c) pause_menu.gd and
+  inventory_panel.gd own an _set_input_active helper that recursively
+  toggles every child Control between STOP and IGNORE on show/hide;
+  (d) stretch_mode changed canvas_items -> viewport so mouse coords
+  always normalize to the 1280x720 base.
+- [done] Visual movement-workbench playtest PASS — dead zones gone
+  across the entire viewport.
+- [governance] failure-modes.md #14 recorded; scene-auditor check #9
+  added; diagnostic snippet preserved for future hunts.
 
 ## 2026-05-30 — stage 3
 

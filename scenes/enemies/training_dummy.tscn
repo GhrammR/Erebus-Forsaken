@@ -15,6 +15,7 @@ size = Vector2(16, 50)
 
 [node name="TrainingDummy" type="CharacterBody2D"]
 y_sort_enabled = true
+input_pickable = false
 collision_layer = 4
 collision_mask = 3
 script = ExtResource("1_td")
@@ -35,6 +36,7 @@ shape = SubResource("cap_feet")
 script = ExtResource("3_hc")
 
 [node name="HurtboxComponent" type="Area2D" parent="."]
+input_pickable = false
 collision_layer = 16
 collision_mask = 32
 script = ExtResource("4_hb")

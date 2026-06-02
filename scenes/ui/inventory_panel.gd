@@ -14,6 +14,21 @@ var _inventory: Inventory = null
 func _ready() -> void:
 	hide()
 	process_mode = Node.PROCESS_MODE_ALWAYS  # inventory accessible even when paused
+	_set_input_active(false)
+
+## Godot 4 quirk: CanvasLayer.visible = false does NOT disable input
+## handling on child Controls. We must also disable mouse_filter
+## everywhere or those Controls eat clicks behind the curtain. See
+## failure-modes.md #14.
+func _set_input_active(active: bool) -> void:
+	var target := Control.MOUSE_FILTER_STOP if active else Control.MOUSE_FILTER_IGNORE
+	_apply_filter_recursive(self, target)
+
+func _apply_filter_recursive(n: Node, target: int) -> void:
+	if n is Control:
+		(n as Control).mouse_filter = target
+	for child in n.get_children():
+		_apply_filter_recursive(child, target)
 
 func bind_inventory(inv: Inventory) -> void:
 	if _inventory == inv:
@@ -28,6 +43,7 @@ func bind_inventory(inv: Inventory) -> void:
 
 func toggle() -> void:
 	visible = not visible
+	_set_input_active(visible)
 	if visible:
 		_refresh()
 

@@ -19,6 +19,9 @@ var _sprite_anim: AnimationPlayer = null
 var current_stats: Stats = null     # public so DamageResolver finds it via duck-type
 
 func _ready() -> void:
+	# Enemy body is a CharacterBody2D; disable mouse picking so it
+	# doesn't eat click-to-move events (failure-modes.md #13).
+	input_pickable = false
 	current_stats = Stats.new_basic(max_hp, defense_value, attack_rating_value)
 	_health.set_stats(current_stats)
 	_health.damaged.connect(_on_damaged)

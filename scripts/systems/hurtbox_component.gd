@@ -6,6 +6,9 @@ class_name HurtboxComponent extends Area2D
 @export var health: HealthComponent
 
 func _ready() -> void:
+	# Disable mouse pickup — hurtboxes are physics-only. See
+	# failure-modes.md #13.
+	input_pickable = false
 	# Convention: HurtboxComponent and HealthComponent are siblings on
 	# the same entity. Allow explicit override via @export, but default
 	# to the sibling lookup so .tscn authoring stays simple.

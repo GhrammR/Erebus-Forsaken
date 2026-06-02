@@ -38,6 +38,37 @@ description: Detect orphaned nodes, broken signal connections, missing @onready 
 6. **Autoload reference correctness**
    - Calls to autoload names not declared in `project.godot`.
 
+9. **Hidden UI scenes still eating input** (failure-modes.md #14)
+   - For each hideable UI scene (pause menu, inventory panel, modal
+     dialog, tooltip), walk the subtree at startup and confirm every
+     Control has `mouse_filter = IGNORE` while the scene is hidden.
+   - Required pattern: a script-side `_set_input_active(bool)` method
+     called from `_ready`, `open`, and `hide`. See `pause_menu.gd`
+     and `inventory_panel.gd`.
+   - Workbench-friendly audit:
+     ```gdscript
+     # Walk get_tree().root at startup, fail on:
+     #   Control where mouse_filter != IGNORE AND parent CanvasLayer.visible == false
+     ```
+
+8. **CollisionObject2D consuming gameplay clicks** (failure-modes.md #13)
+   - Every gameplay `Area2D`, `CharacterBody2D`, `StaticBody2D`, or
+     `RigidBody2D` that is not meant to handle mouse input must have
+     `input_pickable = false` — in its `.tscn` *or* set in `_ready()`
+     via an actor/component script.
+   - WARN: any of the above node types whose `.tscn` doesn't set
+     `input_pickable = false` **and** whose script doesn't disable
+     it in code. Default `true` silently consumes click-to-move
+     events within the collision shape — produces invisible
+     "dead zones" where the body sits.
+   - Audit grep (fast first-pass):
+     ```
+     grep -rnE '\[node.*type="(Area2D|CharacterBody2D|StaticBody2D|RigidBody2D)"' \
+       --include="*.tscn" scenes/ test/
+     ```
+     Then for each, verify either the .tscn or the script disables
+     `input_pickable`.
+
 7. **Passive Controls absorbing input** (failure-modes.md #9)
    - Any `Control` subtype meant for display only (backgrounds,
      HUD labels, debug overlays, decorative panels) must set

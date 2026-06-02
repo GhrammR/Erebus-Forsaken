@@ -17,6 +17,10 @@ var _item: ItemData = null
 var _picked: bool = false
 
 func _ready() -> void:
+	# Pickup area is walk-over only; never consume mouse clicks.
+	# See failure-modes.md #13.
+	_pickup.input_pickable = false
+
 	# Shadow ellipse at feet
 	var sh: PackedVector2Array = []
 	var n := 14

@@ -30,3 +30,5 @@ secrets/
 # Logs
 *.log
 logs/
+*.png
+Screenshot*.png

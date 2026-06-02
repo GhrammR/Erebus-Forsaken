@@ -13,6 +13,22 @@ func _ready() -> void:
 	hide()
 	_resume_btn.pressed.connect(_on_resume)
 	_quit_btn.pressed.connect(_on_quit)
+	_set_input_active(false)
+
+## Godot 4 quirk: CanvasLayer.visible = false does NOT disable input
+## on its child Controls. Combined with `process_mode = WHEN_PAUSED`
+## on the CanvasLayer (.tscn), this belt-and-suspenders ensures the
+## pause menu's Dimmer/Panel never absorb clicks while hidden.
+## See failure-modes.md #14.
+func _set_input_active(active: bool) -> void:
+	var target := Control.MOUSE_FILTER_STOP if active else Control.MOUSE_FILTER_IGNORE
+	_apply_filter_recursive(self, target)
+
+func _apply_filter_recursive(n: Node, target: int) -> void:
+	if n is Control:
+		(n as Control).mouse_filter = target
+	for child in n.get_children():
+		_apply_filter_recursive(child, target)
 
 func toggle() -> void:
 	if visible:
@@ -23,11 +39,13 @@ func toggle() -> void:
 func open() -> void:
 	get_tree().paused = true
 	show()
+	_set_input_active(true)
 	_resume_btn.grab_focus()
 
 func _on_resume() -> void:
 	get_tree().paused = false
 	hide()
+	_set_input_active(false)
 	resumed.emit()
 
 func _on_quit() -> void:

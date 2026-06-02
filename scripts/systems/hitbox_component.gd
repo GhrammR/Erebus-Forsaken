@@ -15,6 +15,11 @@ var _hit_this_swing: Array[Node] = []
 
 func _ready() -> void:
 	_shape.disabled = true
+	# AD-09 lives or dies by this: Area2D.input_pickable defaults to true
+	# and would silently consume mouse clicks within the hitbox.
+	# A 40-radius cleave circle around the player would otherwise create
+	# an 80-pixel dead zone for click-to-move. See failure-modes.md #13.
+	input_pickable = false
 	# Default owner_body to the enclosing entity (typical case).
 	if owner_body == null:
 		owner_body = _find_entity_owner()

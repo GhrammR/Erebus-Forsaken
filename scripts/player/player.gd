@@ -37,6 +37,11 @@ var _sprite_anim: AnimationPlayer = null
 var _sprite_root: Node = null
 
 func _ready() -> void:
+	# CharacterBody2D inherits input_pickable=true from CollisionObject2D
+	# and would silently consume mouse clicks landing on the player's
+	# collider — visible as a moving click-to-move dead zone. See
+	# failure-modes.md #13.
+	input_pickable = false
 	_input.owner_body = self
 	_input.move_intent_changed.connect(_on_move_intent_changed)
 	_input.attack_pressed.connect(_on_attack_pressed)
