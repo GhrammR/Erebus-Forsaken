@@ -79,5 +79,63 @@ func _ready() -> void:
 		mp_before, caster.current_stats.current_mp, lunge.mp_cost])
 	if not ok_mp_spent: fail += 1
 
+	# Clean up the Spear Lunge hitbox so it doesn't confuse later phase
+	# checks that count Projectiles in `parent`.
+	if hb_node != null:
+		hb_node.queue_free()
+	await get_tree().process_frame
+
+	# Phase 3: OracleBolt spawns a Projectile with the right config.
+	var cd_p: ClassData = Database.get_class_data(&"pythia") as ClassData
+	caster.current_stats = Stats.from_class_data(cd_p, 1)
+	var bolt := OracleBolt.new()
+	add_child(bolt)
+	var ok_bolt := bolt.try_activate(caster, Vector2(1, 0))
+	await get_tree().process_frame
+	var bolt_proj: Projectile = null
+	for c in parent.get_children():
+		if c is Projectile:
+			bolt_proj = c as Projectile
+			break
+	var ok_proj_spawned: bool = bolt_proj != null
+	var ok_proj_speed: bool = ok_proj_spawned and abs(bolt_proj.speed - OracleBolt.PROJECTILE_SPEED) < 0.5
+	var ok_proj_dist: bool = ok_proj_spawned and abs(bolt_proj.max_distance - bolt.range_px) < 0.5
+	print("[%s] OracleBolt activated=%s spawned=%s speed=%s dist=%s" % [
+		"OK  " if (ok_bolt and ok_proj_spawned and ok_proj_speed and ok_proj_dist) else "FAIL",
+		str(ok_bolt), str(ok_proj_spawned), str(ok_proj_speed), str(ok_proj_dist)])
+	if not (ok_bolt and ok_proj_spawned and ok_proj_speed and ok_proj_dist): fail += 1
+	if bolt_proj != null: bolt_proj.queue_free()
+	await get_tree().process_frame
+
+	# Phase 4: Volley spawns FAN_COUNT projectiles with angular spread.
+	caster.current_stats = Stats.from_class_data(
+		Database.get_class_data(&"shade_hunter") as ClassData, 1)
+	var volley := Volley.new()
+	add_child(volley)
+	var ok_volley := volley.try_activate(caster, Vector2(1, 0))
+	await get_tree().process_frame
+	var arrow_count := 0
+	var arrow_dirs: Array[Vector2] = []
+	for c in parent.get_children():
+		if c is Projectile:
+			arrow_count += 1
+			arrow_dirs.append((c as Projectile).direction)
+	var ok_fan_count: bool = arrow_count == Volley.FAN_COUNT
+	var ok_fan_unit: bool = true
+	for d in arrow_dirs:
+		if abs(d.length() - 1.0) > 0.01: ok_fan_unit = false
+	var ok_fan_spread: bool = false
+	if arrow_count >= 2:
+		var angles: Array[float] = []
+		for d in arrow_dirs:
+			angles.append(d.angle())
+		angles.sort()
+		var spread: float = angles[angles.size() - 1] - angles[0]
+		ok_fan_spread = abs(spread - 2.0 * Volley.FAN_SPREAD_RAD) < 0.01
+	print("[%s] Volley activated=%s arrows=%d unit_dirs=%s spread=%s" % [
+		"OK  " if (ok_volley and ok_fan_count and ok_fan_unit and ok_fan_spread) else "FAIL",
+		str(ok_volley), arrow_count, str(ok_fan_unit), str(ok_fan_spread)])
+	if not (ok_volley and ok_fan_count and ok_fan_unit and ok_fan_spread): fail += 1
+
 	print("--- Stage 5 verify: %s ---" % ("ALL PASS" if fail == 0 else "%d FAIL" % fail))
 	get_tree().quit(fail)
