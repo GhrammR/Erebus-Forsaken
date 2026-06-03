@@ -207,6 +207,10 @@ func _do_transit(zone_id: StringName, place_at_spawn: bool, arrival_marker: Stri
 	_spawn_pending_spills_in_zone()
 	_wire_zone_npcs()
 	_wire_zone_combat_vfx()
+	# AudioBank listens for zone_changed and swaps the ambient loop.
+	# SceneRouter only emits in the fallback (non-host) path, so the
+	# production transit_to_zone flow re-emits here.
+	EventBus.zone_changed.emit(zone_id)
 	_set_status("Entered %s." % _zone_display_name(zone_id), true)
 
 func _apply_pending_enemy_snapshot() -> void:
@@ -461,11 +465,14 @@ func _wire_zone_npcs() -> void:
 
 func _on_save_pressed() -> void:
 	var ok := SaveSystem.save_game()
+	if ok:
+		AudioBank.play_sfx(&"save")
 	_set_status("Saved." if ok else "Save failed.", ok)
 
 func _on_load_pressed() -> void:
 	var ok := SaveSystem.load_game()
 	if ok:
+		AudioBank.play_sfx(&"load")
 		_zone_cache.clear()
 		_inventory_panel.bind_inventory(_player.get_inventory())
 		_overlay.bind_stats(_player.current_stats)

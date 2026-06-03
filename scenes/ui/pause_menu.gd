@@ -8,12 +8,27 @@ signal quit_requested
 
 @onready var _resume_btn: Button = $Panel/VBox/ResumeButton
 @onready var _quit_btn: Button = $Panel/VBox/QuitButton
+@onready var _master_slider: HSlider = $Panel/VBox/MasterSlider
+@onready var _sfx_slider: HSlider = $Panel/VBox/SfxSlider
+@onready var _ambient_slider: HSlider = $Panel/VBox/AmbientSlider
 
 func _ready() -> void:
 	hide()
 	_resume_btn.pressed.connect(_on_resume)
 	_quit_btn.pressed.connect(_on_quit)
+	_master_slider.value = AudioBank.get_master_volume()
+	_sfx_slider.value = AudioBank.get_sfx_volume()
+	_ambient_slider.value = AudioBank.get_ambient_volume()
+	_master_slider.value_changed.connect(AudioBank.set_master_volume)
+	_sfx_slider.value_changed.connect(AudioBank.set_sfx_volume)
+	_ambient_slider.value_changed.connect(AudioBank.set_ambient_volume)
+	_master_slider.drag_ended.connect(_on_volume_drag_ended)
+	_sfx_slider.drag_ended.connect(_on_volume_drag_ended)
+	_ambient_slider.drag_ended.connect(_on_volume_drag_ended)
 	_set_input_active(false)
+
+func _on_volume_drag_ended(_changed: bool) -> void:
+	AudioBank.save_volumes()
 
 ## Godot 4 quirk: CanvasLayer.visible = false does NOT disable input
 ## on its child Controls. Combined with `process_mode = WHEN_PAUSED`

@@ -202,6 +202,7 @@ func attack() -> void:
 		return
 	_combat = CombatState.ATTACKING
 	_attack_cd_remaining = ATTACK_COOLDOWN
+	AudioBank.play_sfx(&"swing")
 	if _sprite_anim != null:
 		_sprite_anim.play(&"attack")
 	get_tree().create_timer(ATTACK_SWING_LEAD).timeout.connect(_arm_hitbox)
@@ -220,6 +221,8 @@ func _end_attack_state() -> void:
 		_combat = CombatState.READY
 
 func _on_damaged(_amount: int, _source: Node) -> void:
+	if _amount > 0 and _life == LifeState.ALIVE:
+		AudioBank.play_sfx(&"player_hurt")
 	if _amount > 0 and _sprite_anim != null and _life == LifeState.ALIVE \
 			and _combat == CombatState.READY:
 		_sprite_anim.play(&"hit")

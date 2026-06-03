@@ -47,14 +47,17 @@ func _ready() -> void:
 			_sprite_anim.play(&"idle")
 
 func _on_damaged(amount: int, _source: Node) -> void:
+	if amount > 0 and not _health.is_dead():
+		AudioBank.play_sfx(&"hit_flesh")
 	if amount > 0 and _sprite_anim != null and not _health.is_dead():
 		_sprite_anim.play(&"hit")
 
-func _on_died(_killer: Node) -> void:
+func _on_died(killer: Node) -> void:
 	if _sprite_anim != null:
 		_sprite_anim.play(&"die")
 	$HurtboxComponent.set_deferred(&"monitoring", false)
 	$CollisionShape2D.set_deferred(&"disabled", true)
+	EventBus.enemy_died.emit(self, killer)
 	_try_drop()
 	_try_drop_gold()
 	await get_tree().create_timer(corpse_linger).timeout

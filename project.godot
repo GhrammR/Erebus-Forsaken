@@ -25,6 +25,11 @@ SceneRouter="*res://scripts/autoload/scene_router.gd"
 Database="*res://scripts/autoload/database.gd"
 QuestSystem="*res://scripts/autoload/quest_system.gd"
 CorpseSystem="*res://scripts/autoload/corpse_system.gd"
+AudioBank="*res://scripts/autoload/audio_bank.gd"
+
+[audio]
+
+buses/default_bus_layout="res://audio/default_bus_layout.tres"
 
 [display]
 

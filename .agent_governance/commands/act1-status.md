@@ -247,8 +247,8 @@ sequence. Stage **numbers are stable** (existing commits reference
 them); **execution order** is now:
 
 1. Stage 10 — Character select (identity before content) **[CLOSED]**
-2. Stage 7.5 — Audio mini-stage (Feel Pass enablement) *(next)*
-3. Stage 8 — Dungeon (with affix-tier sub-system)
+2. Stage 7.5 — Audio mini-stage (Feel Pass enablement) **[CLOSED]**
+3. Stage 8 — Dungeon (with affix-tier sub-system) *(next)*
 4. Stage 9 — Act boss
 5. Stage 9.5 — Feel Pass (sound + juice contract, `rules/feel-pass.md`)
 6. Stage 9.7 — Endless mode (post-boss retention)
@@ -295,16 +295,43 @@ and a note appended to this file.
   new UI scenes carry mouse_filter=2 on display-only Controls per
   failure-modes #9.
 
-## Stage 7.5 — Audio mini-stage  *(execute after Stage 10)*
+## Stage 7.5 — Audio mini-stage
 
-* \[ ] `AudioBank` autoload registered (single source of truth for sfx
-  + ambient resource lookups; AD-03 analogue for audio)
-* \[ ] 16-entry sfx bank covering the `rules/feel-pass.md` contract
-  (placeholders ok; one .ogg per row in the contract table)
-* \[ ] One ambient loop per shipping zone (camp, wilderness)
-* \[ ] Master + sfx + ambient bus split in `default_bus_layout.tres`
-* \[ ] Audio settings exposed in pause menu (3 sliders)
-* \[ ] Audio mutes correctly when window unfocused
+* \[x] `AudioBank` autoload registered (`scripts/autoload/audio_bank.gd`).
+  Single source of truth for sfx + ambient lookups; bank entries with
+  missing .ogg paths no-op silently (placeholder rule, asset-pipeline.md).
+  Pool of 6 `AudioStreamPlayer` nodes for sfx (round-robin) + one
+  dedicated ambient player.
+* \[x] 16-entry sfx bank covering the full `rules/feel-pass.md` contract
+  (swing, hit_flesh, hit_crit, player_hurt, death_player, death_enemy,
+  skill_cast, skill_ready, pickup_item, pickup_gold, drop_rare, levelup,
+  quest_accept, quest_complete, save, load). .ogg files ship as
+  placeholders — code lands now, audio drops in later.
+* \[x] Ambient loops registered for both shipping zones (threshold_camp,
+  blighted_reach). EventBus.zone_changed drives swap; ambient player
+  auto-loops on `finished` if the import lacked loop=true.
+* \[x] Master / Sfx / Ambient bus split in `audio/default_bus_layout.tres`
+  (Sfx and Ambient send to Master). `project.godot` references the layout.
+* \[x] Audio settings exposed in pause menu (3 HSliders: Master / SFX /
+  Ambient). Live value_changed feeds AudioBank.set_*_volume; drag_ended
+  persists into `user://settings.json` (merged with existing keys —
+  tutorial flag survives).
+* \[x] `_notification(NOTIFICATION_APPLICATION_FOCUS_OUT/IN)` toggles
+  `AudioServer.set_bus_mute(Master)` so the window losing focus mutes
+  the entire output.
+* \[x] Existing event call sites wired: Player.attack → swing,
+  Player._on_damaged → player_hurt, Enemy._on_damaged → hit_flesh,
+  Enemy._on_died emits EventBus.enemy_died → death_enemy, Skill.try_activate
+  on success → skill_cast, game.gd save/load → save/load, game.gd
+  _do_transit re-emits EventBus.zone_changed → ambient swap.
+  Future-binding events (crit, skill_ready, drop_rare, levelup,
+  quest_accept/complete) are in the bank but call sites land in Stage 9.5.
+* \[x] `--verify7_5` verifier (35/35 PASS): sfx bank size + 16 contract
+  keys, ambient bank, 3 buses present, volume round-trip + persistence,
+  settings-merge preserves tutorial flag, defocus handler present,
+  EventBus auto-wiring, all 8 call-site insertions present.
+* \[x] Regression: --verify / --verify3 / --verify4 / --verify5 /
+  --verify6 / --verify7 / --verify10 all PASS post-Stage-7.5.
 
 ## Stage 8 — Dungeon  *(execute after Stage 7.5)*
 

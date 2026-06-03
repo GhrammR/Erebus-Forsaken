@@ -44,6 +44,7 @@ func try_activate(caster: Node, facing_dir: Vector2) -> bool:
 		skill_failed.emit("insufficient_mp")
 		return false
 	_cd_remaining = cooldown
+	AudioBank.play_sfx(&"skill_cast")
 	_execute(caster, facing_dir)
 	skill_used.emit(display_name)
 	return true
