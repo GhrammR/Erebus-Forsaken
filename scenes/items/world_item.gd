@@ -32,6 +32,9 @@ func _ready() -> void:
 
 	_apply_item()
 	_pickup.body_entered.connect(_on_body_entered)
+	# Stage 7 — joined for save snapshot. See gold_pickup.gd for the
+	# shared "loot" group rationale.
+	add_to_group(&"loot")
 
 func set_item(id: StringName) -> void:
 	item_id = id

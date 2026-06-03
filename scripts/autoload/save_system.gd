@@ -4,7 +4,7 @@ extends Node
 ## migrate() step. The on-disk format is human-readable so a tester can
 ## hand-edit corruption cases (rules/failure-modes.md #7 leans on this).
 
-const SAVE_VERSION: int = 7
+const SAVE_VERSION: int = 8
 const SAVE_PATH: String = "user://save_slot_1.dat"
 
 signal save_completed(success: bool)
@@ -14,6 +14,7 @@ signal load_completed(success: bool)
 ## the zone rebuild. Holds {enemy_id, pos:{x,y}, hp} per snapshot
 ## entry. Never persisted at the field level.
 var _pending_enemy_snapshot: Array = []
+var _pending_loot_snapshot: Array = []
 
 func save_game() -> bool:
 	var player := _player()
@@ -84,6 +85,8 @@ func migrate(old: Dictionary) -> Dictionary:
 		old = _migrate_v5_to_v6(old)
 	if v < 7:
 		old = _migrate_v6_to_v7(old)
+	if v < 8:
+		old = _migrate_v7_to_v8(old)
 	return old
 
 func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
@@ -143,6 +146,14 @@ func _migrate_v6_to_v7(old: Dictionary) -> Dictionary:
 		old["enemies"] = []
 	return old
 
+func _migrate_v7_to_v8(old: Dictionary) -> Dictionary:
+	# v7 had no on-ground loot persistence. Legacy saves get an
+	# empty list — old drops were already gone after reload anyway.
+	old["version"] = 8
+	if not old.has("loot"):
+		old["loot"] = []
+	return old
+
 # ---- snapshot / apply ----------------------------------------------------
 
 func _player() -> Node:
@@ -171,8 +182,26 @@ func _snapshot(player: Node) -> Dictionary:
 		"quests": QuestSystem.snapshot(),
 		"zone_id": String(GameState.current_zone_id),
 		"enemies": _snapshot_active_zone_enemies(),
+		"loot": _snapshot_active_zone_loot(),
 	}
 	return snap
+
+func _snapshot_active_zone_loot() -> Array:
+	# WorldItem and GoldPickup join the "loot" group in their _ready.
+	# Each entry: { "kind": "item"|"gold", "pos": {x,y},
+	#              and either "item_id" or "value" }.
+	var out: Array = []
+	for n in get_tree().get_nodes_in_group(&"loot"):
+		var node := n as Node2D
+		if node == null:
+			continue
+		var pos := { "x": node.global_position.x, "y": node.global_position.y }
+		if "value" in node:
+			out.append({ "kind": "gold", "pos": pos, "value": int(node.value) })
+		elif "item_id" in node:
+			out.append({ "kind": "item", "pos": pos,
+					"item_id": String(node.item_id) })
+	return out
 
 func _snapshot_active_zone_enemies() -> Array:
 	# Walk every enemy currently in the "enemies" group; record only
@@ -201,6 +230,11 @@ func consume_pending_enemy_snapshot() -> Array:
 func has_pending_enemy_snapshot() -> bool:
 	return not _pending_enemy_snapshot.is_empty()
 
+func consume_pending_loot_snapshot() -> Array:
+	var s := _pending_loot_snapshot
+	_pending_loot_snapshot = []
+	return s
+
 func _apply(player: Node, data: Dictionary) -> void:
 	var class_id := StringName(data.get("class_id", ""))
 	var cd: ClassData = Database.get_class_data(class_id) as ClassData
@@ -225,6 +259,7 @@ func _apply(player: Node, data: Dictionary) -> void:
 	QuestSystem.restore(data.get("quests", {}))
 	GameState.current_zone_id = StringName(data.get("zone_id", "threshold_camp"))
 	_pending_enemy_snapshot = data.get("enemies", []) as Array
+	_pending_loot_snapshot = data.get("loot", []) as Array
 	# Stats restore needs to happen AFTER inventory restore so equip
 	# bonuses are applied before we set current_hp / mp.
 	if stats != null:

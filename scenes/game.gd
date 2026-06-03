@@ -19,6 +19,8 @@ const DEFAULT_CLASS: StringName = &"myrmidon"
 const DEFAULT_ZONE: StringName = &"threshold_camp"
 
 const _DAMAGE_NUMBER := preload("res://scenes/vfx/damage_number.tscn")
+const _WORLD_ITEM := preload("res://scenes/items/world_item.tscn")
+const _GOLD_PICKUP := preload("res://scenes/items/gold_pickup.tscn")
 
 @onready var _player: Player = $Player
 @onready var _pause: CanvasLayer = $PauseMenu
@@ -140,6 +142,7 @@ func _do_transit(zone_id: StringName, place_at_spawn: bool, arrival_marker: Stri
 		# we just need to keep respawn_position aligned with this zone.
 		_player.respawn_position = _zone.get_spawn_position()
 	_apply_pending_enemy_snapshot()
+	_apply_pending_loot_snapshot()
 	_wire_zone_npcs()
 	_wire_zone_combat_vfx()
 	_set_status("Entered %s." % _zone_display_name(zone_id), true)
@@ -164,6 +167,43 @@ func _apply_pending_enemy_snapshot() -> void:
 	# Area2D bodies while a previous queue_free is still settling
 	# the physics state (failure-modes #17).
 	_spawn_enemy_snapshot.call_deferred(snap)
+
+func _apply_pending_loot_snapshot() -> void:
+	# A load operation parked the saved loot state on SaveSystem;
+	# consume it. Empty list = nothing to do (the fresh zone has
+	# no ground drops yet). Otherwise free any pre-existing loot
+	# in the new zone (defensive — zones shouldn't ship pre-placed
+	# drops, but if they do the snapshot is the source of truth)
+	# and respawn from the snapshot.
+	var snap := SaveSystem.consume_pending_loot_snapshot()
+	if snap.is_empty():
+		return
+	for n in _zone.find_children("*", "Node2D", true, false):
+		if n.is_in_group(&"loot"):
+			n.queue_free()
+	_spawn_loot_snapshot.call_deferred(snap)
+
+func _spawn_loot_snapshot(snap: Array) -> void:
+	if _zone == null or not is_instance_valid(_zone):
+		return
+	for entry_v in snap:
+		var entry: Dictionary = entry_v as Dictionary
+		var pos_d: Dictionary = entry.get("pos", {})
+		var pos := Vector2(float(pos_d.get("x", 0.0)), float(pos_d.get("y", 0.0)))
+		var kind := String(entry.get("kind", ""))
+		var node: Node2D = null
+		if kind == "gold":
+			var coin := _GOLD_PICKUP.instantiate()
+			coin.value = int(entry.get("value", 1))
+			node = coin
+		elif kind == "item":
+			var item := _WORLD_ITEM.instantiate()
+			item.item_id = StringName(entry.get("item_id", ""))
+			node = item
+		if node == null:
+			continue
+		_zone.add_child(node)
+		node.global_position = pos
 
 func _spawn_enemy_snapshot(snap: Array) -> void:
 	if _zone == null or not is_instance_valid(_zone):

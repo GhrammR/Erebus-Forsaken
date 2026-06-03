@@ -21,6 +21,10 @@ func _ready() -> void:
 	_visual.color = COIN_COLOR
 	_label.text = "%d g" % value
 	_pickup.body_entered.connect(_on_body_entered)
+	# Stage 7 — joined for save snapshot. The "loot" group is the
+	# single source of truth for "uncollected drops in the active
+	# zone"; covers both WorldItem and GoldPickup.
+	add_to_group(&"loot")
 
 func _on_body_entered(body: Node) -> void:
 	if _picked:
