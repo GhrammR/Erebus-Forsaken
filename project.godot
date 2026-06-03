@@ -24,6 +24,7 @@ EventBus="*res://scripts/autoload/event_bus.gd"
 SceneRouter="*res://scripts/autoload/scene_router.gd"
 Database="*res://scripts/autoload/database.gd"
 QuestSystem="*res://scripts/autoload/quest_system.gd"
+CorpseSystem="*res://scripts/autoload/corpse_system.gd"
 
 [display]
 

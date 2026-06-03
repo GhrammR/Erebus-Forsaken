@@ -29,6 +29,11 @@ signal enemy_spawned(enemy: Enemy)
 @export var respawn_delay: float = 5.0
 @export var initial_spawn_count: int = 4
 @export var min_distance_from_player: float = 240.0
+## Separate anchors from already-spawned enemies too, so the
+## initial 4-pack doesn't drop two wretches on the same pixel and
+## look like a single enemy. Smaller than the player gate — we
+## just want visual breathing room.
+@export var min_distance_from_others: float = 60.0
 
 var _zone: Node = null
 var _anchors: Array[Marker2D] = []
@@ -103,13 +108,26 @@ func _pick_anchor() -> Marker2D:
 	var player := _player()
 	var pool: Array[Marker2D] = []
 	for a in _anchors:
-		if player == null \
-				or (a.global_position - player.global_position).length() >= min_distance_from_player:
-			pool.append(a)
+		if player != null \
+				and (a.global_position - player.global_position).length() < min_distance_from_player:
+			continue
+		if _has_enemy_within(a.global_position, min_distance_from_others):
+			continue
+		pool.append(a)
 	if pool.is_empty():
-		# Everything is too close to the player — defer this tick.
+		# Everything is occupied or too close to the player — defer
+		# this tick. The director retries next frame; once an enemy
+		# wanders or dies, anchors free up.
 		return null
 	return pool[randi() % pool.size()]
+
+func _has_enemy_within(pos: Vector2, radius: float) -> bool:
+	for e in _tracked_enemies:
+		if e == null or not is_instance_valid(e):
+			continue
+		if (e.global_position - pos).length() < radius:
+			return true
+	return false
 
 func _pick_species() -> StringName:
 	var total: int = 0

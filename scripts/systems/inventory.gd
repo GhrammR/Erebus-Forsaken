@@ -94,6 +94,30 @@ func unequip(slot: int) -> bool:
 	equipment_changed.emit(slot, null)
 	return true
 
+## Strips an equipped item without sending it back to the backpack
+## — used by the corpse-run death penalty (Stage 7 Phase 5). The
+## item is lost from the inventory entirely; the caller is
+## responsible for handing it to whoever holds it next (the
+## CorpseSystem). Returns the item id that was removed, or &"".
+func discard_equipped(slot: int) -> StringName:
+	var item_id: StringName = equipped.get(slot, &"")
+	if item_id == &"":
+		return &""
+	equipped.erase(slot)
+	_recompute_totals()
+	inventory_changed.emit()
+	equipment_changed.emit(slot, null)
+	return item_id
+
+## Returns a random currently-equipped slot, or -1 if nothing is
+## equipped. Used by the death penalty to pick which slot drops
+## into the corpse — uniform random per the Act 1 design call.
+func pick_random_equipped_slot() -> int:
+	if equipped.is_empty():
+		return -1
+	var keys: Array = equipped.keys()
+	return int(keys[randi() % keys.size()])
+
 func get_equipped_id(slot: int) -> StringName:
 	return equipped.get(slot, &"")
 

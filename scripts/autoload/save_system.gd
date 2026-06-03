@@ -4,7 +4,7 @@ extends Node
 ## migrate() step. The on-disk format is human-readable so a tester can
 ## hand-edit corruption cases (rules/failure-modes.md #7 leans on this).
 
-const SAVE_VERSION: int = 8
+const SAVE_VERSION: int = 10
 const SAVE_PATH: String = "user://save_slot_1.dat"
 
 signal save_completed(success: bool)
@@ -87,6 +87,10 @@ func migrate(old: Dictionary) -> Dictionary:
 		old = _migrate_v6_to_v7(old)
 	if v < 8:
 		old = _migrate_v7_to_v8(old)
+	if v < 9:
+		old = _migrate_v8_to_v9(old)
+	if v < 10:
+		old = _migrate_v9_to_v10(old)
 	return old
 
 func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
@@ -154,6 +158,30 @@ func _migrate_v7_to_v8(old: Dictionary) -> Dictionary:
 		old["loot"] = []
 	return old
 
+func _migrate_v8_to_v9(old: Dictionary) -> Dictionary:
+	# v8 had no corpse-run state. Legacy saves get an empty corpse
+	# — no penalty backfill, the player just hadn't died yet under
+	# the new rules.
+	old["version"] = 9
+	if not old.has("corpse"):
+		old["corpse"] = {}
+	return old
+
+func _migrate_v9_to_v10(old: Dictionary) -> Dictionary:
+	# v9 stored a single active corpse. v10 stores a list (multi-
+	# corpse design — see CorpseSystem). Convert any populated v9
+	# corpse into a single-entry list with id=1; legacy saves with
+	# no corpse get an empty list.
+	old["version"] = 10
+	var legacy: Dictionary = old.get("corpse", {})
+	if not legacy.is_empty():
+		var entry: Dictionary = legacy.duplicate(true)
+		entry["id"] = 1
+		old["corpse"] = { "corpses": [entry], "next_id": 2, "spills": [] }
+	else:
+		old["corpse"] = { "corpses": [], "next_id": 1, "spills": [] }
+	return old
+
 # ---- snapshot / apply ----------------------------------------------------
 
 func _player() -> Node:
@@ -183,6 +211,7 @@ func _snapshot(player: Node) -> Dictionary:
 		"zone_id": String(GameState.current_zone_id),
 		"enemies": _snapshot_active_zone_enemies(),
 		"loot": _snapshot_active_zone_loot(),
+		"corpse": CorpseSystem.snapshot(),
 	}
 	return snap
 
@@ -202,6 +231,19 @@ func _snapshot_active_zone_loot() -> Array:
 			out.append({ "kind": "item", "pos": pos,
 					"item_id": String(node.item_id) })
 	return out
+
+## Public wrappers so Game can reuse the same "what's alive in
+## this zone right now" capture for its in-memory zone cache
+## (Stage 7 Phase 5+). Save's _snapshot routes through them too.
+func snapshot_active_zone_enemies() -> Array:
+	return _snapshot_active_zone_enemies()
+
+func snapshot_active_zone_loot() -> Array:
+	return _snapshot_active_zone_loot()
+
+func set_pending_zone_state(enemies: Array, loot: Array) -> void:
+	_pending_enemy_snapshot = enemies
+	_pending_loot_snapshot = loot
 
 func _snapshot_active_zone_enemies() -> Array:
 	# Walk every enemy currently in the "enemies" group; record only
@@ -260,6 +302,7 @@ func _apply(player: Node, data: Dictionary) -> void:
 	GameState.current_zone_id = StringName(data.get("zone_id", "threshold_camp"))
 	_pending_enemy_snapshot = data.get("enemies", []) as Array
 	_pending_loot_snapshot = data.get("loot", []) as Array
+	CorpseSystem.restore(data.get("corpse", {}))
 	# Stats restore needs to happen AFTER inventory restore so equip
 	# bonuses are applied before we set current_hp / mp.
 	if stats != null:

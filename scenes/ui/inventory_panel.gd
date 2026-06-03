@@ -3,8 +3,8 @@ extends CanvasLayer
 ## Click an equipment row to unequip. Drag-drop paper-doll is Stage 12.
 
 @onready var _panel: PanelContainer = $Panel
-@onready var _equip_box: VBoxContainer = $Panel/Margin/VBox/Cols/EquipCol/EquipList
-@onready var _backpack_box: VBoxContainer = $Panel/Margin/VBox/Cols/BackCol/BackList
+@onready var _equip_box: VBoxContainer = $Panel/Margin/VBox/Cols/EquipCol/EquipScroll/EquipList
+@onready var _backpack_box: VBoxContainer = $Panel/Margin/VBox/Cols/BackCol/BackScroll/BackList
 @onready var _equip_title: Label = $Panel/Margin/VBox/Cols/EquipCol/Title
 @onready var _back_title: Label = $Panel/Margin/VBox/Cols/BackCol/Title
 @onready var _capacity_label: Label = $Panel/Margin/VBox/Header/Capacity

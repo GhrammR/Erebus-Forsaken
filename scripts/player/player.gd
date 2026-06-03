@@ -43,6 +43,13 @@ const _SKILL_BY_CLASS: Dictionary = {
 	&"ossuary_priest": preload("res://scripts/skills/bone_servant.gd"),
 }
 
+## Stage 7 Phase 5 — when true, _on_died skips the auto-respawn
+## timer. The orchestrating layer (Game.gd in production, the
+## death screen flow) calls respawn() explicitly once the player
+## has reviewed the scene and chosen to return to town. Default
+## false keeps the workbench/headless flow self-contained.
+@export var external_respawn_handler: bool = false
+
 @onready var _sprite_anchor: Node2D = $SpriteAnchor
 @onready var _input: PlayerInput = $PlayerInput
 @onready var _health: HealthComponent = $HealthComponent
@@ -53,6 +60,14 @@ const _SKILL_BY_CLASS: Dictionary = {
 
 var _sprite_anim: AnimationPlayer = null
 var _sprite_root: Node = null
+## Tween driving the hit flash. The per-class sprite hit anims also
+## carry a modulate track, but the AnimationPlayer doesn't reliably
+## land the final keyframe on very short LOOP_NONE clips — leaving
+## the sprite stuck at the red mid-flash value. We override with a
+## code-driven Tween that always lands cleanly at white. Killed and
+## restarted on each new hit so consecutive damage doesn't accumulate
+## into a permanent tint.
+var _hit_tween: Tween = null
 
 func _ready() -> void:
 	# CharacterBody2D inherits input_pickable=true from CollisionObject2D
@@ -208,6 +223,17 @@ func _on_damaged(_amount: int, _source: Node) -> void:
 	if _amount > 0 and _sprite_anim != null and _life == LifeState.ALIVE \
 			and _combat == CombatState.READY:
 		_sprite_anim.play(&"hit")
+		_flash_hit()
+
+func _flash_hit() -> void:
+	if _sprite_root == null or not (_sprite_root is Node2D):
+		return
+	var sr := _sprite_root as Node2D
+	if _hit_tween != null and _hit_tween.is_valid():
+		_hit_tween.kill()
+	sr.modulate = Color(1.35, 0.55, 0.55, 1)
+	_hit_tween = create_tween()
+	_hit_tween.tween_property(sr, "modulate", Color(1, 1, 1, 1), 0.18)
 
 func _on_died(_killer: Node) -> void:
 	if _life == LifeState.DEAD:
@@ -222,10 +248,14 @@ func _on_died(_killer: Node) -> void:
 	if _sprite_anim != null:
 		_sprite_anim.play(&"die")
 	EventBus.player_died.emit()
+	if external_respawn_handler:
+		# Caller owns the respawn timing. They'll call respawn()
+		# when they're ready (after the death-review screen, etc).
+		return
 	await get_tree().create_timer(DEATH_DURATION).timeout
-	_respawn()
+	respawn()
 
-func _respawn() -> void:
+func respawn() -> void:
 	global_position = respawn_position
 	current_stats.restore_hp(current_stats.max_hp)
 	current_stats.restore_mp(current_stats.max_mp)
@@ -244,6 +274,8 @@ func _respawn() -> void:
 	# Reset the sprite root's transform: the `die` animation leaves
 	# rotation=PI/2 and modulate.a=0.3, and `idle` doesn't animate
 	# those properties so they'd persist into the new life.
+	if _hit_tween != null and _hit_tween.is_valid():
+		_hit_tween.kill()
 	if _sprite_root != null and _sprite_root is Node2D:
 		var sr := _sprite_root as Node2D
 		sr.rotation = 0.0
@@ -273,6 +305,24 @@ func get_inventory() -> Inventory:
 
 func get_wallet() -> Wallet:
 	return _wallet
+
+## Stage 7 Phase 5 — corpse-run harvest. Snapshots every coin and
+## one random equipped slot, then *removes* them from the player.
+## The caller (Game) hands the result to CorpseSystem. Returns
+## { gold, item_id, slot } where item_id is &"" / slot is -1 when
+## the player died wearing nothing.
+func harvest_for_corpse() -> Dictionary:
+	var gold := 0
+	if _wallet != null:
+		gold = _wallet.gold
+		_wallet.set_gold(0)
+	var item_id: StringName = &""
+	var slot := -1
+	if _inventory != null:
+		slot = _inventory.pick_random_equipped_slot()
+		if slot != -1:
+			item_id = _inventory.discard_equipped(slot)
+	return { "gold": gold, "item_id": item_id, "slot": slot }
 
 func get_skill_1() -> Skill:
 	return _skill_1

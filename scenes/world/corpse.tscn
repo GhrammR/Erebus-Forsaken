@@ -1,0 +1,93 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/corpse.gd" id="1_c"]
+
+[sub_resource type="CircleShape2D" id="circle_pickup"]
+radius = 26.0
+
+[sub_resource type="Animation" id="anim_pulse"]
+length = 1.6
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Halo:modulate")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0.0, 0.8, 1.6),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Color(0.85, 0.35, 0.30, 0.18), Color(1.0, 0.55, 0.45, 0.32), Color(0.85, 0.35, 0.30, 0.18)]
+}
+
+[sub_resource type="AnimationLibrary" id="anim_lib"]
+_data = {
+"pulse": SubResource("anim_pulse")
+}
+
+[node name="Corpse" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_c")
+
+[node name="Halo" type="Polygon2D" parent="."]
+z_index = -2
+modulate = Color(0.85, 0.35, 0.30, 0.22)
+polygon = PackedVector2Array(-26, -10, -16, -22, 16, -22, 26, -10, 26, 8, 16, 16, -16, 16, -26, 8)
+color = Color(0.9, 0.45, 0.4, 1)
+
+[node name="Shadow" type="Polygon2D" parent="."]
+z_index = -1
+modulate = Color(0, 0, 0, 0.5)
+position = Vector2(0, 6)
+polygon = PackedVector2Array(-16, -3, -10, -6, 10, -6, 16, -3, 13, 3, -13, 3)
+
+[node name="Body" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-14, 0, -10, -6, 10, -6, 14, 0, 12, 4, -12, 4)
+color = Color(0.20, 0.16, 0.18, 1)
+
+[node name="Cloak" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-16, -2, -8, -10, 8, -10, 16, -2, 12, 6, -12, 6)
+color = Color(0.14, 0.10, 0.13, 1)
+
+[node name="PickupArea" type="Area2D" parent="."]
+input_pickable = false
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PickupArea"]
+shape = SubResource("circle_pickup")
+
+[node name="GoldLabel" type="Label" parent="."]
+z_index = 100
+z_as_relative = false
+mouse_filter = 2
+offset_left = -60.0
+offset_top = -52.0
+offset_right = 60.0
+offset_bottom = -30.0
+theme_override_colors/font_color = Color(0.95, 0.84, 0.35, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+horizontal_alignment = 1
+text = ""
+
+[node name="ItemLabel" type="Label" parent="."]
+z_index = 100
+z_as_relative = false
+mouse_filter = 2
+offset_left = -90.0
+offset_top = -32.0
+offset_right = 90.0
+offset_bottom = -10.0
+theme_override_colors/font_color = Color(0.95, 0.75, 0.65, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+horizontal_alignment = 1
+text = ""
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+autoplay = "pulse"
+libraries = {
+"": SubResource("anim_lib")
+}

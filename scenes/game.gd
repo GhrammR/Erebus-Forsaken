@@ -21,6 +21,7 @@ const DEFAULT_ZONE: StringName = &"threshold_camp"
 const _DAMAGE_NUMBER := preload("res://scenes/vfx/damage_number.tscn")
 const _WORLD_ITEM := preload("res://scenes/items/world_item.tscn")
 const _GOLD_PICKUP := preload("res://scenes/items/gold_pickup.tscn")
+const _CORPSE := preload("res://scenes/world/corpse.tscn")
 
 @onready var _player: Player = $Player
 @onready var _pause: CanvasLayer = $PauseMenu
@@ -33,8 +34,19 @@ const _GOLD_PICKUP := preload("res://scenes/items/gold_pickup.tscn")
 @onready var _info: Label = $HUD/DebugInfo
 @onready var _click_marker: Node2D = $ClickMarker
 @onready var _dn_layer: Node2D = $DamageNumberLayer
+@onready var _death_screen: CanvasLayer = $DeathScreen
 
 var _zone: Zone = null
+
+## In-memory per-zone cache of enemies + loot. Captured when the
+## player leaves a zone (portal transit, death-driven transit) and
+## restored on next entry so monsters freeze in place instead of
+## resetting to the spawn director's initial pack. Independent of
+## save/load — F9 explicitly clears this so the on-disk save is
+## the source of truth after a load.
+##
+## Shape: { zone_id: StringName -> { "enemies": Array, "loot": Array } }
+var _zone_cache: Dictionary = {}
 
 ## Click-to-interact target — set when the player clicks on an NPC's
 ## (or portal's) body footprint, auto-fires interact() once the
@@ -74,6 +86,18 @@ func _ready() -> void:
 	pi.interact_pressed.connect(_on_interact_pressed)
 	_click_marker.visible = false
 
+	# Stage 7 Phase 5 — corpse-run. On death, harvest gold + a
+	# random equipped slot into CorpseSystem, then transit back
+	# to the threshold camp. The corpse waits for the player in
+	# the zone where they died.
+	if not EventBus.player_died.is_connected(_on_player_died):
+		EventBus.player_died.connect(_on_player_died)
+	# Game owns the post-death timing: show the review screen, then
+	# transit + respawn on the player's click. Player no longer
+	# self-respawns after a fixed timer.
+	_player.external_respawn_handler = true
+	_death_screen.return_to_town_requested.connect(_on_return_to_town)
+
 	_player.get_inventory().inventory_changed.connect(_reevaluate_quests)
 
 	# Auto-load on entry: if a save exists, restore it; otherwise
@@ -81,6 +105,7 @@ func _ready() -> void:
 	# the player can tell "no save" apart from "fresh Myrmidon".
 	if SaveSystem.has_save():
 		if SaveSystem.load_game():
+			_zone_cache.clear()
 			_inventory_panel.bind_inventory(_player.get_inventory())
 			_overlay.bind_stats(_player.current_stats)
 			_resume_saved_zone()
@@ -127,8 +152,24 @@ func _do_transit(zone_id: StringName, place_at_spawn: bool, arrival_marker: Stri
 	# Detach the old zone.
 	_set_pending_npc(null)
 	if _zone != null:
+		# Snapshot before tearing down so the player can "leave the
+		# world running" — enemies they didn't kill and loot they
+		# didn't grab will be exactly where they left them on
+		# return. Skip when a save load is in flight (the on-disk
+		# pending snapshot is authoritative in that case).
+		if not SaveSystem.has_pending_enemy_snapshot():
+			_snapshot_zone_to_cache(_zone)
 		remove_child(_zone)
 		_zone.queue_free()
+	# If we have a cached snapshot for the destination zone AND no
+	# save-load is overriding, push it into SaveSystem's pending
+	# slots so the SpawnDirector skips its initial spawn and the
+	# subsequent rehydrate pulls the cached entities in instead.
+	if not SaveSystem.has_pending_enemy_snapshot() and _zone_cache.has(zone_id):
+		var cached: Dictionary = _zone_cache[zone_id]
+		SaveSystem.set_pending_zone_state(
+				(cached.get("enemies", []) as Array).duplicate(true),
+				(cached.get("loot", []) as Array).duplicate(true))
 	# Instantiate + insert the new zone. Place it before the Player
 	# in sibling order so y-sort layering matches the camp setup.
 	var packed: PackedScene = load(path) as PackedScene
@@ -143,6 +184,8 @@ func _do_transit(zone_id: StringName, place_at_spawn: bool, arrival_marker: Stri
 		_player.respawn_position = _zone.get_spawn_position()
 	_apply_pending_enemy_snapshot()
 	_apply_pending_loot_snapshot()
+	_spawn_corpses_in_zone()
+	_spawn_pending_spills_in_zone()
 	_wire_zone_npcs()
 	_wire_zone_combat_vfx()
 	_set_status("Entered %s." % _zone_display_name(zone_id), true)
@@ -167,6 +210,91 @@ func _apply_pending_enemy_snapshot() -> void:
 	# Area2D bodies while a previous queue_free is still settling
 	# the physics state (failure-modes #17).
 	_spawn_enemy_snapshot.call_deferred(snap)
+
+func _snapshot_zone_to_cache(zone: Zone) -> void:
+	if zone == null:
+		return
+	_zone_cache[zone.zone_id] = {
+		"enemies": SaveSystem.snapshot_active_zone_enemies(),
+		"loot": SaveSystem.snapshot_active_zone_loot(),
+	}
+
+func _spawn_corpses_in_zone() -> void:
+	if _zone == null:
+		return
+	var entries := CorpseSystem.corpses_in_zone(_zone.zone_id)
+	for entry_v in entries:
+		var entry: Dictionary = entry_v as Dictionary
+		var corpse := _CORPSE.instantiate() as Corpse
+		_zone.add_child(corpse)
+		corpse.set_corpse_data(entry)
+		var pos_d: Dictionary = entry.get("pos", {})
+		corpse.global_position = Vector2(
+				float(pos_d.get("x", 0.0)),
+				float(pos_d.get("y", 0.0)))
+
+func _spawn_pending_spills_in_zone() -> void:
+	# Evicted-corpse contents become world loot at the original
+	# corpse position. From there they're regular pickups — they
+	# join the "loot" group and round-trip through SaveSystem like
+	# any other dropped item.
+	if _zone == null:
+		return
+	for s in CorpseSystem.consume_spills_in_zone(_zone.zone_id):
+		_spawn_spill(s as Dictionary)
+
+func _spawn_spill(spill: Dictionary) -> void:
+	var pos_d: Dictionary = spill.get("pos", {})
+	var base := Vector2(float(pos_d.get("x", 0.0)), float(pos_d.get("y", 0.0)))
+	var gold := int(spill.get("gold", 0))
+	if gold > 0:
+		var coin := _GOLD_PICKUP.instantiate()
+		coin.value = gold
+		_zone.add_child(coin)
+		coin.global_position = base + Vector2(randf_range(-10, 10), randf_range(8, 22))
+	var item_id := StringName(spill.get("item_id", ""))
+	if item_id != &"":
+		var w := _WORLD_ITEM.instantiate()
+		w.item_id = item_id
+		_zone.add_child(w)
+		w.global_position = base + Vector2(randf_range(-10, 10), randf_range(-18, -4))
+
+# Cached at death-time so the post-screen handler knows where the
+# corpse should land — the player will have transit-teleported by
+# then.
+var _pending_death_pos: Vector2 = Vector2.ZERO
+var _pending_death_zone: StringName = &""
+
+func _on_player_died() -> void:
+	# Park the death context, surface the review screen, and wait.
+	# The harvest + corpse + transit + respawn chain runs only when
+	# the player clicks "Return to Town" on the screen.
+	_pending_death_pos = _player.global_position
+	_pending_death_zone = _zone.zone_id if _zone != null else DEFAULT_ZONE
+	_death_screen.show_death()
+
+func _on_return_to_town() -> void:
+	_death_screen.hide_death()
+	var harvest := _player.harvest_for_corpse()
+	if harvest["gold"] > 0 or StringName(harvest["item_id"]) != &"":
+		# add_corpse handles eviction itself — anything pushed off
+		# the cap becomes a "spill" entry on CorpseSystem and lands
+		# as world loot the next time we enter its zone (see
+		# _spawn_pending_spills_in_zone). No auto-return.
+		CorpseSystem.add_corpse(_pending_death_zone, _pending_death_pos,
+				int(harvest["gold"]),
+				StringName(harvest["item_id"]),
+				int(harvest["slot"]))
+	# Camp-side death (K self-kill demo): no transit needed — spawn
+	# the corpse visual here, then respawn the player.
+	if _pending_death_zone == DEFAULT_ZONE:
+		_spawn_corpses_in_zone.call_deferred()
+		_spawn_pending_spills_in_zone.call_deferred()
+	else:
+		SceneRouter.go_to_zone(DEFAULT_ZONE, &"")
+	# Respawn last — call_deferred so any pending transit completes
+	# before HP/MP restore and input re-enable fire.
+	_player.respawn.call_deferred()
 
 func _apply_pending_loot_snapshot() -> void:
 	# A load operation parked the saved loot state on SaveSystem;
@@ -319,6 +447,7 @@ func _on_save_pressed() -> void:
 func _on_load_pressed() -> void:
 	var ok := SaveSystem.load_game()
 	if ok:
+		_zone_cache.clear()
 		_inventory_panel.bind_inventory(_player.get_inventory())
 		_overlay.bind_stats(_player.current_stats)
 		_resume_saved_zone()
