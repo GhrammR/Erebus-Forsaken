@@ -207,19 +207,36 @@ HealthComponent + verifier reference DamageResolver.
 
 ## Stage 7 — Wilderness
 
-* \[ ] Open zone with at least two enemy types
-* \[ ] Random spawn director with caps
-* \[ ] Loot dropping in world space
-* \[ ] Portal back to town
-* \[ ] **Death-penalty design decision** (multi-choice prompt before
-  the first wilderness encounter): currently a player dies and
-  respawns at town with full HP/MP and no penalty. Choose between
-  (a) Diablo-style corpse-run: drop all gold + a slot of gear at
-  the death point, must retrieve, (b) lose-gold-only: drop a
-  percentage of gold as a recoverable pile, gear stays, (c) hardcore
-  death-is-death (Act 2 mode only, never default), or (d) soft
-  penalty: experience debt or stat drain that wears off. Until this
-  decision lands, death is consequence-free.
+* [x] Phase 1 — Blighted Reach zone scaffolding: ground polygons,
+  perimeter walls, dead trees, two-way Portal in-place swap via
+  SceneRouter host pattern. Per-portal arrival markers so the
+  return drops the player next to the gate, not at zone center.
+* [x] Phase 2 — Two enemy types + persistence: WildernessEnemy AI
+  base, Shade-Wretch (melee), Bog-Caller (ranged kiter). Save
+  schema v7 persists enemy id/pos/hp via EnemyRegistry. Damage
+  numbers wired into the production game scene.
+* [x] Phase 3 — SpawnDirector with caps + respawn cadence:
+  weighted species table, anchor distance gates for player AND
+  other enemies, claim_existing_enemies hand-off after a save
+  load rehydrates the roster.
+* [x] Phase 4 — Loot in world space: WorldItem + GoldPickup join
+  the `loot` group, save schema v8 round-trips uncollected drops
+  per zone via the same call_deferred pattern as enemies.
+* [x] Phase 5 — Corpse-run death penalty: CorpseSystem multi-corpse
+  (cap 3, FIFO eviction → spill queue), per death harvest = gold
+  + 1 random equipped slot. Evicted contents spill at the original
+  corpse position as world loot — no auto-return. DeathScreen
+  overlay shows YOU DIED + Return to Town button so the player
+  can review what killed them before the camp transit fires.
+  Zone cache freezes monsters in place across deaths.
+* [x] Phase 6 — stage7_verify covers EnemyRegistry, wilderness
+  drop table, CorpseSystem basics + eviction + snapshot, save
+  schema v6/v9 -> v10 migration, full corpse round-trip, portal
+  target_zone integrity. 30/30 PASS.
+* [x] Visual playtest — confirmed across the wilderness arc:
+  portal transit both directions, enemies persist on death-return,
+  damage numbers, monster separation, multi-corpse retrieval,
+  spill-on-eviction, save/load round-trip.
 
 ## Stage 8 — Dungeon
 
