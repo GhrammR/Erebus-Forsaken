@@ -239,16 +239,16 @@ func _verify_scene_router(fail: int) -> int:
 	return fail
 
 func _verify_save_schema(fail: int) -> int:
-	var ok_v := SaveSystem.SAVE_VERSION == 11
-	print("[%s] SaveSystem.SAVE_VERSION == 11 (got %d)"
+	var ok_v := SaveSystem.SAVE_VERSION >= 11
+	print("[%s] SaveSystem.SAVE_VERSION >= 11 (got %d)"
 			% [_ok(ok_v), SaveSystem.SAVE_VERSION])
 	if not ok_v: fail += 1
 	# Migration from v10 seeds the registry block.
 	var old: Dictionary = { "version": 10 }
 	var migrated := SaveSystem.migrate(old)
-	var ok_mig := int(migrated.get("version", 0)) == 11 \
+	var ok_mig := int(migrated.get("version", 0)) >= 11 \
 			and migrated.has("item_instances")
-	print("[%s] migrate v10 -> v11 seeds item_instances block"
+	print("[%s] migrate v10 -> v11+ seeds item_instances block"
 			% _ok(ok_mig))
 	if not ok_mig: fail += 1
 	return fail

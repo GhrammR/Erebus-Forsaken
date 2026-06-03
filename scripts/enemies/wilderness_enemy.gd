@@ -49,7 +49,7 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector2.ZERO
 		return
 	_attack_cd = maxf(_attack_cd - delta, 0.0)
-	var player := _get_player()
+	var player := _get_target()
 	if player == null:
 		_set_idle()
 		move_and_slide()
@@ -130,6 +130,35 @@ func _get_player() -> Node2D:
 	if ph != null and ph.is_dead():
 		return null
 	return p as Node2D
+
+## Stage 9 polish — pick the closest live "threat" between the player
+## and any active bone-servant minion. The minion is a real combat
+## target: enemies will path to it and swing on it. A slight bias
+## toward the player keeps focus tilted toward who matters most
+## without making the minion useless as a tank.
+const _MINION_DISTANCE_BIAS: float = 0.85
+const _MINION_GROUP: StringName = &"bone_servant_minions"
+
+func _get_target() -> Node2D:
+	var player := _get_player()
+	var best: Node2D = player
+	var best_d := INF
+	if player != null:
+		best_d = (player.global_position - global_position).length()
+	for m in get_tree().get_nodes_in_group(_MINION_GROUP):
+		if not is_instance_valid(m):
+			continue
+		var n := m as Node2D
+		if n == null:
+			continue
+		if "current_stats" in n and n.current_stats != null \
+				and n.current_stats.is_dead():
+			continue
+		var d := (n.global_position - global_position).length() / _MINION_DISTANCE_BIAS
+		if d < best_d:
+			best_d = d
+			best = n
+	return best
 
 ## Subclasses override to swing a hitbox or spawn a projectile. The
 ## base call enforces the windup delay and animation; the subclass

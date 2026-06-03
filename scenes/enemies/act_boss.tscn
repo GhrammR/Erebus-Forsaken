@@ -1,0 +1,65 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/act_boss.gd" id="1_ab"]
+[ext_resource type="PackedScene" path="res://art/procedural/enemies/act_boss_sprite.tscn" id="2_sp"]
+[ext_resource type="Script" path="res://scripts/systems/health_component.gd" id="3_hc"]
+[ext_resource type="Script" path="res://scripts/systems/hurtbox_component.gd" id="4_hb"]
+[ext_resource type="Script" path="res://scripts/systems/hitbox_component.gd" id="5_hit"]
+
+[sub_resource type="CapsuleShape2D" id="cap_feet"]
+radius = 10.0
+height = 14.0
+
+[sub_resource type="RectangleShape2D" id="rect_body"]
+size = Vector2(32, 70)
+
+[sub_resource type="RectangleShape2D" id="rect_swing"]
+size = Vector2(44, 30)
+
+[node name="ActBoss" type="CharacterBody2D"]
+y_sort_enabled = true
+input_pickable = false
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_ab")
+enemy_id = &"act_boss"
+max_hp = 400
+defense_value = 8
+attack_rating_value = 12
+sprite_scene = ExtResource("2_sp")
+gold_drop_chance = 1.0
+gold_min = 60
+gold_max = 120
+melee_damage = 14
+projectile_speed = 280.0
+projectile_range = 520.0
+
+[node name="SpriteAnchor" type="Node2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -5)
+rotation = 1.5707964
+shape = SubResource("cap_feet")
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("3_hc")
+
+[node name="HurtboxComponent" type="Area2D" parent="."]
+input_pickable = false
+collision_layer = 16
+collision_mask = 32
+script = ExtResource("4_hb")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HurtboxComponent"]
+position = Vector2(0, -38)
+shape = SubResource("rect_body")
+
+[node name="HitboxComponent" type="Area2D" parent="."]
+input_pickable = false
+collision_layer = 64
+collision_mask = 8
+script = ExtResource("5_hit")
+base_damage = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HitboxComponent"]
+shape = SubResource("rect_swing")

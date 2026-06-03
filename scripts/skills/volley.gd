@@ -13,6 +13,7 @@ const ARROW_COLOR: Color = Color(0.85, 0.95, 0.9, 1.0)
 
 func _configure() -> void:
 	display_name = "Volley"
+	skill_id = &"volley"
 	mp_cost = 14
 	cooldown = 1.5
 	base_damage = 8       ## per arrow; 3 arrows = 24 total
@@ -33,11 +34,15 @@ func _execute(caster: Node, facing_dir: Vector2) -> void:
 	if FAN_COUNT > 1:
 		step = (2.0 * FAN_SPREAD_RAD) / float(FAN_COUNT - 1)
 
+	# Stage 9 — unique-item bonus is for the *skill*, not per-arrow.
+	# Distribute evenly across the fan so a +12 Volley unique doesn't
+	# silently triple to +36 across three arrows.
+	var per_arrow := base_damage + int(effective_damage(caster) - base_damage) / FAN_COUNT
 	for i in FAN_COUNT:
 		var angle := -FAN_SPREAD_RAD + step * float(i)
 		var arrow_dir := dir.rotated(angle)
 		var proj := _PROJECTILE_SCENE.instantiate() as Projectile
-		proj.configure(arrow_dir, base_damage, caster, PROJECTILE_SPEED, range_px, ARROW_COLOR)
+		proj.configure(arrow_dir, per_arrow, caster, PROJECTILE_SPEED, range_px, ARROW_COLOR)
 		parent.add_child(proj)
 		(proj as Node2D).global_position = caster_pos + arrow_dir * SPAWN_OFFSET
 

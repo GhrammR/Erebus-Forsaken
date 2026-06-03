@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/enemies/bone_servant_minion.gd" id="1_bsm"]
 [ext_resource type="Script" path="res://scripts/systems/health_component.gd" id="2_hc"]
@@ -11,12 +11,21 @@ size = Vector2(30, 22)
 [sub_resource type="RectangleShape2D" id="rect_minion_hurt"]
 size = Vector2(14, 34)
 
+[sub_resource type="CapsuleShape2D" id="cap_minion_feet"]
+radius = 5.0
+height = 8.0
+
 [node name="BoneServantMinion" type="CharacterBody2D"]
 y_sort_enabled = true
 input_pickable = false
 collision_layer = 2
 collision_mask = 1
 script = ExtResource("1_bsm")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -2)
+rotation = 1.5707964
+shape = SubResource("cap_minion_feet")
 
 [node name="SpriteAnchor" type="Node2D" parent="."]
 

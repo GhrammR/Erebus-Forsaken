@@ -39,6 +39,15 @@ const _GOLD_PICKUP_SCENE := preload("res://scenes/items/gold_pickup.tscn")
 var _sprite_anim: AnimationPlayer = null
 var current_stats: Stats = null     # public so DamageResolver finds it via duck-type
 
+## Stage 9 polish — tween-driven hit flash. The animation-track flash
+## on the sprite scenes is fire-and-forget; if a follow-up anim
+## interrupts mid-flash the modulate property stays at the red
+## mid-frame value, leaving the entity stuck red. The tween restores
+## modulate explicitly so a cancelled flash always ends at white.
+var _hit_tween: Tween = null
+const _HIT_FLASH_TINT: Color = Color(1.6, 0.6, 0.6, 1)
+const _HIT_FLASH_DURATION: float = 0.18
+
 func _ready() -> void:
 	# Enemy body is a CharacterBody2D; disable mouse picking so it
 	# doesn't eat click-to-move events (failure-modes.md #13).
@@ -80,8 +89,43 @@ func _apply_elite_post_sprite() -> void:
 func _on_damaged(amount: int, _source: Node) -> void:
 	if amount > 0 and not _health.is_dead():
 		AudioBank.play_sfx(&"hit_flesh")
-	if amount > 0 and _sprite_anim != null and not _health.is_dead():
-		_sprite_anim.play(&"hit")
+	if amount > 0 and not _health.is_dead():
+		_flash_hit()
+
+## Procedural enemy sprites animate hit by tweening `Body:modulate` —
+## a child of the sprite root. Tweening the SpriteAnchor (a grand-
+## parent) leaves Body stuck at the interrupted red value, which
+## multiplies into the rendered colour. Target the same Body node
+## the anim_hit writes so a cancelled flash always lands on white.
+## Elite tint stays on _sprite_anchor (untouched), so the rest-state
+## colour for Body is plain white regardless.
+func _flash_hit() -> void:
+	var body := _hit_flash_target()
+	if body == null:
+		return
+	if _hit_tween != null and _hit_tween.is_valid():
+		_hit_tween.kill()
+	# Cancel any in-progress hit anim so it doesn't keep writing the
+	# property while the tween runs.
+	if _sprite_anim != null and _sprite_anim.current_animation == &"hit":
+		_sprite_anim.stop()
+	body.modulate = _HIT_FLASH_TINT
+	_hit_tween = create_tween()
+	_hit_tween.tween_property(body, "modulate",
+			Color(1, 1, 1, 1), _HIT_FLASH_DURATION)
+
+func _hit_flash_target() -> CanvasItem:
+	if _sprite_anchor == null or _sprite_anchor.get_child_count() == 0:
+		return null
+	var sprite_root := _sprite_anchor.get_child(0) as Node
+	if sprite_root == null:
+		return null
+	var body := sprite_root.get_node_or_null(^"Body") as CanvasItem
+	if body != null:
+		return body
+	# Fall back to the sprite root if a future sprite layout doesn't
+	# carry a "Body" subnode.
+	return sprite_root as CanvasItem
 
 func _on_died(killer: Node) -> void:
 	if _sprite_anim != null:

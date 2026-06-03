@@ -249,8 +249,8 @@ them); **execution order** is now:
 1. Stage 10 — Character select (identity before content) **[CLOSED]**
 2. Stage 7.5 — Audio mini-stage (Feel Pass enablement) **[CLOSED]**
 3. Stage 8 — Dungeon (with affix-tier sub-system) **[CLOSED]**
-4. Stage 9 — Act boss *(next)*
-5. Stage 9.5 — Feel Pass (sound + juice contract, `rules/feel-pass.md`)
+4. Stage 9 — Act boss **[CLOSED]**
+5. Stage 9.5 — Feel Pass (sound + juice contract, `rules/feel-pass.md`) *(next)*
 6. Stage 9.7 — Endless mode (post-boss retention)
 7. **itch.io free demo launches here** (`commands/launch-plan.md`)
 8. Stage 11 — Save/load hardening
@@ -393,16 +393,64 @@ and a note appended to this file.
   --verify6 / --verify7 / --verify7_5 / --verify10 all PASS
   post-Stage-8.
 
-## Stage 9 — Act boss  *(execute after Stage 8)*
+## Stage 9 — Act boss
 
-* \[ ] Unique boss enemy with ≥3 distinct phases (not just one
-  mechanic — review #14 raised refund-rate risk)
-* \[ ] Guaranteed unique item on first kill, with a *visible reason
-  to use it* (one item-specific affix that interacts with a class
-  skill)
-* \[ ] Boss death triggers Act 1 completion state
-* \[ ] Boss room offers an explicit "begin endless mode" portal once
-  Stage 9.7 ships
+* \[x] Unique boss enemy with 3 distinct phases
+  (`scripts/enemies/act_boss.gd` + `scenes/enemies/act_boss.tscn` +
+  `art/procedural/enemies/act_boss_sprite.tscn`). HP-threshold state
+  machine: P1_STALK (100→66%) melee chase; P2_CHANNEL (66→33%)
+  rooted 3-orb fan every 1.6s; P3_FRENZY (33→0%) speed ×1.6,
+  cadence ×0.5, alternating melee and 6-orb radial burst every 4s
+  + 1 shade_wretch reinforcement on entry. Each transition fires
+  a 0.3s invuln window, sprite-tint shift, skill_cast sfx,
+  `cast` anim telegraph. Boss is its own AI rather than
+  WildernessEnemy — phase-driven, not chase/kite. AD-04 damage path
+  preserved (skill_hitbox scene + enemy_projectile via
+  HealthComponent.take_damage).
+* \[x] Guaranteed class-aware unique on first kill
+  (`scripts/autoload/game_state.gd` `boss_first_kill` flag). On
+  first death, `ActBoss._on_died` picks the unique that matches
+  the live player's `class_data.id` from `UNIQUE_BY_CLASS` and
+  drops it with the `drop_rare` sfx. Subsequent kills fall back
+  to the normal drop table.
+* \[x] Four uniques in `data/items/uniques/`:
+  `forsaken_myrmidon_sigil` (+12 Spear Lunge, +3 STR),
+  `forsaken_pythia_sigil` (+10 Oracle Bolt, +3 PNE),
+  `forsaken_shade_hunter_sigil` (+12 Volley, +3 DEX),
+  `forsaken_ossuary_priest_sigil` (+8 Bone Servant, +3 PNE).
+  All amulet-slot, class-restricted, gold glyph tier.
+* \[x] Item-specific affix interacts with a class skill: new
+  `skill_bonus_<skill_id>` affix-key family.
+  `Stats.apply_equipment_totals` fans these into `equip_skill_bonuses`
+  dict; `Stats.get_skill_bonus(id)` returns the value;
+  `Skill.effective_damage(caster)` folds it into outgoing damage.
+  Each skill subclass sets `skill_id` in `_configure` and reads
+  via `effective_damage` (SpearLunge: hitbox base_damage;
+  OracleBolt: projectile damage; Volley: distributed across the
+  3-arrow fan to avoid stacking; BoneServant: `bonus_damage` rides
+  into `BoneServantMinion._hitbox.base_damage`).
+* \[x] Boss death sets `GameState.act_1_complete = true` (and
+  `boss_first_kill = true`). Save schema v11 → v12 persists both
+  flags; `_migrate_v11_to_v12` seeds them false on legacy saves.
+* \[x] Boss room hosts an explicit `EndlessPortalSlot` Marker2D at
+  the north wall of R3 (`scenes/zones/forsaken_crypt.tscn`).
+  Stage 9.7 spawns the endless portal here gated on
+  `act_1_complete`.
+* \[x] R3 placeholder (Ironbound wretch + Fleet bog_caller)
+  replaced with single Act-boss spawn at the centered Room3 anchor;
+  EnemyRegistry registers `&"act_boss"`.
+* \[x] `--verify9` verifier (29/29 PASS): boss scene + class +
+  enemy_id + HP + Phase enum size; all 4 uniques in Database with
+  correct `skill_bonus_*` affix + gold glyph; Stats apply_equipment
+  routing into equip_skill_bonuses + get_skill_bonus + Skill
+  effective_damage; HP-threshold-driven phase transitions
+  (P1→P2 at 66%, P2→P3 at 33%) via force_check_phase; EnemyRegistry
+  resolution; GameState flag defaults + reset_run clears; save v12
+  + v11→v12 migration; flag round-trip; EndlessPortalSlot marker
+  present; R3 spawns exactly 1 ActBoss in the `crypt_room_3` group.
+* \[x] Regression: --verify / --verify3 / --verify4 / --verify5 /
+  --verify6 / --verify7 / --verify7_5 / --verify8 / --verify10
+  all PASS post-Stage-9.
 
 ## Stage 9.5 — Feel Pass  *(execute after Stage 9; binds `rules/feel-pass.md`)*
 

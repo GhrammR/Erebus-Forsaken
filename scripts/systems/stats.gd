@@ -54,6 +54,12 @@ var equip_hp_max: int = 0
 var weapon_attack_rating: int = 0
 var gear_resistance: int = 0
 
+## Stage 9 — per-skill flat damage bonus contributed by equipment.
+## Keyed by skill id (StringName, matches Skill subclass `id`).
+## Populated by Inventory via the `skill_bonus_<id>` affix-key family.
+## Read by Skill subclasses inside _execute via `get_skill_bonus(id)`.
+var equip_skill_bonuses: Dictionary = {}
+
 # Cached derived (read by other systems; never recomputed per-frame)
 var max_hp: int = 0
 var max_mp: int = 0
@@ -171,7 +177,20 @@ func apply_equipment_totals(totals: Dictionary) -> void:
 	equip_vitality       = int(totals.get(&"vitality", 0))
 	equip_pneuma         = int(totals.get(&"pneuma", 0))
 	equip_hp_max         = int(totals.get(&"hp_max", 0))
+	# Stage 9 — fan out any `skill_bonus_<skill_id>` keys into the
+	# per-skill bonus dict. Skill scripts read this back via
+	# get_skill_bonus(id) when computing outgoing damage.
+	equip_skill_bonuses.clear()
+	for key in totals.keys():
+		var k := String(key)
+		if k.begins_with("skill_bonus_"):
+			equip_skill_bonuses[StringName(k.substr(12))] = int(totals[key])
 	recompute()
+
+## Stage 9 — flat damage bonus a class skill picks up from equipped
+## items. Returns 0 when nothing is granting the bonus.
+func get_skill_bonus(skill_id: StringName) -> int:
+	return int(equip_skill_bonuses.get(skill_id, 0))
 
 ## Stage 1: passthrough. Stage 3's DamageResolver will compute final
 ## damage from Attack vs defender Stats before this is called.

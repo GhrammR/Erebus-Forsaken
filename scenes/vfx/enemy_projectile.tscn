@@ -15,7 +15,7 @@ color = Color(0.55, 0.85, 0.55, 1)
 
 [node name="Hitbox" type="Area2D" parent="."]
 collision_layer = 64
-collision_mask = 8
+collision_mask = 9
 script = ExtResource("2_hit")
 base_damage = 0
 

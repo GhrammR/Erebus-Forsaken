@@ -10,17 +10,45 @@ z_index = -1
 
 [node name="Body" type="Node2D" parent="."]
 
-[node name="Legs" type="Polygon2D" parent="Body"]
+[node name="HipCloth" type="Polygon2D" parent="Body"]
 
-[node name="Ribs" type="Polygon2D" parent="Body"]
+[node name="LegL" type="Polygon2D" parent="Body"]
+
+[node name="LegR" type="Polygon2D" parent="Body"]
+
+[node name="Pelvis" type="Polygon2D" parent="Body"]
+
+[node name="Spine" type="Polygon2D" parent="Body"]
+
+[node name="Rib1" type="Polygon2D" parent="Body"]
+
+[node name="Rib2" type="Polygon2D" parent="Body"]
+
+[node name="Rib3" type="Polygon2D" parent="Body"]
+
+[node name="Sternum" type="Polygon2D" parent="Body"]
+
+[node name="ArmRest" type="Polygon2D" parent="Body"]
 
 [node name="Skull" type="Polygon2D" parent="Body"]
 
-[node name="EyeGlow" type="Polygon2D" parent="Body"]
+[node name="Jaw" type="Polygon2D" parent="Body"]
+
+[node name="EyeSocketL" type="Polygon2D" parent="Body"]
+
+[node name="EyeSocketR" type="Polygon2D" parent="Body"]
+
+[node name="EyeGlowL" type="Polygon2D" parent="Body"]
+
+[node name="EyeGlowR" type="Polygon2D" parent="Body"]
 
 [node name="ArmAnchor" type="Node2D" parent="."]
 position = Vector2(6, -28)
 
-[node name="Arm" type="Polygon2D" parent="ArmAnchor"]
+[node name="ArmUpper" type="Polygon2D" parent="ArmAnchor"]
+
+[node name="ArmLower" type="Polygon2D" parent="ArmAnchor"]
+
+[node name="Claw" type="Polygon2D" parent="ArmAnchor"]
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]

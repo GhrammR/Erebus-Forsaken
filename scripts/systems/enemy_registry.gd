@@ -11,6 +11,7 @@ class_name EnemyRegistry extends RefCounted
 const SCENES: Dictionary = {
 	&"shade_wretch": "res://scenes/enemies/shade_wretch.tscn",
 	&"bog_caller": "res://scenes/enemies/bog_caller.tscn",
+	&"act_boss": "res://scenes/enemies/act_boss.tscn",
 }
 
 ## Stage 8 — elite modifiers loaded once and looked up by id during

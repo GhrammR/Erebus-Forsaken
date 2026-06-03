@@ -18,6 +18,7 @@ class_name ForsakenCrypt extends Zone
 
 const _SHADE_WRETCH := "res://scenes/enemies/shade_wretch.tscn"
 const _BOG_CALLER := "res://scenes/enemies/bog_caller.tscn"
+const _ACT_BOSS := "res://scenes/enemies/act_boss.tscn"
 
 ## Room compositions. Each entry is { scene, elite_id, pos_offset }.
 ## pos_offset is relative to the room's spawn anchor center; we jitter
@@ -37,9 +38,11 @@ const _ROOM_2_SPAWNS: Array = [
 	{ "scene": _BOG_CALLER,   "elite_id": &"elite_fast" },
 ]
 
+## Stage 9 — R3 hosts the Act boss. Single spawn at the room's primary
+## anchor; the boss owns its own phase-driven AI rather than the
+## director-style elite suffix system from Stage 8.
 const _ROOM_3_SPAWNS: Array = [
-	{ "scene": _SHADE_WRETCH, "elite_id": &"elite_tough" },
-	{ "scene": _BOG_CALLER,   "elite_id": &"elite_fast" },
+	{ "scene": _ACT_BOSS, "elite_id": &"" },
 ]
 
 const _ROOM_GROUPS: Array[StringName] = [
@@ -93,6 +96,15 @@ func _spawn_room(room_index: int, spawns: Array, anchor_parent: NodePath) -> voi
 		inst.global_position = anchor.global_position \
 				+ Vector2(randf_range(-24, 24), randf_range(-24, 24))
 		inst.add_to_group(_ROOM_GROUPS[room_index])
+		# Scripted spawns bypass SpawnDirector, so the game scene's
+		# zone-load wire pass won't connect this enemy's damage signal
+		# unless we ask. Look the Game up via group and register.
+		_register_combatant(inst)
+
+func _register_combatant(node: Node) -> void:
+	for g in get_tree().get_nodes_in_group(&"game_host"):
+		if g.has_method("wire_combatant_vfx"):
+			g.wire_combatant_vfx(node)
 
 func _process(_delta: float) -> void:
 	# Cheap polling: a room is "clear" once no live enemies remain in

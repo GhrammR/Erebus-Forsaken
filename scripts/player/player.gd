@@ -223,10 +223,16 @@ func _end_attack_state() -> void:
 func _on_damaged(_amount: int, _source: Node) -> void:
 	if _amount > 0 and _life == LifeState.ALIVE:
 		AudioBank.play_sfx(&"player_hurt")
-	if _amount > 0 and _sprite_anim != null and _life == LifeState.ALIVE \
-			and _combat == CombatState.READY:
+	if _amount <= 0 or _life != LifeState.ALIVE:
+		return
+	# Always run the flash, even mid-attack. Gating on CombatState.READY
+	# meant a hit landed during a swing skipped the lerp-back, leaving
+	# the sprite stuck on whatever modulate frame the previous flash
+	# was on. The anim_hit play is still gated (it would interrupt the
+	# swing anim) but the colour reset is universal.
+	_flash_hit()
+	if _sprite_anim != null and _combat == CombatState.READY:
 		_sprite_anim.play(&"hit")
-		_flash_hit()
 
 func _flash_hit() -> void:
 	if _sprite_root == null or not (_sprite_root is Node2D):

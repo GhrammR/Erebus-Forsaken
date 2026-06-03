@@ -21,6 +21,12 @@ var cooldown: float = 1.0
 var base_damage: int = 10
 var range_px: float = 100.0
 
+## Stage 9 — id this skill registers under. Stats.equip_skill_bonuses
+## is keyed by this id so a unique item with affix
+## `skill_bonus_<id>: +N` boosts only the matching skill. Subclasses
+## set in _configure.
+var skill_id: StringName = &""
+
 var _cd_remaining: float = 0.0
 
 func _init() -> void:
@@ -72,6 +78,15 @@ func _execute(_caster: Node, _facing_dir: Vector2) -> void:
 	pass
 
 # ---------------------------------------------------------------- helpers
+
+## Stage 9 — outgoing damage for this skill, with the unique-item
+## bonus folded in. Subclasses call this instead of reading
+## base_damage directly when spawning hitboxes/projectiles.
+func effective_damage(caster: Node) -> int:
+	var stats := _stats_of(caster)
+	if stats == null or skill_id == &"":
+		return base_damage
+	return base_damage + stats.get_skill_bonus(skill_id)
 
 static func _stats_of(node: Node) -> Stats:
 	if node == null:

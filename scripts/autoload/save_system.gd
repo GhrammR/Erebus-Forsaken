@@ -4,7 +4,7 @@ extends Node
 ## migrate() step. The on-disk format is human-readable so a tester can
 ## hand-edit corruption cases (rules/failure-modes.md #7 leans on this).
 
-const SAVE_VERSION: int = 11
+const SAVE_VERSION: int = 12
 const SAVE_PATH: String = "user://save_slot_1.dat"
 
 signal save_completed(success: bool)
@@ -93,6 +93,8 @@ func migrate(old: Dictionary) -> Dictionary:
 		old = _migrate_v9_to_v10(old)
 	if v < 11:
 		old = _migrate_v10_to_v11(old)
+	if v < 12:
+		old = _migrate_v11_to_v12(old)
 	return old
 
 func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
@@ -184,6 +186,17 @@ func _migrate_v9_to_v10(old: Dictionary) -> Dictionary:
 		old["corpse"] = { "corpses": [], "next_id": 1, "spills": [] }
 	return old
 
+func _migrate_v11_to_v12(old: Dictionary) -> Dictionary:
+	# v11 had no Act-boss completion flags. Legacy saves predate the
+	# boss landing, so both default false — the player simply hasn't
+	# killed it yet under the new state machine.
+	old["version"] = 12
+	if not old.has("act_1_complete"):
+		old["act_1_complete"] = false
+	if not old.has("boss_first_kill"):
+		old["boss_first_kill"] = false
+	return old
+
 func _migrate_v10_to_v11(old: Dictionary) -> Dictionary:
 	# v10 had no item-instance registry. Legacy saves get an empty
 	# block — no prefixed items had ever rolled. Old inventories
@@ -224,6 +237,8 @@ func _snapshot(player: Node) -> Dictionary:
 		"loot": _snapshot_active_zone_loot(),
 		"corpse": CorpseSystem.snapshot(),
 		"item_instances": ItemInstanceRegistry.snapshot(),
+		"act_1_complete": GameState.act_1_complete,
+		"boss_first_kill": GameState.boss_first_kill,
 	}
 	return snap
 
@@ -321,6 +336,8 @@ func _apply(player: Node, data: Dictionary) -> void:
 		wallet.set_gold(int(data.get("gold", 0)))
 	QuestSystem.restore(data.get("quests", {}))
 	GameState.current_zone_id = StringName(data.get("zone_id", "threshold_camp"))
+	GameState.act_1_complete = bool(data.get("act_1_complete", false))
+	GameState.boss_first_kill = bool(data.get("boss_first_kill", false))
 	_pending_enemy_snapshot = data.get("enemies", []) as Array
 	_pending_loot_snapshot = data.get("loot", []) as Array
 	CorpseSystem.restore(data.get("corpse", {}))

@@ -14,6 +14,7 @@ const HITBOX_FORWARD_OFFSET: float = 40.0 ## center of hitbox vs caster
 
 func _configure() -> void:
 	display_name = "Spear Lunge"
+	skill_id = &"spear_lunge"
 	mp_cost = 8
 	cooldown = 1.2
 	base_damage = 22
@@ -30,7 +31,7 @@ func _execute(caster: Node, facing_dir: Vector2) -> void:
 	var hb_node := _HITBOX_SCENE.instantiate()
 	var hb := hb_node as HitboxComponent
 	hb.owner_body = caster
-	hb.base_damage = base_damage
+	hb.base_damage = effective_damage(caster)
 	# Add to caster's parent (the active zone) so it's not affected by
 	# the caster's child transforms (SpriteAnchor flips, etc.).
 	caster.get_parent().add_child(hb)

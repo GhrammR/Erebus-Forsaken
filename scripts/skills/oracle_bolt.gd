@@ -12,6 +12,7 @@ const BOLT_COLOR: Color = Color(0.78, 0.55, 1.0, 1.0)  ## violet
 
 func _configure() -> void:
 	display_name = "Oracle Bolt"
+	skill_id = &"oracle_bolt"
 	mp_cost = 12
 	cooldown = 0.9
 	base_damage = 18
@@ -24,7 +25,7 @@ func _execute(caster: Node, facing_dir: Vector2) -> void:
 	dir = dir.normalized()
 
 	var proj := _PROJECTILE_SCENE.instantiate() as Projectile
-	proj.configure(dir, base_damage, caster, PROJECTILE_SPEED, range_px, BOLT_COLOR)
+	proj.configure(dir, effective_damage(caster), caster, PROJECTILE_SPEED, range_px, BOLT_COLOR)
 	caster.get_parent().add_child(proj)
 	(proj as Node2D).global_position = (caster as Node2D).global_position + dir * SPAWN_OFFSET
 

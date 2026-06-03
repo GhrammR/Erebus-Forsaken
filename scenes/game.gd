@@ -60,6 +60,11 @@ const _CLICK_NPC_RADIUS: float = 22.0
 var _pending_interact_npc: Npc = null
 
 func _ready() -> void:
+	# Stage 9 polish — anything that spawns a combatant outside the
+	# zone-load / SpawnDirector path (scripted dungeon spawns, runtime
+	# summons like Bone Servant) looks Game up via this group and calls
+	# wire_combatant_vfx() so its damage numbers fire.
+	add_to_group(&"game_host")
 	_help.text = "Click=move  |  WASD  |  E=interact  |  I=inventory  |  F5=save  |  F9=load  |  Esc=pause"
 
 	# Default class on first launch; load_game below may overwrite it.
@@ -207,6 +212,11 @@ func _do_transit(zone_id: StringName, place_at_spawn: bool, arrival_marker: Stri
 	_spawn_pending_spills_in_zone()
 	_wire_zone_npcs()
 	_wire_zone_combat_vfx()
+	# Crypt-style scripted spawns happen via call_deferred from the
+	# zone's _ready, so they aren't in the tree yet when the wire pass
+	# above runs. Re-walk next frame to catch them. Idempotent —
+	# already-connected signals are skipped.
+	_wire_zone_combat_vfx.call_deferred()
 	# AudioBank listens for zone_changed and swaps the ambient loop.
 	# SceneRouter only emits in the fallback (non-host) path, so the
 	# production transit_to_zone flow re-emits here.

@@ -1,0 +1,181 @@
+[gd_scene load_steps=8 format=3]
+
+[sub_resource type="Animation" id="anim_idle"]
+length = 1.6
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Body:position")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0.0, 0.8, 1.6),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector2(0, 0), Vector2(0, -2.5), Vector2(0, 0)]
+}
+
+[sub_resource type="Animation" id="anim_walk"]
+length = 0.5
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Body:rotation")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0.0, 0.125, 0.25, 0.375, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [0.0, 0.06, 0.0, -0.06, 0.0]
+}
+
+[sub_resource type="Animation" id="anim_attack"]
+length = 0.45
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Body/ArmR:rotation")
+tracks/0/interp = 2
+tracks/0/keys = {
+"times": PackedFloat32Array(0.0, 0.18, 0.30, 0.45),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [0.0, -1.6, 0.5, 0.0]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Body/ArmL:rotation")
+tracks/1/interp = 2
+tracks/1/keys = {
+"times": PackedFloat32Array(0.0, 0.18, 0.30, 0.45),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [0.0, 1.6, -0.5, 0.0]
+}
+
+[sub_resource type="Animation" id="anim_hit"]
+length = 0.22
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Body:modulate")
+tracks/0/interp = 1
+tracks/0/keys = {
+"times": PackedFloat32Array(0.0, 0.06, 0.22),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(2.6, 1.4, 1.8, 1), Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="anim_die"]
+length = 0.9
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Body:rotation")
+tracks/0/interp = 2
+tracks/0/keys = {
+"times": PackedFloat32Array(0.0, 0.9),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [0.0, 1.5]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Body:modulate")
+tracks/1/interp = 1
+tracks/1/keys = {
+"times": PackedFloat32Array(0.0, 0.9),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(0.4, 0.3, 0.5, 0)]
+}
+
+[sub_resource type="Animation" id="anim_cast"]
+length = 0.6
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Body:modulate")
+tracks/0/interp = 1
+tracks/0/keys = {
+"times": PackedFloat32Array(0.0, 0.25, 0.5, 0.6),
+"transitions": PackedFloat32Array(1, 1, 1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(1.6, 1.4, 2.2, 1), Color(1.6, 1.4, 2.2, 1), Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="AnimationLibrary" id="anim_lib"]
+_data = {
+"attack": SubResource("anim_attack"),
+"cast": SubResource("anim_cast"),
+"die": SubResource("anim_die"),
+"hit": SubResource("anim_hit"),
+"idle": SubResource("anim_idle"),
+"walk": SubResource("anim_walk")
+}
+
+[node name="ActBossSprite" type="Node2D"]
+
+[node name="Shadow" type="Polygon2D" parent="."]
+z_index = -1
+modulate = Color(0, 0, 0, 0.65)
+position = Vector2(0, 6)
+polygon = PackedVector2Array(-22, -5, -14, -10, 14, -10, 22, -5, 16, 5, -16, 5)
+
+[node name="Body" type="Node2D" parent="."]
+
+[node name="Robe" type="Polygon2D" parent="Body"]
+polygon = PackedVector2Array(-22, -10, -18, -52, -10, -62, 10, -62, 18, -52, 22, -10, 14, 0, -14, 0)
+color = Color(0.10, 0.07, 0.15, 1)
+
+[node name="Trim" type="Polygon2D" parent="Body"]
+position = Vector2(0, -10)
+polygon = PackedVector2Array(-22, 0, -14, 2, 14, 2, 22, 0, 20, -2, -20, -2)
+color = Color(0.55, 0.42, 0.18, 1)
+
+[node name="Hood" type="Polygon2D" parent="Body"]
+polygon = PackedVector2Array(-14, -62, -10, -76, 10, -76, 14, -62, 7, -58, -7, -58)
+color = Color(0.05, 0.04, 0.09, 1)
+
+[node name="HornR" type="Polygon2D" parent="Body"]
+polygon = PackedVector2Array(8, -76, 14, -90, 16, -80, 11, -74)
+color = Color(0.08, 0.06, 0.08, 1)
+
+[node name="HornL" type="Polygon2D" parent="Body"]
+polygon = PackedVector2Array(-8, -76, -14, -90, -16, -80, -11, -74)
+color = Color(0.08, 0.06, 0.08, 1)
+
+[node name="FaceVoid" type="Polygon2D" parent="Body"]
+polygon = PackedVector2Array(-7, -70, 7, -70, 5, -62, -5, -62)
+color = Color(0.02, 0.02, 0.04, 1)
+
+[node name="EyeL" type="Polygon2D" parent="Body"]
+position = Vector2(-3, -66)
+polygon = PackedVector2Array(-1.5, -1.5, 1.5, -1.5, 1.5, 1.5, -1.5, 1.5)
+color = Color(0.4, 0.95, 1.0, 1)
+
+[node name="EyeR" type="Polygon2D" parent="Body"]
+position = Vector2(3, -66)
+polygon = PackedVector2Array(-1.5, -1.5, 1.5, -1.5, 1.5, 1.5, -1.5, 1.5)
+color = Color(0.4, 0.95, 1.0, 1)
+
+[node name="ArmR" type="Polygon2D" parent="Body"]
+position = Vector2(18, -36)
+polygon = PackedVector2Array(0, -3, 14, -2, 18, 3, 14, 6, 0, 4)
+color = Color(0.16, 0.12, 0.18, 1)
+
+[node name="ArmL" type="Polygon2D" parent="Body"]
+position = Vector2(-18, -36)
+polygon = PackedVector2Array(0, -3, -14, -2, -18, 3, -14, 6, 0, 4)
+color = Color(0.16, 0.12, 0.18, 1)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("anim_lib")
+}

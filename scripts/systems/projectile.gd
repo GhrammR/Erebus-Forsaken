@@ -22,6 +22,13 @@ func _ready() -> void:
 	_visual.color = visual_color
 	_hitbox.arm()
 	_hitbox.area_entered.connect(_on_area_entered)
+	# Stage 9 polish — projectiles must die on wall contact. Walls are
+	# StaticBody2D (bodies, not areas) so area_entered alone won't
+	# catch them; the hitbox masks include the wall layer (1) and we
+	# despawn on body overlap. No damage delivered: walls have no
+	# HurtboxComponent. Later traversal skills (teleport, etc.) can
+	# opt out by flagging the projectile.
+	_hitbox.body_entered.connect(_on_body_entered)
 
 func _process(delta: float) -> void:
 	var step := speed * delta
@@ -37,6 +44,11 @@ func _on_area_entered(other: Area2D) -> void:
 	if hurt == null:
 		return
 	hit_target.emit(hurt.get_parent())
+	queue_free()
+
+func _on_body_entered(_body: Node) -> void:
+	# Walls (any non-hurt body in the hitbox's mask) stop the projectile.
+	expired.emit()
 	queue_free()
 
 ## Configure before adding to the tree; call after instantiate().

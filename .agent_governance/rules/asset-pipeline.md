@@ -25,6 +25,63 @@ sprites are:
 - Animations driven by `AnimationPlayer`, never by `_process` math, so they
   survive the bitmap swap unchanged.
 
+### Modular subtree contract
+
+Every procedural sprite is a *layered subtree*, not a single Polygon2D
+blob. The rule:
+
+> One semantic part = one `Polygon2D` node, named for the part.
+
+Why: the polish pass (bitmap swap, or richer procedural details like
+flowing cloth, facial features, individual ribs, weapon textures) can
+replace a single subnode without redrawing the rest of the sprite,
+and the AnimationPlayer tracks (which reference NodePaths to those
+named subnodes) keep working unchanged.
+
+Reference layout for a humanoid:
+
+```
+SpriteRoot (Node2D)
+├── Shadow                   (one Polygon2D)
+├── Body (Node2D)            ← every part the hit-flash should tint
+│   ├── HipCloth / Robe      (cloth layer behind bones)
+│   ├── LegL, LegR           (separate, not a fused trapezoid)
+│   ├── Pelvis, Spine
+│   ├── Rib1, Rib2, Rib3, Sternum   (individual ribs, not one block)
+│   ├── ArmRest              (resting / hanging arm)
+│   ├── Skull, Jaw
+│   ├── EyeSocketL, EyeSocketR
+│   └── EyeGlowL, EyeGlowR
+├── ArmAnchor (Node2D)       ← rotated by the attack animation
+│   ├── ArmUpper, ArmLower
+│   └── Claw / WeaponHead
+└── AnimationPlayer
+```
+
+Hard requirements:
+
+- Anything the hit-flash should tint must live under `Body`. The
+  flash code targets `Body.modulate` (see `Enemy._flash_hit`).
+- The arm that performs the attack lives under `ArmAnchor`. The
+  attack anim rotates `ArmAnchor:rotation`, so flipping
+  `_sprite_anchor.scale.x` mirrors the swing automatically — never
+  hardcode left-vs-right swing logic.
+- Default-facing is **right** (positive x). Owner scripts flip
+  `_sprite_anchor.scale.x` to face left.
+- Eye glows are separate from sockets so a bitmap polish pass can
+  swap the socket without re-doing the glow shader/colour.
+- Don't fuse parts ("a single trapezoid suggesting both legs" is
+  the bug we're avoiding). One part, one node — even if the
+  procedural rendering looks blobby today, the modular structure
+  is what gives the polish pass somewhere to land.
+
+Reference implementation:
+`art/procedural/enemies/bone_servant_sprite.tscn` + `.gd`.
+The Stage-5 fused-blob version was rewritten under this contract
+in Stage 9 polish — match its structure when authoring new
+procedural sprites and refactor older ones as their polish window
+opens.
+
 ### Class visual identity (procedural era)
 
 | Class          | Silhouette cue            | Palette anchor              |
