@@ -26,6 +26,7 @@ const _SFX_BANK: Dictionary = {
 const _AMBIENT_BANK: Dictionary = {
 	&"threshold_camp": "res://audio/ambient/threshold_camp.ogg",
 	&"blighted_reach": "res://audio/ambient/blighted_reach.ogg",
+	&"forsaken_crypt": "res://audio/ambient/forsaken_crypt.ogg",
 }
 
 const _SETTINGS_PATH: String = "user://settings.json"

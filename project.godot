@@ -26,6 +26,7 @@ Database="*res://scripts/autoload/database.gd"
 QuestSystem="*res://scripts/autoload/quest_system.gd"
 CorpseSystem="*res://scripts/autoload/corpse_system.gd"
 AudioBank="*res://scripts/autoload/audio_bank.gd"
+ItemInstanceRegistry="*res://scripts/autoload/item_instance_registry.gd"
 
 [audio]
 

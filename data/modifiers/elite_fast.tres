@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EliteModifier" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/elite_modifier.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"elite_fast"
+display_name = "Fleet"
+hp_mult = 1.15
+damage_mult = 1.0
+defense_mult = 1.0
+speed_mult = 1.6
+attack_interval_mult = 0.75
+tint = Color(1.25, 1.05, 0.75, 1.0)
+scale_mult = 0.95
+spawns_on_death = &""
+spawn_count = 0

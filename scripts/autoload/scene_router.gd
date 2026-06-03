@@ -13,6 +13,7 @@ extends Node
 const ZONE_PATHS: Dictionary = {
 	&"threshold_camp": "res://scenes/zones/threshold_camp.tscn",
 	&"blighted_reach": "res://scenes/zones/blighted_reach.tscn",
+	&"forsaken_crypt": "res://scenes/zones/forsaken_crypt.tscn",
 }
 
 var _host: Object = null

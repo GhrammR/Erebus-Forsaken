@@ -35,6 +35,15 @@ var _attack_cd: float = 0.0
 var _state: AiState = AiState.IDLE
 var _aggroed: bool = false
 
+func _ready() -> void:
+	super._ready()
+	# Elite mults are folded in once here so the AI loop reads stable
+	# values from tick zero. _apply_elite_pre_stats already handled HP
+	# and damage; speed + cadence are AI-side so they live here.
+	if elite_modifier != null:
+		move_speed *= elite_modifier.speed_mult
+		attack_interval *= elite_modifier.attack_interval_mult
+
 func _physics_process(delta: float) -> void:
 	if _health == null or _health.is_dead():
 		velocity = Vector2.ZERO

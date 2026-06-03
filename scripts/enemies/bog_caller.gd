@@ -16,6 +16,11 @@ const _PROJECTILE_SCENE := preload("res://scenes/vfx/enemy_projectile.tscn")
 @export var projectile_range: float = 480.0
 @export var projectile_color: Color = Color(0.55, 0.85, 0.55, 1)
 
+func _ready() -> void:
+	super._ready()
+	if elite_damage_mult != 1.0:
+		projectile_damage = int(round(float(projectile_damage) * elite_damage_mult))
+
 func _perform_attack(dir: Vector2) -> void:
 	# Defer the actual spawn to next idle so a Bog-Caller standing in
 	# a tight cluster never schedules an Area2D add during a physics

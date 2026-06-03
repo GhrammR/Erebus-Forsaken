@@ -64,7 +64,12 @@ func get_all_classes() -> Array:
 			out.append(cd)
 	return out
 
+## Stage 8: instance ids (e.g. "shade_blade#7") synthesize a one-off
+## ItemData clone via ItemInstanceRegistry — see AD-06 + D3.A. Base
+## ids fall through to the dict lookup unchanged.
 func get_item(id: StringName) -> Resource:
+	if ItemInstanceRegistry.is_instance(id):
+		return ItemInstanceRegistry.synthesize(id)
 	return items.get(id, null)
 
 func get_enemy(id: StringName) -> Resource:

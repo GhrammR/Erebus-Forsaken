@@ -13,8 +13,26 @@ const SCENES: Dictionary = {
 	&"bog_caller": "res://scenes/enemies/bog_caller.tscn",
 }
 
+## Stage 8 — elite modifiers loaded once and looked up by id during
+## save snapshot rehydration. Keeps SaveSystem/Game ignorant of the
+## modifier asset paths (parallel to SCENES above).
+const ELITE_PATHS: Dictionary = {
+	&"elite_fast":    "res://data/modifiers/elite_fast.tres",
+	&"elite_tough":   "res://data/modifiers/elite_tough.tres",
+	&"elite_spawner": "res://data/modifiers/elite_spawner.tres",
+}
+
 static func scene_for(id: StringName) -> PackedScene:
 	var path: String = SCENES.get(id, "")
 	if path == "":
 		return null
 	return load(path) as PackedScene
+
+static func elite_modifier_for(id: StringName) -> EliteModifier:
+	var path: String = ELITE_PATHS.get(id, "")
+	if path == "":
+		return null
+	return load(path) as EliteModifier
+
+static func elite_ids() -> Array:
+	return ELITE_PATHS.keys()

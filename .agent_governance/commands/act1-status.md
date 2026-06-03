@@ -248,8 +248,8 @@ them); **execution order** is now:
 
 1. Stage 10 — Character select (identity before content) **[CLOSED]**
 2. Stage 7.5 — Audio mini-stage (Feel Pass enablement) **[CLOSED]**
-3. Stage 8 — Dungeon (with affix-tier sub-system) *(next)*
-4. Stage 9 — Act boss
+3. Stage 8 — Dungeon (with affix-tier sub-system) **[CLOSED]**
+4. Stage 9 — Act boss *(next)*
 5. Stage 9.5 — Feel Pass (sound + juice contract, `rules/feel-pass.md`)
 6. Stage 9.7 — Endless mode (post-boss retention)
 7. **itch.io free demo launches here** (`commands/launch-plan.md`)
@@ -333,24 +333,65 @@ and a note appended to this file.
 * \[x] Regression: --verify / --verify3 / --verify4 / --verify5 /
   --verify6 / --verify7 / --verify10 all PASS post-Stage-7.5.
 
-## Stage 8 — Dungeon  *(execute after Stage 7.5)*
+## Stage 8 — Dungeon
 
-* \[ ] Three-room interior with locked progression
-* \[ ] Trash → mini-encounter → boss room
-* \[ ] Difficulty rises per room (enemy count or stats)
-* \[ ] Elite enemy suffix system: 3 suffixes (Fast, Tough, Spawner)
-  applied to wilderness/dungeon enemies via a `EliteModifier` resource
-* \[ ] **Affix tier added to ItemData** (single fixed-roll prefix tier
-  — Strategic Review D3.A). Drops with a 25% prefix-roll chance.
-  Prefix table: 6 prefixes (+STR, +DEX, +VIT, +PNE, +HP, +Armor).
-  Does NOT introduce variable rolls — each prefix is a fixed integer.
-  This is the only scope-lock exception explicitly approved by the
-  review; it does not unlock Act 2 affix scope (variable rolls,
-  suffixes, ranges) which remain forbidden.
-* \[ ] Drop rarity colors on `ItemData.glyph_color`: white/blue/gold
-  by prefix count (0/1/future). UI surfaces the color on tooltips
-  and pickup labels.
-* \[ ] Inventory cap bumped 24 → 36 to accommodate dungeon density
+* \[x] Three-room interior with locked progression
+  (`scenes/zones/forsaken_crypt.tscn` + `scripts/zones/forsaken_crypt.gd`).
+  Single zone — one `_zone_cache` entry, AD-12 compliant. Rooms are
+  rectangular floor tints; player enters south, pushes north through
+  R1 → R2 → R3.
+* \[x] Trash → mini-encounter → boss room. R1: 3 shade_wretches. R2:
+  4 wretches + 1 Fleet bog_caller (gate1 closes south corridor until
+  cleared). R3 (boss-room placeholder): 1 Ironbound wretch + 1 Fleet
+  bog_caller. Stage 9 lands the real Act boss in the same R3 footprint.
+* \[x] Difficulty rises per room — enemy count (3/5/2 elite-heavy) +
+  elite density per the brief.
+* \[x] Elite enemy suffix system
+  (`scripts/enemies/elite_modifier.gd` + `data/modifiers/elite_*.tres`):
+  Fleet (+speed, +cadence), Ironbound (+hp, +dmg, +def, -speed),
+  Brood-mother (+hp, spawns 2 wretches on death). Applied via
+  `Enemy.elite_modifier` export; mults fold into Stats/AI/damage in
+  `_apply_elite_pre_stats` + `_apply_elite_post_sprite`. SpawnDirector
+  rolls elites via `elite_chance` + `elite_table` per zone. Save +
+  cache round-trip via `EnemyRegistry.elite_modifier_for(id)`.
+* \[x] **Affix tier — D3.A carve-out**: single fixed-roll prefix at
+  25% drop chance. `data/affixes/prefix_table.tres` (PrefixTable):
+  Mighty (+3 STR), Swift (+3 DEX), Stout (+3 VIT), Wise (+3 PNE),
+  Hale (+15 HP), Plated (+5 Armor). HP routed via new `hp_max` key
+  in `Stats.apply_equipment_totals`. NO suffixes, NO ranges, NO
+  variable rolls. Act 2 affix scope remains forbidden.
+* \[x] Per-drop instance system
+  (`scripts/autoload/item_instance_registry.gd`): roll mints a
+  synthetic instance_id (e.g. "shade_blade#7"); Database.get_item
+  routes it to a synthesized ItemData clone with merged affixes,
+  blue glyph_color, prefix-prepended display_name. Save schema v11
+  persists the registry alongside inventory.
+* \[x] Drop rarity colors: base = cream (white-tier),
+  prefixed = `Color(0.45, 0.65, 1.0)` blue (rare-tier). Gold-tier
+  (2+ prefixes) branch is wired in `synthesize` but no drop produces
+  it this stage — that path is Stage 9 unique-item territory.
+* \[x] Inventory cap bumped 24 → 36 (`Inventory.BACKPACK_CAPACITY`).
+  No save migration needed — backpack is a dynamic Array; old 24-cap
+  saves load cleanly.
+* \[x] Wilderness south crypt entrance: portal at (0, 500) in
+  Blighted Reach behind the existing tree line, with
+  `FromForsakenCrypt` arrival marker so returns drop the player
+  next to the door. Player discovers it by traversal — no hub-side
+  teleport.
+* \[x] Gates: `scripts/world/gate.gd` + `scenes/world/gate.tscn`
+  (stone slab + cyan rune). Lock by default; on room clear the rune
+  flares for 0.18s then the slab fades over 0.4s as the collider
+  disables. Zone polls each frame; cheap.
+* \[x] `--verify8` verifier (35/35 PASS): prefix table contents +
+  stat coverage, elite modifier load + apply, instance registry roll
+  determinism + statistical band, Database dispatch + synth shape,
+  inventory cap, crypt scene structural contract (3 rooms × correct
+  anchor counts, 2 gates, return portal), Blighted Reach entrance,
+  SceneRouter wiring, save schema v11 + migration, registry
+  round-trip, AudioBank ambient registration.
+* \[x] Regression: --verify / --verify3 / --verify4 / --verify5 /
+  --verify6 / --verify7 / --verify7_5 / --verify10 all PASS
+  post-Stage-8.
 
 ## Stage 9 — Act boss  *(execute after Stage 8)*
 

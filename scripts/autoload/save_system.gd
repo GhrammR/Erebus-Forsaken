@@ -4,7 +4,7 @@ extends Node
 ## migrate() step. The on-disk format is human-readable so a tester can
 ## hand-edit corruption cases (rules/failure-modes.md #7 leans on this).
 
-const SAVE_VERSION: int = 10
+const SAVE_VERSION: int = 11
 const SAVE_PATH: String = "user://save_slot_1.dat"
 
 signal save_completed(success: bool)
@@ -91,6 +91,8 @@ func migrate(old: Dictionary) -> Dictionary:
 		old = _migrate_v8_to_v9(old)
 	if v < 10:
 		old = _migrate_v9_to_v10(old)
+	if v < 11:
+		old = _migrate_v10_to_v11(old)
 	return old
 
 func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
@@ -182,6 +184,15 @@ func _migrate_v9_to_v10(old: Dictionary) -> Dictionary:
 		old["corpse"] = { "corpses": [], "next_id": 1, "spills": [] }
 	return old
 
+func _migrate_v10_to_v11(old: Dictionary) -> Dictionary:
+	# v10 had no item-instance registry. Legacy saves get an empty
+	# block — no prefixed items had ever rolled. Old inventories
+	# remain valid since unprefixed items pass through unchanged.
+	old["version"] = 11
+	if not old.has("item_instances"):
+		old["item_instances"] = { "next_serial": 1, "instances": {} }
+	return old
+
 # ---- snapshot / apply ----------------------------------------------------
 
 func _player() -> Node:
@@ -212,6 +223,7 @@ func _snapshot(player: Node) -> Dictionary:
 		"enemies": _snapshot_active_zone_enemies(),
 		"loot": _snapshot_active_zone_loot(),
 		"corpse": CorpseSystem.snapshot(),
+		"item_instances": ItemInstanceRegistry.snapshot(),
 	}
 	return snap
 
@@ -257,11 +269,14 @@ func _snapshot_active_zone_enemies() -> Array:
 			continue
 		if e.current_stats != null and e.current_stats.is_dead():
 			continue
-		out.append({
+		var entry: Dictionary = {
 			"id": String(e.enemy_id),
 			"pos": { "x": e.global_position.x, "y": e.global_position.y },
 			"hp": e.current_stats.current_hp if e.current_stats != null else int(e.max_hp),
-		})
+		}
+		if e.elite_modifier != null and e.elite_modifier.id != &"":
+			entry["elite_id"] = String(e.elite_modifier.id)
+		out.append(entry)
 	return out
 
 func consume_pending_enemy_snapshot() -> Array:
@@ -292,6 +307,12 @@ func _apply(player: Node, data: Dictionary) -> void:
 		stats.alloc_vitality  = int(alloc.get("vitality", 0))
 		stats.alloc_pneuma    = int(alloc.get("pneuma", 0))
 		stats.recompute()
+	# Item-instance registry must restore BEFORE Inventory.restore so
+	# the inventory's _recompute_totals lookup synthesizes prefixed
+	# items via Database.get_item and feeds their equip totals into
+	# Stats. Order matters — a late restore would silently drop the
+	# equipment bonus on the first equip-totals pass.
+	ItemInstanceRegistry.restore(data.get("item_instances", {}))
 	var inv: Inventory = player.get_node_or_null(^"Inventory") as Inventory
 	if inv != null:
 		inv.restore(data.get("inventory", {}))

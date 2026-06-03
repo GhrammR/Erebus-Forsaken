@@ -50,6 +50,7 @@ var equip_pneuma: int = 0
 
 # Equipment slot-base + affix totals (Stage 4 populates via Inventory)
 var armor_defense: int = 0
+var equip_hp_max: int = 0
 var weapon_attack_rating: int = 0
 var gear_resistance: int = 0
 
@@ -125,7 +126,7 @@ func recompute() -> void:
 		return
 
 	# Derived
-	max_hp = cd.base_hp + int(vitality * cd.vit_per_hp)
+	max_hp = cd.base_hp + int(vitality * cd.vit_per_hp) + equip_hp_max
 	max_mp = cd.base_mp + int(pneuma   * cd.pne_per_mp)
 	defense = dexterity / 4 + armor_defense
 	attack_rating = dexterity * 5 + weapon_attack_rating + level * 5
@@ -169,6 +170,7 @@ func apply_equipment_totals(totals: Dictionary) -> void:
 	equip_dexterity      = int(totals.get(&"dexterity", 0))
 	equip_vitality       = int(totals.get(&"vitality", 0))
 	equip_pneuma         = int(totals.get(&"pneuma", 0))
+	equip_hp_max         = int(totals.get(&"hp_max", 0))
 	recompute()
 
 ## Stage 1: passthrough. Stage 3's DamageResolver will compute final

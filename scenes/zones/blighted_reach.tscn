@@ -119,8 +119,17 @@ display_name = "Threshold Camp"
 target_zone = &"threshold_camp"
 arrival_marker = &"FromBlightedReach"
 
+[node name="CryptPortal" parent="." instance=ExtResource("3_portal")]
+position = Vector2(0, 500)
+display_name = "Forsaken Crypt"
+target_zone = &"forsaken_crypt"
+arrival_marker = &"FromBlightedReach"
+
 [node name="SpawnPoint" type="Marker2D" parent="."]
 position = Vector2(0, -460)
+
+[node name="FromForsakenCrypt" type="Marker2D" parent="."]
+position = Vector2(0, 440)
 
 [node name="SpawnAnchors" type="Node2D" parent="."]
 

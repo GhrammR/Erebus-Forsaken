@@ -11,6 +11,17 @@ class_name Enemy extends CharacterBody2D
 @export var drop_table: DropTable                ## Stage 4 — rolled on death
 @export var corpse_linger: float = 1.0  ## seconds between die anim and queue_free
 
+## Stage 8 — optional elite suffix. SpawnDirector assigns this before
+## add_child so _ready applies the mults to Stats/sprite/damage in one
+## pass. Saved per-enemy via EnemyRegistry snapshot so a Tough
+## Shade-Wretch round-trips correctly across save/load + zone-cache.
+@export var elite_modifier: EliteModifier = null
+
+## Subclasses read this in _ready when computing outgoing damage
+## (Hitbox.base_damage, projectile_damage). Defaults to 1.0; an elite
+## modifier overrides during _apply_elite_modifier.
+var elite_damage_mult: float = 1.0
+
 const _WORLD_ITEM_SCENE := preload("res://scenes/items/world_item.tscn")
 const _GOLD_PICKUP_SCENE := preload("res://scenes/items/gold_pickup.tscn")
 
@@ -35,6 +46,11 @@ func _ready() -> void:
 	# Stage 5: ally minions (BoneServantMinion) look up valid targets
 	# via this group. Every Enemy joins it on _ready.
 	add_to_group(&"enemies")
+	# Apply elite mults to max_hp/defense/AR *before* Stats are built so
+	# HealthComponent and DamageResolver see the boosted values from
+	# tick zero. Tint + scale + spawns-on-death wait until after the
+	# sprite subtree is up.
+	_apply_elite_pre_stats()
 	current_stats = Stats.new_basic(max_hp, defense_value, attack_rating_value)
 	_health.set_stats(current_stats)
 	_health.damaged.connect(_on_damaged)
@@ -45,6 +61,21 @@ func _ready() -> void:
 		_sprite_anim = inst.get_node_or_null(^"AnimationPlayer") as AnimationPlayer
 		if _sprite_anim != null:
 			_sprite_anim.play(&"idle")
+	_apply_elite_post_sprite()
+
+func _apply_elite_pre_stats() -> void:
+	if elite_modifier == null:
+		return
+	max_hp = maxi(1, int(round(float(max_hp) * elite_modifier.hp_mult)))
+	defense_value = int(round(float(defense_value) * elite_modifier.defense_mult))
+	attack_rating_value = int(round(float(attack_rating_value) * elite_modifier.defense_mult))
+	elite_damage_mult = elite_modifier.damage_mult
+
+func _apply_elite_post_sprite() -> void:
+	if elite_modifier == null:
+		return
+	_sprite_anchor.modulate = elite_modifier.tint
+	_sprite_anchor.scale = Vector2.ONE * elite_modifier.scale_mult
 
 func _on_damaged(amount: int, _source: Node) -> void:
 	if amount > 0 and not _health.is_dead():
@@ -60,8 +91,31 @@ func _on_died(killer: Node) -> void:
 	EventBus.enemy_died.emit(self, killer)
 	_try_drop()
 	_try_drop_gold()
+	_try_elite_spawn_on_death()
 	await get_tree().create_timer(corpse_linger).timeout
 	queue_free()
+
+func _try_elite_spawn_on_death() -> void:
+	if elite_modifier == null:
+		return
+	if elite_modifier.spawns_on_death == &"" or elite_modifier.spawn_count <= 0:
+		return
+	var packed := EnemyRegistry.scene_for(elite_modifier.spawns_on_death)
+	if packed == null:
+		return
+	for i in elite_modifier.spawn_count:
+		_spawn_elite_minion.call_deferred(packed, global_position
+				+ Vector2(randf_range(-24, 24), randf_range(-24, 24)))
+
+func _spawn_elite_minion(packed: PackedScene, at: Vector2) -> void:
+	var parent := get_parent()
+	if parent == null or not is_instance_valid(parent):
+		return
+	var inst := packed.instantiate() as Enemy
+	if inst == null:
+		return
+	parent.add_child(inst)
+	inst.global_position = at
 
 func _try_drop() -> void:
 	if drop_table == null:
@@ -78,7 +132,12 @@ func _try_drop() -> void:
 	# with the gold "Xg" label (which drops below). See _try_drop_gold.
 	var jitter := Vector2(randf_range(-14, 14), randf_range(-18, -6))
 	var drop_pos := global_position + jitter
-	_spawn_world_item.call_deferred(id, drop_pos)
+	# Stage 8 — every base drop gets a chance to roll a single prefix
+	# tier (Strategic Review D3.A). maybe_roll_prefix either returns
+	# the base id unchanged or registers a fresh synthetic instance id;
+	# the rest of the pipeline doesn't need to care which.
+	var rolled := ItemInstanceRegistry.maybe_roll_prefix(id)
+	_spawn_world_item.call_deferred(rolled, drop_pos)
 
 func _spawn_world_item(id: StringName, at: Vector2) -> void:
 	var parent := get_parent()

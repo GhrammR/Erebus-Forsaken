@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EliteModifier" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/elite_modifier.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"elite_tough"
+display_name = "Ironbound"
+hp_mult = 2.25
+damage_mult = 1.25
+defense_mult = 1.5
+speed_mult = 0.8
+attack_interval_mult = 1.1
+tint = Color(0.7, 0.85, 1.05, 1.0)
+scale_mult = 1.2
+spawns_on_death = &""
+spawn_count = 0

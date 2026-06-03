@@ -35,6 +35,13 @@ signal enemy_spawned(enemy: Enemy)
 ## just want visual breathing room.
 @export var min_distance_from_others: float = 60.0
 
+## Stage 8 — per-spawn elite roll. When > 0, each spawn picks an
+## EliteModifier uniformly from elite_table. Wilderness ships ~5%;
+## the dungeon room 2/3 directors run higher rates via per-zone
+## overrides. Empty table => roll is skipped regardless of chance.
+@export_range(0.0, 1.0, 0.01) var elite_chance: float = 0.0
+@export var elite_table: Array[EliteModifier] = []
+
 var _zone: Node = null
 var _anchors: Array[Marker2D] = []
 var _cooldown_remaining: float = 0.0
@@ -96,6 +103,11 @@ func _spawn_one() -> void:
 	var inst := packed.instantiate() as Enemy
 	if inst == null:
 		return
+	# Assign the elite modifier BEFORE add_child so Enemy._ready folds
+	# the mults into Stats/sprite in one pass.
+	var em := _maybe_pick_elite()
+	if em != null:
+		inst.elite_modifier = em
 	var container: Node = _zone.get_node_or_null(^"Enemies")
 	if container == null:
 		container = _zone
@@ -103,6 +115,13 @@ func _spawn_one() -> void:
 	inst.global_position = anchor.global_position
 	_track(inst)
 	enemy_spawned.emit(inst)
+
+func _maybe_pick_elite() -> EliteModifier:
+	if elite_chance <= 0.0 or elite_table.is_empty():
+		return null
+	if randf() >= elite_chance:
+		return null
+	return elite_table[randi() % elite_table.size()]
 
 func _pick_anchor() -> Marker2D:
 	var player := _player()

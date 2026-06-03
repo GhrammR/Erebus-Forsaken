@@ -17,6 +17,8 @@ func _ready() -> void:
 	super._ready()
 	if _hitbox != null:
 		_hitbox.owner_body = self
+		if elite_damage_mult != 1.0:
+			_hitbox.base_damage = int(round(float(_hitbox.base_damage) * elite_damage_mult))
 
 func _perform_attack(dir: Vector2) -> void:
 	if _hitbox == null:

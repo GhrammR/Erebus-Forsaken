@@ -1,0 +1,44 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/gate.gd" id="1_gate"]
+
+[sub_resource type="RectangleShape2D" id="rect_gate"]
+size = Vector2(220, 30)
+
+[node name="Gate" type="Node2D"]
+script = ExtResource("1_gate")
+
+[node name="Slab" type="Polygon2D" parent="."]
+z_index = 2
+polygon = PackedVector2Array(-110, -16, 110, -16, 110, 16, -110, 16)
+color = Color(0.22, 0.22, 0.26, 1)
+
+[node name="SlabHi" type="Polygon2D" parent="Slab"]
+polygon = PackedVector2Array(-110, -16, 110, -16, 110, -12, -110, -12)
+color = Color(0.32, 0.32, 0.36, 1)
+
+[node name="SlabShadow" type="Polygon2D" parent="Slab"]
+polygon = PackedVector2Array(-110, 12, 110, 12, 110, 16, -110, 16)
+color = Color(0.12, 0.12, 0.16, 1)
+
+[node name="Rune" type="Node2D" parent="."]
+z_index = 3
+
+[node name="RuneCenter" type="Polygon2D" parent="Rune"]
+polygon = PackedVector2Array(-12, 0, 0, -10, 12, 0, 0, 10)
+color = Color(0.4, 0.85, 1.0, 1)
+
+[node name="RuneArmL" type="Polygon2D" parent="Rune"]
+polygon = PackedVector2Array(-26, -2, -14, -2, -14, 2, -26, 2)
+color = Color(0.4, 0.85, 1.0, 1)
+
+[node name="RuneArmR" type="Polygon2D" parent="Rune"]
+polygon = PackedVector2Array(14, -2, 26, -2, 26, 2, 14, 2)
+color = Color(0.4, 0.85, 1.0, 1)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
+shape = SubResource("rect_gate")

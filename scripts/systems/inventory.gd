@@ -3,7 +3,11 @@ class_name Inventory extends Node
 ## Equip/unequip operations validate class_mask + level_req and roll
 ## up totals into Stats via apply_equipment_totals.
 
-const BACKPACK_CAPACITY: int = 24
+## Stage 8 bumped 24 -> 36 to absorb dungeon density (prefixed drops
+## stack alongside base drops because each instance is its own
+## StringName id). Backpack is a dynamic Array, so old 24-cap saves
+## load cleanly with no migration step.
+const BACKPACK_CAPACITY: int = 36
 
 signal inventory_changed
 signal equipment_changed(slot: int, item: ItemData)

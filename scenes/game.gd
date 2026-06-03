@@ -375,6 +375,12 @@ func _spawn_enemy_snapshot(snap: Array) -> void:
 		var inst := packed.instantiate() as Enemy
 		if inst == null:
 			continue
+		# Stage 8 — restore the elite modifier BEFORE add_child so
+		# Enemy._ready applies the mults during stats construction
+		# (same contract as SpawnDirector spawns).
+		var elite_id := StringName(entry.get("elite_id", ""))
+		if elite_id != &"":
+			inst.elite_modifier = EnemyRegistry.elite_modifier_for(elite_id)
 		container.add_child(inst)
 		var pos: Dictionary = entry.get("pos", {})
 		inst.global_position = Vector2(float(pos.get("x", 0.0)), float(pos.get("y", 0.0)))
@@ -404,6 +410,7 @@ func _zone_display_name(zone_id: StringName) -> String:
 	match zone_id:
 		&"threshold_camp": return "Threshold Camp"
 		&"blighted_reach": return "Blighted Reach"
+		&"forsaken_crypt": return "Forsaken Crypt"
 		_: return String(zone_id)
 
 func _wire_player_combat_vfx() -> void:

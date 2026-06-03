@@ -1,0 +1,138 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/zones/forsaken_crypt.gd" id="1_fc"]
+[ext_resource type="PackedScene" path="res://scenes/world/portal.tscn" id="2_portal"]
+[ext_resource type="PackedScene" path="res://scenes/world/gate.tscn" id="3_gate"]
+
+[sub_resource type="RectangleShape2D" id="rect_n"]
+size = Vector2(900, 40)
+
+[sub_resource type="RectangleShape2D" id="rect_s"]
+size = Vector2(900, 40)
+
+[sub_resource type="RectangleShape2D" id="rect_e"]
+size = Vector2(40, 1500)
+
+[sub_resource type="RectangleShape2D" id="rect_w"]
+size = Vector2(40, 1500)
+
+[node name="ForsakenCrypt" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_fc")
+zone_id = &"forsaken_crypt"
+
+[node name="VoidBackground" type="ColorRect" parent="."]
+mouse_filter = 2
+z_index = -100
+z_as_relative = false
+offset_left = -2400.0
+offset_top = -2400.0
+offset_right = 2400.0
+offset_bottom = 2400.0
+color = Color(0.01, 0.01, 0.015, 1)
+
+[node name="Floor" type="Polygon2D" parent="."]
+z_index = -10
+polygon = PackedVector2Array(-420, -700, 420, -700, 420, 700, -420, 700)
+color = Color(0.10, 0.08, 0.09, 1)
+
+[node name="FloorShadow" type="Polygon2D" parent="."]
+z_index = -9
+modulate = Color(1, 1, 1, 0.5)
+polygon = PackedVector2Array(-300, -600, 300, -600, 300, 600, -300, 600)
+color = Color(0.06, 0.05, 0.06, 1)
+
+[node name="Room1Tint" type="Polygon2D" parent="."]
+z_index = -8
+modulate = Color(0.85, 0.78, 0.7, 0.18)
+polygon = PackedVector2Array(-420, 220, 420, 220, 420, 700, -420, 700)
+color = Color(0.6, 0.5, 0.4, 1)
+
+[node name="Room2Tint" type="Polygon2D" parent="."]
+z_index = -8
+modulate = Color(0.7, 0.78, 0.95, 0.18)
+polygon = PackedVector2Array(-420, -160, 420, -160, 420, 220, -420, 220)
+color = Color(0.4, 0.5, 0.6, 1)
+
+[node name="Room3Tint" type="Polygon2D" parent="."]
+z_index = -8
+modulate = Color(0.85, 0.6, 0.6, 0.22)
+polygon = PackedVector2Array(-420, -700, 420, -700, 420, -160, -420, -160)
+color = Color(0.6, 0.3, 0.3, 1)
+
+[node name="PerimeterWalls" type="StaticBody2D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="N" type="CollisionShape2D" parent="PerimeterWalls"]
+position = Vector2(0, -720)
+shape = SubResource("rect_n")
+
+[node name="S" type="CollisionShape2D" parent="PerimeterWalls"]
+position = Vector2(0, 720)
+shape = SubResource("rect_s")
+
+[node name="E" type="CollisionShape2D" parent="PerimeterWalls"]
+position = Vector2(440, 0)
+shape = SubResource("rect_e")
+
+[node name="W" type="CollisionShape2D" parent="PerimeterWalls"]
+position = Vector2(-440, 0)
+shape = SubResource("rect_w")
+
+[node name="SpawnPoint" type="Marker2D" parent="."]
+position = Vector2(0, 620)
+
+[node name="FromBlightedReach" type="Marker2D" parent="."]
+position = Vector2(0, 620)
+
+[node name="ReturnPortal" parent="." instance=ExtResource("2_portal")]
+position = Vector2(0, 660)
+display_name = "Blighted Reach"
+target_zone = &"blighted_reach"
+arrival_marker = &"FromForsakenCrypt"
+
+[node name="Gate1" parent="." instance=ExtResource("3_gate")]
+position = Vector2(0, 220)
+
+[node name="Gate2" parent="." instance=ExtResource("3_gate")]
+position = Vector2(0, -160)
+
+[node name="Room1Anchors" type="Node2D" parent="."]
+
+[node name="A0" type="Marker2D" parent="Room1Anchors"]
+position = Vector2(-240, 480)
+
+[node name="A1" type="Marker2D" parent="Room1Anchors"]
+position = Vector2(240, 480)
+
+[node name="A2" type="Marker2D" parent="Room1Anchors"]
+position = Vector2(0, 360)
+
+[node name="Room2Anchors" type="Node2D" parent="."]
+
+[node name="A0" type="Marker2D" parent="Room2Anchors"]
+position = Vector2(-260, 120)
+
+[node name="A1" type="Marker2D" parent="Room2Anchors"]
+position = Vector2(260, 120)
+
+[node name="A2" type="Marker2D" parent="Room2Anchors"]
+position = Vector2(-260, -40)
+
+[node name="A3" type="Marker2D" parent="Room2Anchors"]
+position = Vector2(260, -40)
+
+[node name="A4" type="Marker2D" parent="Room2Anchors"]
+position = Vector2(0, 40)
+
+[node name="Room3Anchors" type="Node2D" parent="."]
+
+[node name="A0" type="Marker2D" parent="Room3Anchors"]
+position = Vector2(-220, -440)
+
+[node name="A1" type="Marker2D" parent="Room3Anchors"]
+position = Vector2(220, -440)
+
+[node name="Enemies" type="Node2D" parent="."]
+y_sort_enabled = true
