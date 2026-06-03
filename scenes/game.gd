@@ -191,8 +191,14 @@ func _spawn_enemy_snapshot(snap: Array) -> void:
 		var hp := int(entry.get("hp", inst.max_hp))
 		if inst.current_stats != null and hp > 0:
 			inst.current_stats.restore_pools(hp, 0)
-	# Damage-number wiring needs to reach the newly-spawned crew too.
-	_wire_zone_combat_vfx()
+	# Hand the rehydrated roster over to the spawn director (if any)
+	# so cap + respawn accounting picks up where the save left off,
+	# and re-wire damage numbers for the new crew.
+	var dir := _zone.get_node_or_null(^"SpawnDirector") as SpawnDirector
+	if dir != null:
+		dir.claim_existing_enemies()
+	else:
+		_wire_zone_combat_vfx()
 
 func _place_player_for_arrival(arrival_marker: StringName) -> void:
 	var pos := _zone.get_spawn_position()
@@ -216,20 +222,31 @@ func _wire_player_combat_vfx() -> void:
 
 func _wire_zone_combat_vfx() -> void:
 	# Every HealthComponent inside the active zone gets its damaged
-	# signal piped into the shared DamageNumberLayer. New enemies
-	# spawned later (Phase 3 spawn director) will need the same
-	# treatment — they should call this hook or a per-enemy variant.
+	# signal piped into the shared DamageNumberLayer. Latecomers
+	# (SpawnDirector output, save-snapshot rehydration) flow through
+	# wire_combatant_vfx() — see SpawnDirector hookup below.
 	if _zone == null:
 		return
 	for n in _zone.find_children("*", "HealthComponent", true, false):
-		var hc := n as HealthComponent
-		if hc == null:
-			continue
-		var target := hc.get_parent()
-		if target == null:
-			continue
-		if not hc.damaged.is_connected(_on_combatant_damaged):
-			hc.damaged.connect(_on_combatant_damaged.bind(target))
+		wire_combatant_vfx(n.get_parent())
+	# Subscribe to the zone's spawn director (if any) so newly-
+	# spawned enemies get their damage numbers without us re-
+	# walking the tree every frame.
+	var dir := _zone.get_node_or_null(^"SpawnDirector") as SpawnDirector
+	if dir != null and not dir.enemy_spawned.is_connected(_on_director_spawned):
+		dir.enemy_spawned.connect(_on_director_spawned)
+
+func wire_combatant_vfx(target: Node) -> void:
+	if target == null or not is_instance_valid(target):
+		return
+	var hc := target.get_node_or_null(^"HealthComponent") as HealthComponent
+	if hc == null:
+		return
+	if not hc.damaged.is_connected(_on_combatant_damaged):
+		hc.damaged.connect(_on_combatant_damaged.bind(target))
+
+func _on_director_spawned(enemy: Enemy) -> void:
+	wire_combatant_vfx(enemy)
 
 func _on_combatant_damaged(amount: int, _source: Node, target: Node) -> void:
 	if target == null or not is_instance_valid(target):

@@ -198,6 +198,9 @@ func consume_pending_enemy_snapshot() -> Array:
 	_pending_enemy_snapshot = []
 	return s
 
+func has_pending_enemy_snapshot() -> bool:
+	return not _pending_enemy_snapshot.is_empty()
+
 func _apply(player: Node, data: Dictionary) -> void:
 	var class_id := StringName(data.get("class_id", ""))
 	var cd: ClassData = Database.get_class_data(class_id) as ClassData

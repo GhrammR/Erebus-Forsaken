@@ -1,10 +1,9 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/zones/blighted_reach.gd" id="1_br"]
 [ext_resource type="PackedScene" path="res://art/procedural/world/dead_tree.tscn" id="2_tree"]
 [ext_resource type="PackedScene" path="res://scenes/world/portal.tscn" id="3_portal"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/shade_wretch.tscn" id="4_sw"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/bog_caller.tscn" id="5_bc"]
+[ext_resource type="Script" path="res://scripts/systems/spawn_director.gd" id="4_sd"]
 
 [sub_resource type="RectangleShape2D" id="rect_n"]
 size = Vector2(2000, 40)
@@ -126,34 +125,45 @@ position = Vector2(0, -460)
 [node name="SpawnAnchors" type="Node2D" parent="."]
 
 [node name="A0" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(-600, -100)
+position = Vector2(-680, -200)
 
 [node name="A1" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(600, -100)
+position = Vector2(680, -200)
 
 [node name="A2" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(-400, 300)
+position = Vector2(-520, 320)
 
 [node name="A3" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(400, 300)
+position = Vector2(520, 320)
 
 [node name="A4" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(0, 200)
+position = Vector2(0, 320)
+
+[node name="A5" type="Marker2D" parent="SpawnAnchors"]
+position = Vector2(-300, 80)
+
+[node name="A6" type="Marker2D" parent="SpawnAnchors"]
+position = Vector2(300, 80)
+
+[node name="A7" type="Marker2D" parent="SpawnAnchors"]
+position = Vector2(-820, 120)
+
+[node name="A8" type="Marker2D" parent="SpawnAnchors"]
+position = Vector2(820, 120)
 
 [node name="Enemies" type="Node2D" parent="."]
 y_sort_enabled = true
 
-[node name="Wretch1" parent="Enemies" instance=ExtResource("4_sw")]
-position = Vector2(-220, -160)
-
-[node name="Wretch2" parent="Enemies" instance=ExtResource("4_sw")]
-position = Vector2(-160, -120)
-
-[node name="Wretch3" parent="Enemies" instance=ExtResource("4_sw")]
-position = Vector2(280, 60)
-
-[node name="Caller1" parent="Enemies" instance=ExtResource("5_bc")]
-position = Vector2(-520, 220)
-
-[node name="Caller2" parent="Enemies" instance=ExtResource("5_bc")]
-position = Vector2(540, 240)
+[node name="SpawnDirector" type="Node" parent="."]
+script = ExtResource("4_sd")
+species = [{
+"id": &"shade_wretch",
+"weight": 3
+}, {
+"id": &"bog_caller",
+"weight": 1
+}]
+concurrent_cap = 6
+respawn_delay = 5.0
+initial_spawn_count = 4
+min_distance_from_player = 280.0
