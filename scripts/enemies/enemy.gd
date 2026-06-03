@@ -3,6 +3,7 @@ class_name Enemy extends CharacterBody2D
 ## via HealthComponent, plays the canonical AD-11 anim names through
 ## the sprite scene assigned in the subclass's .tscn.
 
+@export var enemy_id: StringName = &""  ## Stage 7 — save persistence key
 @export var max_hp: int = 100
 @export var defense_value: int = 0
 @export var attack_rating_value: int = 0

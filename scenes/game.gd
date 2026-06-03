@@ -18,6 +18,8 @@ extends Node2D
 const DEFAULT_CLASS: StringName = &"myrmidon"
 const DEFAULT_ZONE: StringName = &"threshold_camp"
 
+const _DAMAGE_NUMBER := preload("res://scenes/vfx/damage_number.tscn")
+
 @onready var _player: Player = $Player
 @onready var _pause: CanvasLayer = $PauseMenu
 @onready var _overlay: CanvasLayer = $DebugStatOverlay
@@ -28,6 +30,7 @@ const DEFAULT_ZONE: StringName = &"threshold_camp"
 @onready var _status: Label = $HUD/Status
 @onready var _info: Label = $HUD/DebugInfo
 @onready var _click_marker: Node2D = $ClickMarker
+@onready var _dn_layer: Node2D = $DamageNumberLayer
 
 var _zone: Zone = null
 
@@ -54,6 +57,8 @@ func _ready() -> void:
 	_zone = $ThresholdCamp
 	_zone.attach_player(_player)
 	_wire_zone_npcs()
+	_wire_player_combat_vfx()
+	_wire_zone_combat_vfx()
 
 	SceneRouter.set_zone_host(self)
 
@@ -89,21 +94,23 @@ func _exit_tree() -> void:
 ## Called by SceneRouter when a Portal asks to go somewhere. The
 ## actual subtree swap is deferred so we can be triggered safely
 ## from any context (physics flush, Area2D callback, etc.).
-func transit_to_zone(zone_id: StringName) -> void:
-	_do_transit.call_deferred(zone_id, true)
+func transit_to_zone(zone_id: StringName, arrival_marker: StringName = &"") -> void:
+	_do_transit.call_deferred(zone_id, true, arrival_marker, false)
 
 func _resume_saved_zone() -> void:
 	# After a successful load, GameState.current_zone_id holds the
-	# saved zone. If the player belonged in a different zone than
-	# the one we booted into, swap to it — but preserve the saved
-	# player position (don't snap to spawn).
+	# saved zone. Always rebuild the zone subtree — even if it
+	# matches the current one — so enemies, dropped loot, and any
+	# other zone-scoped state reset to the saved snapshot. The
+	# player keeps the position SaveSystem._apply just restored
+	# (we pass place_at_spawn = false).
 	var saved: StringName = GameState.current_zone_id
-	if saved == &"" or saved == _zone.zone_id:
-		return
-	_do_transit.call_deferred(saved, false)
+	if saved == &"":
+		saved = _zone.zone_id if _zone != null else DEFAULT_ZONE
+	_do_transit.call_deferred(saved, false, &"", true)
 
-func _do_transit(zone_id: StringName, place_at_spawn: bool) -> void:
-	if _zone != null and _zone.zone_id == zone_id:
+func _do_transit(zone_id: StringName, place_at_spawn: bool, arrival_marker: StringName, force: bool = false) -> void:
+	if not force and _zone != null and _zone.zone_id == zone_id:
 		return
 	var path := SceneRouter.zone_scene_path(zone_id)
 	if path == "" or not ResourceLoader.exists(path):
@@ -127,19 +134,114 @@ func _do_transit(zone_id: StringName, place_at_spawn: bool) -> void:
 	add_child(_zone)
 	move_child(_zone, _player.get_index())
 	if place_at_spawn:
-		_zone.attach_player(_player)
+		_place_player_for_arrival(arrival_marker)
 	else:
 		# Saved-position restore handled by SaveSystem._apply already;
 		# we just need to keep respawn_position aligned with this zone.
 		_player.respawn_position = _zone.get_spawn_position()
+	_apply_pending_enemy_snapshot()
 	_wire_zone_npcs()
+	_wire_zone_combat_vfx()
 	_set_status("Entered %s." % _zone_display_name(zone_id), true)
+
+func _apply_pending_enemy_snapshot() -> void:
+	# A load operation parked the saved enemy state on SaveSystem;
+	# consume it (consuming clears the buffer so a subsequent
+	# non-load transit doesn't re-trigger). Empty list = no save
+	# data for this transit, leave the zone's pre-placed enemies
+	# alone — that's the normal portal-walk case.
+	var snap := SaveSystem.consume_pending_enemy_snapshot()
+	if snap.is_empty():
+		return
+	# Free every pre-placed Enemy in the zone — the snapshot is now
+	# the source of truth for what should be alive.
+	for n in _zone.find_children("*", "Enemy", true, false):
+		var e := n as Enemy
+		if e == null:
+			continue
+		e.queue_free()
+	# Spawn the saved enemies. Done call_deferred so we don't add
+	# Area2D bodies while a previous queue_free is still settling
+	# the physics state (failure-modes #17).
+	_spawn_enemy_snapshot.call_deferred(snap)
+
+func _spawn_enemy_snapshot(snap: Array) -> void:
+	if _zone == null or not is_instance_valid(_zone):
+		return
+	# Re-use the zone's Enemies container if it has one; otherwise
+	# drop the saved enemies directly under the zone root. Either
+	# way, they participate in the zone's y-sort group.
+	var container: Node = _zone.get_node_or_null(^"Enemies")
+	if container == null:
+		container = _zone
+	for entry_v in snap:
+		var entry: Dictionary = entry_v as Dictionary
+		var id := StringName(entry.get("id", ""))
+		var packed := EnemyRegistry.scene_for(id)
+		if packed == null:
+			push_warning("Game: no scene for saved enemy_id '%s'" % id)
+			continue
+		var inst := packed.instantiate() as Enemy
+		if inst == null:
+			continue
+		container.add_child(inst)
+		var pos: Dictionary = entry.get("pos", {})
+		inst.global_position = Vector2(float(pos.get("x", 0.0)), float(pos.get("y", 0.0)))
+		# Apply HP after the enemy's _ready built its Stats.
+		var hp := int(entry.get("hp", inst.max_hp))
+		if inst.current_stats != null and hp > 0:
+			inst.current_stats.restore_pools(hp, 0)
+	# Damage-number wiring needs to reach the newly-spawned crew too.
+	_wire_zone_combat_vfx()
+
+func _place_player_for_arrival(arrival_marker: StringName) -> void:
+	var pos := _zone.get_spawn_position()
+	if arrival_marker != &"":
+		var mp := _zone.get_marker_position(arrival_marker)
+		if mp != Vector2.ZERO:
+			pos = mp
+	_player.global_position = pos
+	_player.respawn_position = _zone.get_spawn_position()
 
 func _zone_display_name(zone_id: StringName) -> String:
 	match zone_id:
 		&"threshold_camp": return "Threshold Camp"
 		&"blighted_reach": return "Blighted Reach"
 		_: return String(zone_id)
+
+func _wire_player_combat_vfx() -> void:
+	var hc := _player.get_health_component()
+	if hc != null and not hc.damaged.is_connected(_on_combatant_damaged):
+		hc.damaged.connect(_on_combatant_damaged.bind(_player))
+
+func _wire_zone_combat_vfx() -> void:
+	# Every HealthComponent inside the active zone gets its damaged
+	# signal piped into the shared DamageNumberLayer. New enemies
+	# spawned later (Phase 3 spawn director) will need the same
+	# treatment — they should call this hook or a per-enemy variant.
+	if _zone == null:
+		return
+	for n in _zone.find_children("*", "HealthComponent", true, false):
+		var hc := n as HealthComponent
+		if hc == null:
+			continue
+		var target := hc.get_parent()
+		if target == null:
+			continue
+		if not hc.damaged.is_connected(_on_combatant_damaged):
+			hc.damaged.connect(_on_combatant_damaged.bind(target))
+
+func _on_combatant_damaged(amount: int, _source: Node, target: Node) -> void:
+	if target == null or not is_instance_valid(target):
+		return
+	var dn := _DAMAGE_NUMBER.instantiate()
+	if amount <= 0:
+		dn.is_miss = true
+	else:
+		dn.text = str(amount)
+		dn.color = Color(1.0, 0.55, 0.35, 1) if amount >= 20 else Color(1.0, 0.92, 0.65, 1)
+	_dn_layer.add_child(dn)
+	dn.global_position = (target as Node2D).global_position + Vector2(randf_range(-6, 6), -56)
 
 func _wire_zone_npcs() -> void:
 	# Vendor and quest panels live above the zone; we connect to

@@ -183,3 +183,6 @@ position = Vector2(-220, -100)
 position = Vector2(0, 350)
 display_name = "Blighted Reach"
 target_zone = &"blighted_reach"
+
+[node name="FromBlightedReach" type="Marker2D" parent="."]
+position = Vector2(0, 280)

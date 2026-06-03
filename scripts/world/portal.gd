@@ -14,6 +14,15 @@ class_name Portal extends Npc
 
 @export var target_zone: StringName = &""
 
+## Optional Marker2D name in the destination zone where the player
+## should arrive. Defaults to the zone's "SpawnPoint" so first-time
+## visits land at the central spawn; portals back from a sibling zone
+## set this to a return marker placed near their own counterpart
+## (e.g. the camp-side wilderness portal has a "FromBlightedReach"
+## marker the wilderness portal points at, so coming back drops you
+## next to the portal you used, not at the camp's central spawn).
+@export var arrival_marker: StringName = &""
+
 ## Portal silhouette is wider/taller than an Npc character — override
 ## the click hit-test rectangle so ground-clicks adjacent to the stone
 ## don't engage, but clicks on the stone or glyph do.
@@ -26,4 +35,4 @@ func interact() -> void:
 		push_warning("Portal '%s' has no target_zone set." % display_name)
 		return
 	interacted.emit(self)
-	SceneRouter.go_to_zone(target_zone)
+	SceneRouter.go_to_zone(target_zone, arrival_marker)

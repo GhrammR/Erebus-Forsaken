@@ -1,0 +1,60 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/bog_caller.gd" id="1_bc"]
+[ext_resource type="PackedScene" path="res://art/procedural/enemies/bog_caller_sprite.tscn" id="2_sp"]
+[ext_resource type="Script" path="res://scripts/systems/health_component.gd" id="3_hc"]
+[ext_resource type="Script" path="res://scripts/systems/hurtbox_component.gd" id="4_hb"]
+[ext_resource type="Resource" path="res://data/enemies/wilderness_basic_drops.tres" id="5_dt"]
+
+[sub_resource type="CapsuleShape2D" id="cap_feet"]
+radius = 6.0
+height = 10.0
+
+[sub_resource type="RectangleShape2D" id="rect_body"]
+size = Vector2(20, 52)
+
+[node name="BogCaller" type="CharacterBody2D"]
+y_sort_enabled = true
+input_pickable = false
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_bc")
+enemy_id = &"bog_caller"
+max_hp = 55
+defense_value = 2
+attack_rating_value = 8
+sprite_scene = ExtResource("2_sp")
+drop_table = ExtResource("5_dt")
+gold_drop_chance = 0.75
+gold_min = 4
+gold_max = 10
+move_speed = 70.0
+aggro_range = 360.0
+deaggro_range = 480.0
+attack_range = 320.0
+keep_distance = 180.0
+attack_interval = 1.8
+attack_windup = 0.25
+projectile_damage = 10
+projectile_speed = 280.0
+projectile_range = 480.0
+
+[node name="SpriteAnchor" type="Node2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -3)
+rotation = 1.5707964
+shape = SubResource("cap_feet")
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("3_hc")
+
+[node name="HurtboxComponent" type="Area2D" parent="."]
+input_pickable = false
+collision_layer = 16
+collision_mask = 32
+script = ExtResource("4_hb")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HurtboxComponent"]
+position = Vector2(0, -26)
+shape = SubResource("rect_body")

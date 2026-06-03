@@ -1,0 +1,70 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/shade_wretch.gd" id="1_sw"]
+[ext_resource type="PackedScene" path="res://art/procedural/enemies/shade_wretch_sprite.tscn" id="2_sp"]
+[ext_resource type="Script" path="res://scripts/systems/health_component.gd" id="3_hc"]
+[ext_resource type="Script" path="res://scripts/systems/hurtbox_component.gd" id="4_hb"]
+[ext_resource type="Script" path="res://scripts/systems/hitbox_component.gd" id="5_hit"]
+[ext_resource type="Resource" path="res://data/enemies/wilderness_basic_drops.tres" id="6_dt"]
+
+[sub_resource type="CapsuleShape2D" id="cap_feet"]
+radius = 6.0
+height = 8.0
+
+[sub_resource type="RectangleShape2D" id="rect_body"]
+size = Vector2(18, 42)
+
+[sub_resource type="RectangleShape2D" id="rect_claw"]
+size = Vector2(28, 22)
+
+[node name="ShadeWretch" type="CharacterBody2D"]
+y_sort_enabled = true
+input_pickable = false
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_sw")
+enemy_id = &"shade_wretch"
+max_hp = 40
+defense_value = 0
+attack_rating_value = 4
+sprite_scene = ExtResource("2_sp")
+drop_table = ExtResource("6_dt")
+gold_drop_chance = 0.65
+gold_min = 2
+gold_max = 6
+move_speed = 110.0
+aggro_range = 240.0
+deaggro_range = 380.0
+attack_range = 34.0
+attack_interval = 1.1
+attack_windup = 0.12
+
+[node name="SpriteAnchor" type="Node2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -3)
+rotation = 1.5707964
+shape = SubResource("cap_feet")
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("3_hc")
+
+[node name="HurtboxComponent" type="Area2D" parent="."]
+input_pickable = false
+collision_layer = 16
+collision_mask = 32
+script = ExtResource("4_hb")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HurtboxComponent"]
+position = Vector2(0, -22)
+shape = SubResource("rect_body")
+
+[node name="HitboxComponent" type="Area2D" parent="."]
+input_pickable = false
+collision_layer = 64
+collision_mask = 8
+script = ExtResource("5_hit")
+base_damage = 6
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HitboxComponent"]
+shape = SubResource("rect_claw")

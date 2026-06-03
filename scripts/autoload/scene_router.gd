@@ -27,12 +27,12 @@ func clear_zone_host(host: Object) -> void:
 func zone_scene_path(zone_id: StringName) -> String:
 	return String(ZONE_PATHS.get(zone_id, ""))
 
-func go_to_zone(zone_id: StringName) -> void:
+func go_to_zone(zone_id: StringName, arrival_marker: StringName = &"") -> void:
 	if not ZONE_PATHS.has(zone_id):
 		push_error("SceneRouter: unknown zone_id %s" % zone_id)
 		return
 	if _host != null and _host.has_method(&"transit_to_zone"):
-		_host.transit_to_zone(zone_id)
+		_host.transit_to_zone(zone_id, arrival_marker)
 		return
 	# Fallback: standalone scene swap. Loses Player + UI, so only
 	# usable from dev scenes that explicitly want it.

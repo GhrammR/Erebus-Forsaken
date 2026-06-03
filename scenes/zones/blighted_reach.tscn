@@ -1,8 +1,10 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/zones/blighted_reach.gd" id="1_br"]
 [ext_resource type="PackedScene" path="res://art/procedural/world/dead_tree.tscn" id="2_tree"]
 [ext_resource type="PackedScene" path="res://scenes/world/portal.tscn" id="3_portal"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/shade_wretch.tscn" id="4_sw"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/bog_caller.tscn" id="5_bc"]
 
 [sub_resource type="RectangleShape2D" id="rect_n"]
 size = Vector2(2000, 40)
@@ -116,6 +118,7 @@ shape = SubResource("rect_w")
 position = Vector2(0, -520)
 display_name = "Threshold Camp"
 target_zone = &"threshold_camp"
+arrival_marker = &"FromBlightedReach"
 
 [node name="SpawnPoint" type="Marker2D" parent="."]
 position = Vector2(0, -460)
@@ -136,3 +139,21 @@ position = Vector2(400, 300)
 
 [node name="A4" type="Marker2D" parent="SpawnAnchors"]
 position = Vector2(0, 200)
+
+[node name="Enemies" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="Wretch1" parent="Enemies" instance=ExtResource("4_sw")]
+position = Vector2(-220, -160)
+
+[node name="Wretch2" parent="Enemies" instance=ExtResource("4_sw")]
+position = Vector2(-160, -120)
+
+[node name="Wretch3" parent="Enemies" instance=ExtResource("4_sw")]
+position = Vector2(280, 60)
+
+[node name="Caller1" parent="Enemies" instance=ExtResource("5_bc")]
+position = Vector2(-520, 220)
+
+[node name="Caller2" parent="Enemies" instance=ExtResource("5_bc")]
+position = Vector2(540, 240)

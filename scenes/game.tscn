@@ -31,6 +31,11 @@ script = ExtResource("4_marker")
 
 [node name="Player" parent="." instance=ExtResource("3_player")]
 
+[node name="DamageNumberLayer" type="Node2D" parent="."]
+y_sort_enabled = false
+z_index = 50
+z_as_relative = false
+
 [node name="DebugStatOverlay" parent="." instance=ExtResource("6_overlay")]
 
 [node name="InventoryPanel" parent="." instance=ExtResource("7_inv")]

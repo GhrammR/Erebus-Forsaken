@@ -69,7 +69,7 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	SceneRouter.clear_zone_host(self)
 
-func transit_to_zone(zone_id: StringName) -> void:
+func transit_to_zone(zone_id: StringName, _arrival_marker: StringName = &"") -> void:
 	_set_status("Workbench: portal would transit to %s (no-op here)." % zone_id, true)
 
 func _on_save_pressed() -> void:

@@ -627,6 +627,41 @@ to the pre-death click target. Fix as above.
 
 ---
 
+## 20. Load restores Player but not zone-scoped state
+
+**Symptom:** Player kills three enemies in a zone, presses F5 to
+save, kills more, presses F9 to load. The player snapshot restores
+(HP, gold, inventory, position) but the already-killed enemies stay
+dead and the new kills are still gone. Anything else owned by the
+zone subtree (dropped loot, spawned projectiles, world items, NPC
+panel state) behaves the same way.
+
+**Root cause:** `SaveSystem._apply` writes player-shaped fields
+back into the live Player node. Zones are subtree-shaped and not
+part of the save snapshot — they're rebuilt only on zone transit.
+A same-zone load therefore restores the player against a stale
+zone tree.
+
+**Prevention:** Treat "load" as "reset the world, restore the
+player on top of it." `Game._resume_saved_zone()` always calls
+`_do_transit(saved_zone, place_at_spawn=false, force=true)` after
+SaveSystem.load_game so the active zone is reinstantiated even
+when its id matches the current one. Zones must therefore be
+cheap to instantiate and re-instantiate; do not stash per-zone
+runtime state outside the zone subtree.
+
+**Recovery:** Remove any same-zone short-circuit in the load
+path. Pass `force=true` to the transit so its internal
+`zone_id == zone_id` early return is bypassed. Save loads only
+ever pass `place_at_spawn=false` so the player keeps the position
+SaveSystem._apply just wrote.
+
+**First incident:** Stage 7 Phase 2 playtest. F9 in the
+wilderness restored the player but left the dead Shade-Wretches
+dead. Fix landed alongside the Phase 2 polish commit.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.
