@@ -33,6 +33,9 @@ func _ready() -> void:
 	if "--verify7" in args:
 		add_child(load("res://test/stage7_verify.tscn").instantiate())
 		return
+	if "--verify10" in args:
+		add_child(load("res://test/stage10_verify.tscn").instantiate())
+		return
 	if "--workbench" in args:
 		add_child(load("res://test/stat_workbench.tscn").instantiate())
 		return
@@ -58,10 +61,15 @@ func _ready() -> void:
 		_build_label.text = "Erebus Forsaken — build %s" % GameState.BUILD_VERSION
 		_hint_label.text = "Splash. Pass --town for the dev town workbench. Esc quits."
 		return
-	# Default boot — straight into the game (threshold camp, town
-	# auto-resumes from save if one exists). Pass --splash to keep
-	# the title screen, or any workbench flag to bypass.
-	add_child(load("res://scenes/game.tscn").instantiate())
+	# Default boot. Existing save → straight into game (auto-resume,
+	# unchanged from Stage 6 Phase 5). No save → character select
+	# (Stage 10); the select scene picks a class then swaps to
+	# game.tscn. Pass --splash to keep the title screen, or any
+	# workbench flag to bypass either path.
+	if SaveSystem.has_save():
+		add_child(load("res://scenes/game.tscn").instantiate())
+	else:
+		add_child(load("res://scenes/ui/character_select.tscn").instantiate())
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_quit") or event.is_action_pressed("ui_cancel"):

@@ -22,6 +22,8 @@ const _DAMAGE_NUMBER := preload("res://scenes/vfx/damage_number.tscn")
 const _WORLD_ITEM := preload("res://scenes/items/world_item.tscn")
 const _GOLD_PICKUP := preload("res://scenes/items/gold_pickup.tscn")
 const _CORPSE := preload("res://scenes/world/corpse.tscn")
+const _TUTORIAL_PROMPT := preload("res://scenes/ui/tutorial_prompt.tscn")
+const _TUTORIAL_SCRIPT := preload("res://scripts/ui/tutorial_prompt.gd")
 
 @onready var _player: Player = $Player
 @onready var _pause: CanvasLayer = $PauseMenu
@@ -61,7 +63,16 @@ func _ready() -> void:
 	_help.text = "Click=move  |  WASD  |  E=interact  |  I=inventory  |  F5=save  |  F9=load  |  Esc=pause"
 
 	# Default class on first launch; load_game below may overwrite it.
-	var cd: ClassData = Database.get_class_data(DEFAULT_CLASS) as ClassData
+	# Stage 10: character_select.tscn stashes the player's pick in
+	# GameState.pending_class_id before swapping here. Consume it
+	# (and clear it) so a subsequent zone reload doesn't re-apply it.
+	var first_class: StringName = DEFAULT_CLASS
+	if GameState.pending_class_id != &"":
+		first_class = GameState.pending_class_id
+		GameState.pending_class_id = &""
+	var cd: ClassData = Database.get_class_data(first_class) as ClassData
+	if cd == null:
+		cd = Database.get_class_data(DEFAULT_CLASS) as ClassData
 	_player.assign_class(cd)
 	_overlay.bind_stats(_player.current_stats)
 	_inventory_panel.bind_inventory(_player.get_inventory())
@@ -113,7 +124,15 @@ func _ready() -> void:
 		else:
 			_set_status("Resume failed — starting fresh.", false)
 	else:
-		_set_status("New game — fresh Myrmidon.", true)
+		_set_status("New game — fresh start.", true)
+		_maybe_show_tutorial()
+
+func _maybe_show_tutorial() -> void:
+	# First-launch only: skip if the player has already dismissed it
+	# in any prior session (flag lives in user://settings.json).
+	if _TUTORIAL_SCRIPT.has_seen_tutorial():
+		return
+	add_child(_TUTORIAL_PROMPT.instantiate())
 
 func _exit_tree() -> void:
 	SceneRouter.clear_zone_host(self)

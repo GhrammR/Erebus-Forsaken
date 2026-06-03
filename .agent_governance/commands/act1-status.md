@@ -246,8 +246,8 @@ Strategic Review v1 (locked 2026-06-03) reordered the post-Stage-7
 sequence. Stage **numbers are stable** (existing commits reference
 them); **execution order** is now:
 
-1. Stage 10 — Character select (identity before content)
-2. Stage 7.5 — Audio mini-stage (Feel Pass enablement)
+1. Stage 10 — Character select (identity before content) **[CLOSED]**
+2. Stage 7.5 — Audio mini-stage (Feel Pass enablement) *(next)*
 3. Stage 8 — Dungeon (with affix-tier sub-system)
 4. Stage 9 — Act boss
 5. Stage 9.5 — Feel Pass (sound + juice contract, `rules/feel-pass.md`)
@@ -262,16 +262,38 @@ and a note appended to this file.
 
 ---
 
-## Stage 10 — All four classes selectable  *(execute next)*
+## Stage 10 — All four classes selectable
 
-* \[ ] Character select scene with all four classes (`scenes/ui/character_select.tscn`)
-* \[ ] Boots from `main.tscn` before the save-resume path; existing
-  saves bypass select and route straight into the game
-* \[ ] Each class plays through Stages 3–5 without class-specific bugs
-* \[ ] First-launch tutorial prompt: 30-second overlay teaching
-  click-to-move, basic attack (Space), skill 1, inventory (I), pause
-  (Esc). Dismissible; remembered across sessions.
-* \[ ] One-line pitch shown on character-select screen footer
+* \[x] Character select scene with all four classes
+  (`scenes/ui/character_select.tscn` + `scripts/ui/character_select.gd`).
+  Cards built from `Database.get_all_classes()` in M/P/H/O order
+  (new `CLASS_ORDER` const in database.gd is the single source). Each
+  card surfaces display name, primary attribute, and base STR/DEX/VIT/PNE.
+* \[x] Boots from `main.tscn` before the save-resume path;
+  `main.gd` forks on `SaveSystem.has_save()` — existing save → game.tscn
+  unchanged; no save → character_select.tscn. The select scene stashes
+  the pick in `GameState.pending_class_id` (transient, not saved) and
+  swaps to game.tscn, which consumes the id in `_ready`.
+* \[x] Each class plays through Stages 3–5 without class-specific bugs
+  — covered by existing `--verify3 / --verify4 / --verify5` (all PASS
+  this stage); the per-class workbench paths are unchanged.
+* \[x] First-launch tutorial prompt
+  (`scenes/ui/tutorial_prompt.tscn` + `scripts/ui/tutorial_prompt.gd`):
+  non-modal panel at screen bottom, dismissible via Esc or the "Got it"
+  button. Persistence in `user://settings.json` under
+  `has_seen_tutorial` — separate from save_slot_1 so a wipe doesn't
+  re-trigger it. Spawned by `game.gd` only on the new-game path.
+  mouse_filter=2 on Panel/VBox/labels so it doesn't eat gameplay clicks.
+* \[x] One-line pitch shown on character-select screen footer (exact
+  copy from CLAUDE.md `## One-line pitch`)
+* \[x] `--verify10` verifier (11/11 PASS): class roster + order, four
+  ClassData resources, pending_class_id round-trip, tutorial flag
+  persistence, settings-merge preserves other keys.
+* \[x] Regression: --verify / --verify3 / --verify4 / --verify5 /
+  --verify6 / --verify7 all PASS post-Stage-10.
+* \[x] combat-validator + scene-auditor: PASS. No combat code touched;
+  new UI scenes carry mouse_filter=2 on display-only Controls per
+  failure-modes #9.
 
 ## Stage 7.5 — Audio mini-stage  *(execute after Stage 10)*
 

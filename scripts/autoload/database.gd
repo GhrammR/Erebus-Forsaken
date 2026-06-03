@@ -46,8 +46,23 @@ func _load_dir(dir_path: String, target: Dictionary) -> void:
 		file_name = dir.get_next()
 	dir.list_dir_end()
 
+## Fixed roster order (design-intent — matches the M/P/H/O workbench
+## cycler and Stage 5 skill order). Stage 10 character-select reads
+## this directly so card order stays single-sourced.
+const CLASS_ORDER: Array[StringName] = [
+	&"myrmidon", &"pythia", &"shade_hunter", &"ossuary_priest",
+]
+
 func get_class_data(id: StringName) -> Resource:
 	return classes.get(id, null)
+
+func get_all_classes() -> Array:
+	var out: Array = []
+	for id in CLASS_ORDER:
+		var cd: Resource = classes.get(id, null)
+		if cd != null:
+			out.append(cd)
+	return out
 
 func get_item(id: StringName) -> Resource:
 	return items.get(id, null)
