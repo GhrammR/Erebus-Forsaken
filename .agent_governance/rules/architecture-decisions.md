@@ -143,6 +143,57 @@ code rewrite.
 
 ---
 
+## AD-12 — Zone state lifecycle: subtree-owned, cache-frozen across death
+
+Per-zone runtime state (enemies, ground loot, spawn-director timers)
+lives **inside the zone subtree** and is owned by the zone node. Nothing
+outside the zone subtree may hold a long-lived reference to a zone-scoped
+entity.
+
+Two state transitions are defined:
+
+1. **Zone transit** (portal, fast-travel, scene-router host swap):
+   the outgoing zone snapshots its enemies + loot into `_zone_cache`
+   keyed by `zone_id` (in-memory only). The incoming zone restores from
+   the cache if a frozen state exists for its id; otherwise it spawns
+   fresh via SpawnDirector.
+
+2. **Death → return to town**: same as zone transit. Monsters freeze in
+   place at the moment of the killing blow. Re-entering the death zone
+   restores them, not respawns them. This is the corpse-run contract
+   (failure-modes #20 + project_death_penalty memory).
+
+**Save semantics:**
+- `F5 save` persists the *active* zone state (enemies + loot) inline
+  with the player snapshot.
+- `F9 load` always treats load as "reset the world, restore the player
+  on top of it" — the active zone is reinstantiated, then the saved
+  per-zone state is pushed via `SaveSystem.set_pending_zone_state()`,
+  and `_zone_cache` is cleared (other zones revert to fresh spawn on
+  next visit).
+- Only **one zone's** runtime state survives a save/load round trip —
+  the one that was active at save time. Caching every visited zone
+  forever would balloon save size unboundedly.
+
+**Why this is locked:**
+The Stage 7 cache+save layering took ten iterations to land
+correctly. The interaction between `physics flush` (failure-modes
+#17), `load = reset-world` (failure-modes #20), and corpse persistence
+is non-trivial enough that the next agent will re-derive it wrong if
+not explicitly fenced.
+
+**What this forbids:**
+- No "session-wide enemy memory" caching state for zones the player
+  isn't currently in (beyond the in-memory cache, which is cleared on
+  load and on explicit reset).
+- No persisted enemy state across game *restarts* for non-active zones.
+  Re-entering after a quit + reload = fresh spawn for the visited zone
+  unless that zone was the one active at save time.
+- No add_child of an Area2D-bearing zone entity outside a
+  `call_deferred` (failure-modes #17 boundary still applies).
+
+---
+
 ## When to revisit
 
 These decisions are revisitable only when:

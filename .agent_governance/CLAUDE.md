@@ -27,6 +27,28 @@ project*, not to describe how it would work. If you cannot test it, say so.
 - When uncertain, say "I don't know" and propose how to find out.
 - Short responses by default. Long only when the problem warrants it.
 
+## One-line pitch (binding for marketing copy + Steam page)
+
+> An ARPG where every death is a heirloom — your corpse stays where it
+> fell, and so does what you were carrying.
+
+This is the marketing wedge that ties to the implemented multi-corpse
+mechanic. New features either reinforce this wedge or are deferred. Do
+not generate alternative pitches without explicit user approval.
+
+## Conflict resolution priority
+
+When two governance documents disagree, the higher item wins:
+
+1. `rules/scope-lock.md` — absolute
+2. `rules/architecture-decisions.md` (AD-01 … AD-12) — locked
+3. Other `rules/*.md` files
+4. `commands/*.md` files
+5. Skills
+
+A rule edit that contradicts a higher-priority document is invalid
+without an explicit user-approved supersede entry.
+
 ## Non-negotiables
 
 1. **Never skip the scope lock.** Act 1 is the entire game until Steam launch.
@@ -59,6 +81,7 @@ Rules — read when relevant:
 - `rules/asset-pipeline.md` — procedural sprites vs bitmap, integration rules
 - `rules/testing.md` — what must be tested before a feature is "done"
 - `rules/failure-modes.md` — known collapse vectors and prevention
+- `rules/feel-pass.md` — sound + visual cue contract for every player-affecting event
 - `rules/git-and-github.md` — branching, commits, PRs, public-repo readiness
 - `rules/architecture-decisions.md` — locked design calls (AD-01 … AD-11)
 
@@ -72,6 +95,7 @@ Commands:
 - `commands/audit.md` — full project health check
 - `commands/act1-status.md` — living Act 1 completion checklist
 - `commands/stage-handoff.md` — required end-of-stage response format
+- `commands/launch-plan.md` — itch.io demo → Steam EA sequence + post-launch cadence
 
 ## Session protocol
 

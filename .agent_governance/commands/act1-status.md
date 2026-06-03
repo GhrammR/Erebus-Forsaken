@@ -238,36 +238,146 @@ HealthComponent + verifier reference DamageResolver.
   damage numbers, monster separation, multi-corpse retrieval,
   spill-on-eviction, save/load round-trip.
 
-## Stage 8 — Dungeon
+---
+
+## Execution order (post Stage 7)
+
+Strategic Review v1 (locked 2026-06-03) reordered the post-Stage-7
+sequence. Stage **numbers are stable** (existing commits reference
+them); **execution order** is now:
+
+1. Stage 10 — Character select (identity before content)
+2. Stage 7.5 — Audio mini-stage (Feel Pass enablement)
+3. Stage 8 — Dungeon (with affix-tier sub-system)
+4. Stage 9 — Act boss
+5. Stage 9.5 — Feel Pass (sound + juice contract, `rules/feel-pass.md`)
+6. Stage 9.7 — Endless mode (post-boss retention)
+7. **itch.io free demo launches here** (`commands/launch-plan.md`)
+8. Stage 11 — Save/load hardening
+9. Stage 12 — Pre-launch polish
+10. **Steam EA launch**
+
+Skipping or reordering this sequence requires explicit user approval
+and a note appended to this file.
+
+---
+
+## Stage 10 — All four classes selectable  *(execute next)*
+
+* \[ ] Character select scene with all four classes (`scenes/ui/character_select.tscn`)
+* \[ ] Boots from `main.tscn` before the save-resume path; existing
+  saves bypass select and route straight into the game
+* \[ ] Each class plays through Stages 3–5 without class-specific bugs
+* \[ ] First-launch tutorial prompt: 30-second overlay teaching
+  click-to-move, basic attack (Space), skill 1, inventory (I), pause
+  (Esc). Dismissible; remembered across sessions.
+* \[ ] One-line pitch shown on character-select screen footer
+
+## Stage 7.5 — Audio mini-stage  *(execute after Stage 10)*
+
+* \[ ] `AudioBank` autoload registered (single source of truth for sfx
+  + ambient resource lookups; AD-03 analogue for audio)
+* \[ ] 16-entry sfx bank covering the `rules/feel-pass.md` contract
+  (placeholders ok; one .ogg per row in the contract table)
+* \[ ] One ambient loop per shipping zone (camp, wilderness)
+* \[ ] Master + sfx + ambient bus split in `default_bus_layout.tres`
+* \[ ] Audio settings exposed in pause menu (3 sliders)
+* \[ ] Audio mutes correctly when window unfocused
+
+## Stage 8 — Dungeon  *(execute after Stage 7.5)*
 
 * \[ ] Three-room interior with locked progression
 * \[ ] Trash → mini-encounter → boss room
 * \[ ] Difficulty rises per room (enemy count or stats)
+* \[ ] Elite enemy suffix system: 3 suffixes (Fast, Tough, Spawner)
+  applied to wilderness/dungeon enemies via a `EliteModifier` resource
+* \[ ] **Affix tier added to ItemData** (single fixed-roll prefix tier
+  — Strategic Review D3.A). Drops with a 25% prefix-roll chance.
+  Prefix table: 6 prefixes (+STR, +DEX, +VIT, +PNE, +HP, +Armor).
+  Does NOT introduce variable rolls — each prefix is a fixed integer.
+  This is the only scope-lock exception explicitly approved by the
+  review; it does not unlock Act 2 affix scope (variable rolls,
+  suffixes, ranges) which remain forbidden.
+* \[ ] Drop rarity colors on `ItemData.glyph_color`: white/blue/gold
+  by prefix count (0/1/future). UI surfaces the color on tooltips
+  and pickup labels.
+* \[ ] Inventory cap bumped 24 → 36 to accommodate dungeon density
 
-## Stage 9 — Act boss
+## Stage 9 — Act boss  *(execute after Stage 8)*
 
-* \[ ] Unique boss enemy with at least one distinct mechanic
-* \[ ] Guaranteed unique item on first kill
+* \[ ] Unique boss enemy with ≥3 distinct phases (not just one
+  mechanic — review #14 raised refund-rate risk)
+* \[ ] Guaranteed unique item on first kill, with a *visible reason
+  to use it* (one item-specific affix that interacts with a class
+  skill)
 * \[ ] Boss death triggers Act 1 completion state
+* \[ ] Boss room offers an explicit "begin endless mode" portal once
+  Stage 9.7 ships
 
-## Stage 10 — All four classes selectable
+## Stage 9.5 — Feel Pass  *(execute after Stage 9; binds `rules/feel-pass.md`)*
 
-* \[ ] Character select scene with all four classes
-* \[ ] Each class plays through Stages 3–5 without class-specific bugs
+* \[ ] `CameraShake` helper (`scripts/systems/camera_shake.gd`):
+  `kick(amount, duration)`. One call site per damage-taken path.
+* \[ ] `HitStop` helper (`scripts/systems/hit_stop.gd`):
+  `pulse(frames := 3)`. Crit hits only.
+* \[ ] Crit math added to DamageResolver (5% base crit, 2× damage)
+  with golden DamageNumber variant
+* \[ ] Hit-flash on every enemy hurtbox (mirror the existing player
+  `_flash_hit` pattern)
+* \[ ] Gold-pickup pulse + auto-stack animation
+* \[ ] Rare-drop column-of-light VFX (`GPUParticles2D`) + 2px outline
+  via shader
+* \[ ] Cooldown ring overlay on skill icon
+* \[ ] HUD: active-quest chip (top-left), zone-name fade-in (top-right),
+  kill counter (small, top-center)
+* \[ ] Save / Load toast (top-left, 1.5s fade)
+* \[ ] Every event in `rules/feel-pass.md` contract has both an
+  AudioBank call and a visual hook — verifier `--verify9_5` walks
+  the call sites and asserts both exist
+* \[ ] `scene-auditor` check #10 added (feel contract)
+
+## Stage 9.7 — Endless mode  *(execute after Stage 9.5)*
+
+* \[ ] Endless mode portal in boss room (post-clear)
+* \[ ] Wave director: `SpawnDirector` extension that scales
+  `concurrent_cap` + `species` weights per wave, no map change
+* \[ ] Wave counter HUD
+* \[ ] Run summary screen on player death: waves cleared, kills,
+  gold, time. Shareable seed string (Strategic Review #7 viral hook).
+* \[ ] Endless runs are NOT saved; they use the run-start save as a
+  rollback point. Quitting endless = revert to pre-portal state.
+* \[ ] Disabled in demo build via `FEATURE_FLAGS.demo_mode`
+  (`commands/launch-plan.md`)
 
 ## Stage 11 — Save/load hardening
 
-* \[ ] Versioned save format
+* \[ ] Versioned save format (already in place, AD-07)
 * \[ ] Round-trip across every major state
-* \[ ] Corrupt-save handling (don't crash; warn)
+* \[ ] Atomic save write: write to `save_slot_1.json.tmp`, fsync,
+  rename. Prevents partial saves on crash mid-write
+  (Failure Analysis #19)
+* \[ ] Corrupt-save handling (don't crash; warn; offer to delete)
+* \[ ] Save-import path from itch demo location to Steam user dir
+  (`commands/launch-plan.md`)
+* \[ ] Corrupt-save fixture test in stage11_verify
 
 ## Stage 12 — Pre-launch polish
 
-* \[ ] Procedural sprites replaced with bitmaps where decided
-* \[ ] Audio pass (or explicitly deferred to post-launch)
-* \[ ] Title screen, options (resolution + key rebind), credits stub
-* \[ ] No `push\\\\\\\_error` / `push\\\\\\\_warning` during a 30-min play session
+* \[ ] Procedural sprites: explicit "ship as procedural" decision
+  noted here per class/enemy (Stage 0 charter allows this)
+* \[ ] Title screen + main menu (New / Continue / Options / Quit)
+* \[ ] Options: resolution, audio (3 sliders from Stage 7.5),
+  key rebind, controller toggle
+* \[ ] Controller support (Godot input map; 1-day expected)
+* \[ ] Accessibility: colorblind-safe damage-number palette toggle,
+  UI font scale (90/100/120%)
+* \[ ] Credits stub
+* \[ ] Telemetry opt-in prompt on first launch (zone time, death
+  cause; off by default — `commands/launch-plan.md`)
+* \[ ] No `push_error` / `push_warning` during a 30-min play session
 * \[ ] `audit.md` produces all PASS
+* \[ ] Discord channels created and invite link baked into title
+  screen (`commands/launch-plan.md`)
 
 \---
 
