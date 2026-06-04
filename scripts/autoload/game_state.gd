@@ -21,6 +21,20 @@ var pending_class_id: StringName = &""
 var act_1_complete: bool = false
 var boss_first_kill: bool = false
 
+## Stage 9.7 polish — Tower of Ascension milestones the player has
+## already claimed. Persistent across runs (the reward is one-time).
+## EndlessDirector reads this on _advance_wave_to to decide whether
+## to grant the milestone reward; rewards write back through here.
+## Stored as an array of ints (floor numbers) to keep the save JSON
+## stable across schema changes.
+var endless_milestones: Array = []
+
+## Stage 9.7 polish — cosmetic titles the player has earned. Floor 50
+## grants "Delver"; future stages may add more. Surfaced by the
+## character-select screen (parked: skill-page / character-sheet UI).
+## Stored as strings to keep the save JSON portable.
+var titles: Array = []
+
 const BUILD_VERSION: String = "0.0.1"
 
 func reset_run() -> void:
@@ -29,3 +43,5 @@ func reset_run() -> void:
 	pending_class_id = &""
 	act_1_complete = false
 	boss_first_kill = false
+	endless_milestones = []
+	titles = []

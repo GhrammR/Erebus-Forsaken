@@ -29,6 +29,15 @@ signal enemy_spawned(enemy: Enemy)
 @export var respawn_delay: float = 5.0
 @export var initial_spawn_count: int = 4
 @export var min_distance_from_player: float = 240.0
+
+## Stage 9.7 polish — total lifetime spawn budget for this director.
+## -1 (default) = unlimited (back-compat for existing wilderness +
+## crypt configs that never set this). When >0, every successful
+## spawn decrements; at zero, _spawn_one returns early and the zone
+## permanently quiets for this save slot. Blighted Reach uses this
+## to enforce campaign-only respawn now that Forsaken Depths owns
+## the endless farm loop.
+@export var total_spawn_budget: int = -1
 ## Separate anchors from already-spawned enemies too, so the
 ## initial 4-pack doesn't drop two wretches on the same pixel and
 ## look like a single enemy. Smaller than the player gate — we
@@ -46,10 +55,23 @@ var _zone: Node = null
 var _anchors: Array[Marker2D] = []
 var _cooldown_remaining: float = 0.0
 var _tracked_enemies: Array[Enemy] = []
+## Remaining lifetime spawns. Mirrors total_spawn_budget at start
+## and decrements on each successful _spawn_one. Persisted via save
+## (see SaveSystem._snapshot_active_zone_directors) so a quit-then-
+## reload doesn't refresh the budget.
+var _budget_remaining: int = -1
 
 func _ready() -> void:
 	_zone = get_parent()
 	_collect_anchors()
+	_budget_remaining = total_spawn_budget
+	# SaveSystem may have parked a per-director budget snapshot; consume
+	# it now so the wilderness's "no more respawn after N kills" state
+	# survives quit-and-reload.
+	var zone_name: StringName = _zone.name if _zone != null else &""
+	var saved_budget: Variant = SaveSystem.consume_pending_director_budget(zone_name)
+	if saved_budget != null:
+		_budget_remaining = int(saved_budget)
 	if SaveSystem.has_pending_enemy_snapshot():
 		# A load is queued: skip initial spawn. Game will call
 		# claim_existing_enemies() after it spawns the snapshot.
@@ -90,6 +112,10 @@ func _spawn_one() -> void:
 		return
 	if _anchors.is_empty() or species.is_empty():
 		return
+	# Stage 9.7 polish — finite budget. -1 sentinel = unlimited (back
+	# compat). Zero or below = zone permanently quiet for this save.
+	if total_spawn_budget >= 0 and _budget_remaining <= 0:
+		return
 	var anchor := _pick_anchor()
 	if anchor == null:
 		return
@@ -111,9 +137,25 @@ func _spawn_one() -> void:
 	var container: Node = _zone.get_node_or_null(^"Enemies")
 	if container == null:
 		container = _zone
+	# Stage 9.7 polish — failure-modes #25. Set position BEFORE
+	# add_child so the enemy's CollisionShape2D never registers at
+	# world (0, 0) (its default while not in tree). Without this,
+	# the brief instant where add_child has run but global_position
+	# hasn't been re-assigned yet lets the physics server record a
+	# contact with the player at the origin. Next physics tick the
+	# player is then "depenetrated" all the way to the enemy's final
+	# anchor position — a 600+ px teleport with zero velocity.
+	#
+	# Setting position first is safe because:
+	#   - Container is at world (0,0) in both wilderness and depths.
+	#   - When the node isn't in the tree, `position =` (local)
+	#     stages the world value; add_child then evaluates
+	#     parent.global_transform + local to compute global.
+	inst.position = anchor.global_position
 	container.add_child(inst)
-	inst.global_position = anchor.global_position
 	_track(inst)
+	if total_spawn_budget >= 0:
+		_budget_remaining = maxi(_budget_remaining - 1, 0)
 	enemy_spawned.emit(inst)
 
 func _maybe_pick_elite() -> EliteModifier:
@@ -190,3 +232,11 @@ func claim_existing_enemies() -> void:
 func _player() -> Node2D:
 	var p: Node = GameState.player
 	return p as Node2D if p != null and is_instance_valid(p) else null
+
+## Stage 9.7 polish — SaveSystem reads this for the per-zone budget
+## snapshot. -1 sentinel = no budget tracking, skip in the save.
+func budget_remaining() -> int:
+	return _budget_remaining
+
+func has_finite_budget() -> bool:
+	return total_spawn_budget >= 0

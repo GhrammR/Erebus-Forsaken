@@ -5,7 +5,6 @@ extends Node2D
 ## red and the item stays.
 
 const FULL_FLASH_DURATION: float = 0.6
-const _PILLAR_SCENE := preload("res://scenes/vfx/rare_drop_pillar.tscn")
 const _OUTLINE_SHADER := preload("res://art/shaders/item_outline.gdshader")
 
 @export var item_id: StringName = &""
@@ -105,14 +104,15 @@ func _is_rare_or_better(d: ItemData) -> bool:
 	return rare_match or gold_match
 
 func _apply_rare_dress() -> void:
-	# Persistent outline + one-shot pillar at spawn.
+	# Stage 9.7 polish — the spawn-time pillar VFX was reading as a
+	# random unexplained glyph rather than a "rare drop landed here"
+	# cue. Stripped. The persistent outlined name label + glyph
+	# color (gold for uniques, blue for rares) are enough to tell
+	# loot apart at a glance, same way text colour does in D2 and
+	# PoE. If a future stage wants a louder cue, prefer a beam-of-
+	# light style consistent with ARPG genre norms.
 	if _label is CanvasItem:
 		var mat := ShaderMaterial.new()
 		mat.shader = _OUTLINE_SHADER
 		mat.set_shader_parameter(&"outline_color", _item.glyph_color)
 		_label.material = mat
-	var pillar := _PILLAR_SCENE.instantiate()
-	# Parent into the same Node2D parent so y-sort doesn't fight the
-	# floor — same pattern as the item itself.
-	get_parent().add_child.call_deferred(pillar)
-	pillar.global_position = global_position

@@ -75,6 +75,9 @@ func _ready() -> void:
 	# collider — visible as a moving click-to-move dead zone. See
 	# failure-modes.md #13.
 	input_pickable = false
+	if DebugLog.is_enabled(&"class"):
+		DebugLog.write(&"class", "Player._ready gp=%s vis=%s mod=%s" % [
+				global_position, visible, modulate])
 	# Stage 9.5 — register the player's Camera2D so CameraShake.kick()
 	# finds it without a hardcoded NodePath. Workbenches without a
 	# player wired in just have no camera in the group; kicks no-op.
@@ -139,9 +142,46 @@ func assign_class(cd: ClassData) -> void:
 		_sprite_anim = inst.get_node_or_null(^"AnimationPlayer") as AnimationPlayer
 		if _sprite_anim == null:
 			push_warning("Player.assign_class: sprite_scene has no AnimationPlayer for class %s" % cd.id)
+		if DebugLog.is_enabled(&"class"):
+			DebugLog.write(&"class", "assign_class(%s) -> sprite_root=%s anim=%s mod=%s" % [
+					cd.id, _sprite_root.name,
+					"yes" if _sprite_anim != null else "NO",
+					str((_sprite_root as Node2D).modulate) if _sprite_root is Node2D else "<not Node2D>"])
+	else:
+		if DebugLog.is_enabled(&"class"):
+			DebugLog.write(&"class", "assign_class(%s) -> sprite_scene is NULL" % cd.id)
 	EventBus.stats_changed.emit(self)
 
+var _phys_watch_prev: Vector2 = Vector2.ZERO
+var _phys_watch_first: bool = true
+
 func _physics_process(delta: float) -> void:
+	# Stage 9.7 polish — watch for unexplained position jumps. Logs
+	# the BEFORE/AFTER, intent, life state, and velocity if the
+	# player moved more than 50 px in a single physics tick. Walking
+	# is bounded at WALK_SPEED * delta ≈ 2.3 px / tick at 60 Hz, so
+	# anything past 50 px is a teleport, a depenetration shove, or
+	# a respawn. Opt-in via --debug=physics.
+	if not _phys_watch_first and DebugLog.is_enabled(&"physics"):
+		var jump := global_position - _phys_watch_prev
+		# Expected walk this tick = velocity * delta. Anything else is
+		# either a teleport, a depenetration shove, or floor() rounding.
+		var expected := velocity * delta
+		var unexpected := jump - expected
+		if jump.length() > 50.0:
+			DebugLog.write(&"physics",
+					"BIG JUMP from=%s to=%s delta=%s expected=%s unexpected=%s vel=%s intent=%s life=%s combat=%s" % [
+							_phys_watch_prev, global_position, jump,
+							expected, unexpected,
+							velocity, _intent, _life, _combat])
+		elif unexpected.length() > 1.0:
+			DebugLog.write(&"physics",
+					"DRIFT from=%s to=%s delta=%s expected=%s unexpected=%s vel=%s intent=%s" % [
+							_phys_watch_prev, global_position, jump,
+							expected, unexpected,
+							velocity, _intent])
+	_phys_watch_first = false
+	_phys_watch_prev = global_position
 	if _life == LifeState.DEAD:
 		velocity = Vector2.ZERO
 		return
@@ -275,8 +315,23 @@ func _on_died(_killer: Node) -> void:
 	await get_tree().create_timer(DEATH_DURATION).timeout
 	respawn()
 
+func is_dead() -> bool:
+	return _life == LifeState.DEAD
+
+## Stage 9.7 polish — full respawn with HP/MP refill + teleport to
+## the zone's spawn point. Used by the corpse-run flow where dying
+## sends you back to camp.
 func respawn() -> void:
 	global_position = respawn_position
+	revive_in_place()
+
+## Revive without teleporting. Used by the endless rollback chain
+## (Maw -> rollback to pre-portal save in the crypt): the player's
+## position was already restored by SaveSystem._apply, so re-using
+## respawn() would yank them to the zone's south-wall SpawnPoint
+## instead of leaving them where they entered The Maw. HP/MP were
+## also restored from save, so re-filling here is harmless.
+func revive_in_place() -> void:
 	current_stats.restore_hp(current_stats.max_hp)
 	current_stats.restore_mp(current_stats.max_mp)
 	_life = LifeState.ALIVE

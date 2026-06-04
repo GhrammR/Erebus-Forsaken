@@ -163,7 +163,7 @@ position = Vector2(820, 120)
 [node name="Enemies" type="Node2D" parent="."]
 y_sort_enabled = true
 
-[node name="SpawnDirector" type="Node" parent="."]
+[node name="SpawnDirector" type="Node" parent="." groups=["spawn_director"]]
 script = ExtResource("4_sd")
 species = [{
 "id": &"shade_wretch",
@@ -176,3 +176,4 @@ concurrent_cap = 6
 respawn_delay = 5.0
 initial_spawn_count = 4
 min_distance_from_player = 280.0
+total_spawn_budget = 16

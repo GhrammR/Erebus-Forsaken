@@ -189,16 +189,20 @@ func _verify_gamestate_flags(fail: int) -> int:
 	return fail
 
 func _verify_save_schema(fail: int) -> int:
-	var ok_v := SaveSystem.SAVE_VERSION == 12
-	print("[%s] SaveSystem.SAVE_VERSION == 12 (got %d)"
+	# Stage 9.7 polish bumped to v13; this verifier only cares that
+	# the schema is at least Stage 9's contract version.
+	var ok_v := SaveSystem.SAVE_VERSION >= 12
+	print("[%s] SaveSystem.SAVE_VERSION >= 12 (got %d)"
 			% [_ok(ok_v), SaveSystem.SAVE_VERSION])
 	if not ok_v: fail += 1
 	# v11 -> v12 seeds both flags.
 	var migrated := SaveSystem.migrate({ "version": 11 })
-	var ok_mig := int(migrated.get("version", 0)) == 12 \
+	# Stage 9.7 polish chains migration through v13, but the v12
+	# contract (act_1_complete + boss_first_kill seeded) must still hold.
+	var ok_mig := int(migrated.get("version", 0)) >= 12 \
 			and migrated.has("act_1_complete") \
 			and migrated.has("boss_first_kill")
-	print("[%s] migrate v11 -> v12 seeds Act-1 flags" % _ok(ok_mig))
+	print("[%s] migrate v11 -> v12+ seeds Act-1 flags" % _ok(ok_mig))
 	if not ok_mig: fail += 1
 	return fail
 

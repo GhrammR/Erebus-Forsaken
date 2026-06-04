@@ -34,9 +34,12 @@ func is_full() -> bool:
 
 func add_item(item_id: StringName) -> bool:
 	if is_full():
+		DebugLog.write(&"items", "add_item(%s) -> FULL" % item_id)
 		return false
 	backpack.append(item_id)
 	inventory_changed.emit()
+	DebugLog.write(&"items", "add %s (backpack=%d/%d)" % [
+			item_id, backpack.size(), BACKPACK_CAPACITY])
 	return true
 
 func remove_item(item_id: StringName) -> bool:
@@ -45,6 +48,8 @@ func remove_item(item_id: StringName) -> bool:
 		return false
 	backpack.remove_at(idx)
 	inventory_changed.emit()
+	DebugLog.write(&"items", "remove %s (backpack=%d/%d)" % [
+			item_id, backpack.size(), BACKPACK_CAPACITY])
 	return true
 
 func backpack_size() -> int:
@@ -83,6 +88,8 @@ func equip(item_id: StringName) -> bool:
 	_recompute_totals()
 	inventory_changed.emit()
 	equipment_changed.emit(slot, item)
+	DebugLog.write(&"items", "equip %s -> slot %d (replaced %s)" % [
+			item_id, slot, prev_id if prev_id != &"" else "<empty>"])
 	return true
 
 func unequip(slot: int) -> bool:
@@ -96,6 +103,7 @@ func unequip(slot: int) -> bool:
 	_recompute_totals()
 	inventory_changed.emit()
 	equipment_changed.emit(slot, null)
+	DebugLog.write(&"items", "unequip slot %d -> %s" % [slot, item_id])
 	return true
 
 ## Strips an equipped item without sending it back to the backpack

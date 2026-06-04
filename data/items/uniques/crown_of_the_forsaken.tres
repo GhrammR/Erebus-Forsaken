@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1_i"]
+
+[resource]
+script = ExtResource("1_i")
+id = &"crown_of_the_forsaken"
+display_name = "Crown of the Forsaken"
+slot = 2
+class_mask = 15
+level_req = 1
+base_armor_defense = 4
+base_weapon_ar = 0
+base_resist = 5
+affixes = { &"strength": 1, &"dexterity": 1, &"vitality": 1, &"pneuma": 1 }
+glyph_color = Color(0.95, 0.55, 0.25, 1)
+glyph_shape = 2
+base_price = 0

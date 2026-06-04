@@ -49,9 +49,26 @@ const _ROOM_GROUPS: Array[StringName] = [
 	&"crypt_room_1", &"crypt_room_2", &"crypt_room_3",
 ]
 
+## Stage 9.7 — endless-mode portal asset, instantiated at the
+## EndlessPortalSlot marker when the boss has been killed and demo
+## mode is off. Reuses portal.tscn for the visuals + Npc scaffolding,
+## but the instance's script is swapped to EndlessPortal so the
+## interact path can save the rollback anchor before routing.
+const _PORTAL_SCENE := preload("res://scenes/world/portal.tscn")
+const _ENDLESS_PORTAL_SCRIPT := preload("res://scripts/world/endless_portal.gd")
+
+var _endless_portal: Portal = null
+
 func _ready() -> void:
 	zone_id = &"forsaken_crypt"
 	super._ready()
+	_maybe_spawn_endless_portal()
+	# act_1_complete flips mid-fight (in ActBoss._on_died), so the
+	# _ready spawn check above only catches the case where the player
+	# RE-enters the crypt. Subscribe to enemy_died so the portal
+	# appears the moment the boss dies, without forcing a zone reload.
+	if not EventBus.enemy_died.is_connected(_on_any_enemy_died):
+		EventBus.enemy_died.connect(_on_any_enemy_died)
 	# If a load/cache snapshot will rehydrate the room, skip the
 	# scripted spawn — Game pushes the snapshot into the SaveSystem
 	# pending slot before instantiating us, same contract as the
@@ -60,7 +77,32 @@ func _ready() -> void:
 		return
 	_spawn_initial.call_deferred()
 
+func _exit_tree() -> void:
+	if EventBus.enemy_died.is_connected(_on_any_enemy_died):
+		EventBus.enemy_died.disconnect(_on_any_enemy_died)
+
+func _on_any_enemy_died(enemy: Node, _killer: Node) -> void:
+	# Only the boss flips act_1_complete; cheap filter so we don't
+	# re-walk the scene for every wretch death.
+	if enemy is ActBoss:
+		# Defer the spawn — `enemy_died` fires from inside a physics
+		# query (HurtboxComponent.area_entered → HC.take_damage →
+		# HC.died.emit). Instantiating the portal Npc in-flush trips
+		# Godot's "Can't change this state while flushing queries"
+		# because the portal's StaticBody2D + Area2D set collision
+		# flags during _ready. Deferral pushes the spawn to idle.
+		_maybe_spawn_endless_portal.call_deferred()
+
 func _spawn_initial() -> void:
+	# Stage 9.7 polish — once the boss has been killed (act_1_complete
+	# is permanent in the save), the WHOLE crypt is "cleared." None of
+	# the three rooms should respawn. Previously only R3 (boss) was
+	# gated, which left R1 + R2 wretches resurrecting on every re-
+	# entry — the player walked back through a corpse-cleared act and
+	# found the rooms full again. The dungeon-crawl reward is a
+	## quiet zone, so the gate covers all three rooms.
+	if GameState.act_1_complete:
+		return
 	_spawn_room(0, _ROOM_1_SPAWNS, ^"Room1Anchors")
 	_spawn_room(1, _ROOM_2_SPAWNS, ^"Room2Anchors")
 	_spawn_room(2, _ROOM_3_SPAWNS, ^"Room3Anchors")
@@ -92,9 +134,10 @@ func _spawn_room(room_index: int, spawns: Array, anchor_parent: NodePath) -> voi
 		if elite_id != &"":
 			inst.elite_modifier = EnemyRegistry.elite_modifier_for(elite_id)
 		var anchor := anchors[i % anchors.size()]
-		container.add_child(inst)
-		inst.global_position = anchor.global_position \
+		# failure-modes #25 — pre-position before add_child.
+		inst.position = anchor.global_position \
 				+ Vector2(randf_range(-24, 24), randf_range(-24, 24))
+		container.add_child(inst)
 		inst.add_to_group(_ROOM_GROUPS[room_index])
 		# Scripted spawns bypass SpawnDirector, so the game scene's
 		# zone-load wire pass won't connect this enemy's damage signal
@@ -134,10 +177,38 @@ func _room_alive_count(room_index: int) -> int:
 		count += 1
 	return count
 
+## Stage 9.7 — drop an Endless Trial portal at the EndlessPortalSlot
+## once act_1_complete is true. Gated on FeatureFlags.demo_mode so
+## the demo build never surfaces it. Interact captures the rollback
+## save before SceneRouter dispatches (the run is not allowed to
+## start if save_game() fails — we need a clean anchor to revert to).
+func _maybe_spawn_endless_portal() -> void:
+	if has_endless_portal():
+		return
+	if FeatureFlags.demo_mode:
+		return
+	if not GameState.act_1_complete:
+		return
+	var slot := get_node_or_null(^"EndlessPortalSlot") as Marker2D
+	if slot == null:
+		return
+	var portal := _PORTAL_SCENE.instantiate() as Portal
+	if portal == null:
+		return
+	portal.set_script(_ENDLESS_PORTAL_SCRIPT)
+	portal.display_name = "The Maw"
+	portal.global_position = slot.global_position
+	portal.add_to_group(&"endless_portal")
+	add_child(portal)
+	_endless_portal = portal
+
 ## Verifier hook: stage8_verify reads these to confirm the scene's
 ## structural contract (3 rooms × spawn anchors, 2 gates, return portal).
 func get_room_count() -> int:
 	return _ROOM_GROUPS.size()
+
+func has_endless_portal() -> bool:
+	return _endless_portal != null and is_instance_valid(_endless_portal)
 
 func gate_paths() -> Array:
 	return [^"Gate1", ^"Gate2"]

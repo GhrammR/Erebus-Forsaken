@@ -40,6 +40,9 @@ const _TUTORIAL_SCRIPT := preload("res://scripts/ui/tutorial_prompt.gd")
 @onready var _save_toast: Label = $HUD/SaveToast
 @onready var _gold_hud: Label = $HUD/GoldHUD
 @onready var _skill_icon: Control = $HUD/SkillIcon
+@onready var _wave_counter: Label = $HUD/WaveCounter
+@onready var _endless_summary: CanvasLayer = $EndlessSummary
+@onready var _milestone_modal: CanvasLayer = $MilestoneModal
 @onready var _click_marker: Node2D = $ClickMarker
 @onready var _dn_layer: Node2D = $DamageNumberLayer
 @onready var _death_screen: CanvasLayer = $DeathScreen
@@ -85,6 +88,9 @@ func _ready() -> void:
 	# summons like Bone Servant) looks Game up via this group and calls
 	# wire_combatant_vfx() so its damage numbers fire.
 	add_to_group(&"game_host")
+	if DebugLog.is_enabled(&"class"):
+		DebugLog.write(&"class", "Game._ready begin pending=%s has_save=%s" % [
+				GameState.pending_class_id, SaveSystem.has_save()])
 	# Trimmed after Stage 9.5 playtest — the full keymap pushed the
 	# Help label across the top-centre and ate the KillCounter row.
 	_help.text = "Click=move  WASD  E=interact  I=inv  F5/F9=save/load  Esc=pause"
@@ -136,6 +142,27 @@ func _ready() -> void:
 	# self-respawns after a fixed timer.
 	_player.external_respawn_handler = true
 	_death_screen.return_to_town_requested.connect(_on_return_to_town)
+
+	# Stage 9.7 — endless run lifecycle. Summary modal opens on death
+	# during a run; its return button hands control back here, which
+	# routes through EndlessRun.rollback() to the pre-portal save.
+	_endless_summary.return_requested.connect(_on_endless_summary_return)
+	_milestone_modal.continue_pressed.connect(_on_milestone_continue)
+	if not EndlessRun.milestone_reached.is_connected(_on_milestone_reached):
+		EndlessRun.milestone_reached.connect(_on_milestone_reached)
+	if not EventBus.endless_wave_started.is_connected(_on_endless_wave_started):
+		EventBus.endless_wave_started.connect(_on_endless_wave_started)
+	if not EventBus.endless_wave_completed.is_connected(_on_endless_wave_completed):
+		EventBus.endless_wave_completed.connect(_on_endless_wave_completed)
+	if not EndlessRun.stats_changed.is_connected(_on_endless_stats_changed):
+		EndlessRun.stats_changed.connect(_on_endless_stats_changed)
+	# Stage 9.7 polish — AscentSpire ends the run via
+	# EndlessRun.end_run() which emits endless_run_ended. Player
+	# death goes through the same signal so both paths converge on
+	# the summary modal.
+	if not EventBus.endless_run_ended.is_connected(_on_endless_run_ended):
+		EventBus.endless_run_ended.connect(_on_endless_run_ended)
+	_refresh_wave_counter()
 
 	_player.get_inventory().inventory_changed.connect(_reevaluate_quests)
 
@@ -217,6 +244,12 @@ func _do_transit(zone_id: StringName, place_at_spawn: bool, arrival_marker: Stri
 		SaveSystem.set_pending_zone_state(
 				(cached.get("enemies", []) as Array).duplicate(true),
 				(cached.get("loot", []) as Array).duplicate(true))
+		# Push budgets too so the destination's SpawnDirector picks
+		# up the in-session decrement on its _ready instead of
+		# re-reading its @export default.
+		var cached_budgets: Dictionary = cached.get("director_budgets", {}) as Dictionary
+		for k in cached_budgets.keys():
+			SaveSystem.set_pending_director_budget(StringName(k), int(cached_budgets[k]))
 	# Instantiate + insert the new zone. Place it before the Player
 	# in sibling order so y-sort layering matches the camp setup.
 	var packed: PackedScene = load(path) as PackedScene
@@ -273,7 +306,27 @@ func _snapshot_zone_to_cache(zone: Zone) -> void:
 	_zone_cache[zone.zone_id] = {
 		"enemies": SaveSystem.snapshot_active_zone_enemies(),
 		"loot": SaveSystem.snapshot_active_zone_loot(),
+		# Stage 9.7 polish — capture per-zone director budgets so a
+		# wilderness re-entry doesn't reset the spawn count. Without
+		# this, leaving Blighted Reach for town and coming back would
+		# refresh the budget mid-session (the on-disk save only carries
+		# it across save/load, not in-session transit).
+		"director_budgets": _collect_director_budgets(zone),
 	}
+
+func _collect_director_budgets(zone: Zone) -> Dictionary:
+	# One entry per finite-budget director in the zone, keyed by the
+	# director's parent name (matches SaveSystem's snapshot key).
+	var out: Dictionary = {}
+	for n in zone.find_children("*", "Node", true, false):
+		var sd := n as SpawnDirector
+		if sd == null or not sd.has_finite_budget():
+			continue
+		var parent := sd.get_parent()
+		if parent == null:
+			continue
+		out[String(parent.name)] = sd.budget_remaining()
+	return out
 
 func _spawn_corpses_in_zone() -> void:
 	if _zone == null:
@@ -322,12 +375,85 @@ var _pending_death_pos: Vector2 = Vector2.ZERO
 var _pending_death_zone: StringName = &""
 
 func _on_player_died() -> void:
+	# Stage 9.7 — endless death bypasses the corpse-run chain entirely.
+	# No harvest, no corpse, no penalty: the rollback restores HP +
+	# inventory + zone bytes-for-bytes from the pre-portal save when
+	# the summary closes. end_run() emits endless_run_ended, and
+	# _on_endless_run_ended below opens the summary; no need to call
+	# show_summary directly.
+	if EndlessRun.active:
+		EndlessRun.end_run(true)
+		return
 	# Park the death context, surface the review screen, and wait.
 	# The harvest + corpse + transit + respawn chain runs only when
 	# the player clicks "Return to Town" on the screen.
 	_pending_death_pos = _player.global_position
 	_pending_death_zone = _zone.zone_id if _zone != null else DEFAULT_ZONE
 	_death_screen.show_death()
+
+func _on_endless_run_ended(stats: Dictionary) -> void:
+	# Single summary entry point for both death and AscentSpire
+	# interact. Idempotent — if the modal is already up (shouldn't
+	# happen but defensive), show_summary just re-binds the labels.
+	_endless_summary.show_summary(stats)
+
+func _on_endless_summary_return() -> void:
+	_endless_summary.hide_summary()
+	# Capture milestones earned in THIS run before rollback wipes the
+	# in-memory GameState (the pre-portal save has the pre-run
+	# milestone list, so loading it removes the rewards we just
+	# granted). Then: rollback -> load anchor -> reapply milestones
+	# -> save -> resume zone. Milestones are the one piece of
+	# permanent progress that survives an endless run.
+	var new_milestones := EndlessRun.milestones_new_this_run()
+	EndlessRun.rollback()
+	var ok := SaveSystem.load_game()
+	if ok:
+		_zone_cache.clear()
+		_inventory_panel.bind_inventory(_player.get_inventory())
+		_overlay.bind_stats(_player.current_stats)
+		if not new_milestones.is_empty():
+			EndlessRun.recommit_milestones(new_milestones)
+			# Persist the rolled-back-but-with-milestones state. Active
+			# is already off, so the save guard doesn't trip.
+			SaveSystem.save_game()
+		_resume_saved_zone()
+		# If the run ended via death the player's LifeState is DEAD and
+		# input is suppressed (see Player._on_died); the load restored
+		# HP/MP + position but not the input-process flags or life/
+		# combat state. revive_in_place() flips those without yanking
+		# the player away from the save-restored position (the south-
+		# wall SpawnPoint would replace the boss-room rollback slot).
+		# AscentSpire path leaves the player alive — nothing to do.
+		if EndlessRun.ended_via_death:
+			_player.revive_in_place.call_deferred()
+	_refresh_wave_counter()
+
+func _on_endless_wave_started(_wave: int, _kills_required: int) -> void:
+	_refresh_wave_counter()
+
+func _on_endless_wave_completed(wave: int) -> void:
+	_wave_counter.text = "Floor %d — clear!" % wave
+
+func _on_milestone_reached(floor: int, reward: Dictionary) -> void:
+	_milestone_modal.show_milestone(floor, reward)
+
+func _on_milestone_continue() -> void:
+	_milestone_modal.hide_milestone()
+
+func _on_endless_stats_changed() -> void:
+	_refresh_wave_counter()
+
+func _refresh_wave_counter() -> void:
+	if not EndlessRun.active or EndlessRun.wave <= 0:
+		_wave_counter.text = ""
+		_wave_counter.visible = false
+		return
+	_wave_counter.visible = true
+	_wave_counter.text = "Floor %d — %d / %d" % [
+			EndlessRun.wave,
+			mini(EndlessRun.kills_this_wave, EndlessRun.kills_required),
+			EndlessRun.kills_required]
 
 func _on_return_to_town() -> void:
 	_death_screen.hide_death()
@@ -414,9 +540,11 @@ func _spawn_enemy_snapshot(snap: Array) -> void:
 		var elite_id := StringName(entry.get("elite_id", ""))
 		if elite_id != &"":
 			inst.elite_modifier = EnemyRegistry.elite_modifier_for(elite_id)
-		container.add_child(inst)
+		# failure-modes #25 — pre-position before add_child so the
+		# enemy's collision never registers at world (0,0).
 		var pos: Dictionary = entry.get("pos", {})
-		inst.global_position = Vector2(float(pos.get("x", 0.0)), float(pos.get("y", 0.0)))
+		inst.position = Vector2(float(pos.get("x", 0.0)), float(pos.get("y", 0.0)))
+		container.add_child(inst)
 		# Apply HP after the enemy's _ready built its Stats.
 		var hp := int(entry.get("hp", inst.max_hp))
 		if inst.current_stats != null and hp > 0:
@@ -432,18 +560,79 @@ func _spawn_enemy_snapshot(snap: Array) -> void:
 
 func _place_player_for_arrival(arrival_marker: StringName) -> void:
 	var pos := _zone.get_spawn_position()
-	if arrival_marker != &"":
-		var mp := _zone.get_marker_position(arrival_marker)
-		if mp != Vector2.ZERO:
-			pos = mp
+	# Stage 9.7 polish — has_marker is an explicit node-existence
+	# probe. The old `if mp != Vector2.ZERO` shortcut silently dropped
+	# the override for any marker at the world origin (DepthsEntry at
+	# (0, 0) read as "missing" and the player ended up at whatever
+	# fallback get_spawn_position served).
+	if arrival_marker != &"" and _zone.has_marker(arrival_marker):
+		pos = _zone.get_marker_position(arrival_marker)
+	# Teleport + immediate state wipe. Without zeroing velocity and
+	# clearing the click target, a residual intent from BEFORE the
+	# portal interaction (the click that walked the player toward
+	# the portal in the OLD zone's world coords) survives into the
+	# new zone — the player then walks toward a now-meaningless
+	# stale position in the new zone's coordinate frame, which can
+	# read as "spawning in a corner."
 	_player.global_position = pos
+	_player.velocity = Vector2.ZERO
 	_player.respawn_position = _zone.get_spawn_position()
+	var pi := _player.get_input()
+	if pi != null:
+		pi.clear_click_target()
+	_set_pending_npc(null)
+	# Stage 9.7 polish — failure-modes #23. Residual Camera2D.offset
+	# from a CameraShake.kick fired just before the portal interact
+	# carries into the new zone and renders the viewport off-centre.
+	# Player ends up at the entry marker correctly, but the camera
+	# shows them at a corner. Reset on every transit.
+	CameraShake.reset()
+	DebugLog.write(&"transit", "arrival zone=%s marker=%s target=%s -> player.gp=%s cam_offset=%s" % [
+			_zone.zone_id, arrival_marker, pos, _player.global_position,
+			CameraShake.current_offset()])
+	# Movement watch (separate `movement` flag so it's opt-in and
+	# doesn't dominate `transit`). Logs only deltas > 5px so normal
+	# walking doesn't flood — anything large enough to be a teleport,
+	# physics shove, or post-transit nudge surfaces with frame index.
+	if DebugLog.is_enabled(&"movement"):
+		_movement_watch_target = pos
+		_movement_watch_frames = 300
+		_movement_watch_last = pos
+	# Deferred re-apply: AFTER all transit-frame work has settled.
+	_settle_arrival.call_deferred(pos)
+
+# Movement-watch state. Declared at class scope, populated by
+# _place_player_for_arrival when the `movement` debug flag is on,
+# read by _process. _movement_watch_target is currently unused but
+# kept around so a future check can compare against the spawn
+# anchor (e.g. "did the player drift more than X px from target?").
+var _movement_watch_target: Vector2 = Vector2.ZERO
+var _movement_watch_frames: int = 0
+var _movement_watch_last: Vector2 = Vector2.ZERO
+
+func _settle_arrival(target: Vector2) -> void:
+	if not is_instance_valid(_player) or _player.is_dead():
+		return
+	DebugLog.write(&"transit", "settle before=%s -> target=%s" % [
+			_player.global_position, target])
+	_player.global_position = target
+	_player.velocity = Vector2.ZERO
+	var pi := _player.get_input()
+	if pi != null:
+		pi.clear_click_target()
 
 func _zone_display_name(zone_id: StringName) -> String:
+	# Internal zone_id stays `forsaken_depths` (it's referenced by
+	# the EndlessPortal target, save migration, and SceneRouter
+	# registration — churn-not-worth-it to rename). User-facing
+	# strings use "The Maw" after the Stage 9.7 polish naming pass —
+	# distinct from the Forsaken Crypt, fits the swallowed-descent
+	# read for the wave climb.
 	match zone_id:
-		&"threshold_camp": return "Threshold Camp"
-		&"blighted_reach": return "Blighted Reach"
-		&"forsaken_crypt": return "Forsaken Crypt"
+		&"threshold_camp":  return "Threshold Camp"
+		&"blighted_reach":  return "Blighted Reach"
+		&"forsaken_crypt":  return "Forsaken Crypt"
+		&"forsaken_depths": return "The Maw"
 		_: return String(zone_id)
 
 func _wire_player_combat_vfx() -> void:
@@ -524,6 +713,12 @@ func _on_zone_changed_feel(zone_id: StringName) -> void:
 			Color(1, 1, 1, 0), 0.5)
 
 func _on_enemy_died_feel(_enemy: Node, _killer: Node) -> void:
+	if DebugLog.is_enabled(&"combat") and _enemy != null:
+		var k: String = String(_killer.name) if _killer != null else "<?>"
+		DebugLog.write(&"combat", "%s died (killer=%s)" % [_enemy.name, k])
+	_on_enemy_died_feel_real(_enemy, _killer)
+
+func _on_enemy_died_feel_real(_enemy: Node, _killer: Node) -> void:
 	_kill_count += 1
 	_kill_counter.text = "kills %d" % _kill_count
 	# Bring the label back to full brightness on every new kill, then
@@ -600,12 +795,17 @@ func _wire_zone_combat_vfx() -> void:
 		return
 	for n in _zone.find_children("*", "HealthComponent", true, false):
 		wire_combatant_vfx(n.get_parent())
-	# Subscribe to the zone's spawn director (if any) so newly-
-	# spawned enemies get their damage numbers without us re-
-	# walking the tree every frame.
-	var dir := _zone.get_node_or_null(^"SpawnDirector") as SpawnDirector
-	if dir != null and not dir.enemy_spawned.is_connected(_on_director_spawned):
-		dir.enemy_spawned.connect(_on_director_spawned)
+	# Subscribe to every SpawnDirector (including subclasses like
+	# EndlessDirector in Forsaken Depths) so newly-spawned enemies
+	# get their damage numbers without us re-walking the tree every
+	# frame. Lookup-by-class instead of hardcoded `^"SpawnDirector"`
+	# name — the depths' director node is named "EndlessDirector"
+	# and the old name-based lookup silently missed it, leaving
+	# wave-spawned wretches with no damage-number wiring.
+	for n in _zone.find_children("*", "Node", true, false):
+		var dir := n as SpawnDirector
+		if dir != null and not dir.enemy_spawned.is_connected(_on_director_spawned):
+			dir.enemy_spawned.connect(_on_director_spawned)
 
 func wire_combatant_vfx(target: Node) -> void:
 	if target == null or not is_instance_valid(target):
@@ -625,6 +825,13 @@ func _on_director_spawned(enemy: Enemy) -> void:
 	wire_combatant_vfx(enemy)
 
 func _on_combatant_damaged(amount: int, _source: Node, target: Node) -> void:
+	if DebugLog.is_enabled(&"combat") and target != null:
+		var src_name: String = String(_source.name) if _source != null else "<?>"
+		DebugLog.write(&"combat", "%s -> %s  dmg=%d" % [
+				src_name, target.name, amount])
+	_on_combatant_damaged_vfx(amount, _source, target)
+
+func _on_combatant_damaged_vfx(amount: int, _source: Node, target: Node) -> void:
 	if target == null or not is_instance_valid(target):
 		return
 	var dn := _DAMAGE_NUMBER.instantiate()
@@ -751,6 +958,22 @@ func _process(_delta: float) -> void:
 	# below. Nothing to tick here per-frame.
 	if _player == null:
 		return
+	# Movement watch (failure-modes #23 + future spawn issues): only
+	# fires when --debug=movement and only for ~5s after a transit.
+	# Skips per-frame walking by only printing deltas > 5px AND
+	# always prints camera offset so a phantom teleport that's
+	# really a camera offset stands out.
+	if _movement_watch_frames > 0:
+		var gp: Vector2 = _player.global_position
+		var d := gp - _movement_watch_last
+		if d.length() > 5.0:
+			DebugLog.write(&"movement",
+					"frame=%d gp=%s delta=%s vel=%s cam_offset=%s" % [
+							300 - _movement_watch_frames,
+							gp, d, _player.velocity,
+							CameraShake.current_offset()])
+			_movement_watch_last = gp
+		_movement_watch_frames -= 1
 	# Auto-interact once the player arrives at a clicked Npc/Portal.
 	if _pending_interact_npc != null:
 		if not is_instance_valid(_pending_interact_npc):

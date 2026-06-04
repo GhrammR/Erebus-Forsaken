@@ -251,11 +251,12 @@ them); **execution order** is now:
 3. Stage 8 — Dungeon (with affix-tier sub-system) **[CLOSED]**
 4. Stage 9 — Act boss **[CLOSED]**
 5. Stage 9.5 — Feel Pass (sound + juice contract, `rules/feel-pass.md`) **[CLOSED]**
-6. Stage 9.7 — Endless mode (post-boss retention) *(next)*
-7. **itch.io free demo launches here** (`commands/launch-plan.md`)
-8. Stage 11 — Save/load hardening
-9. Stage 12 — Pre-launch polish
-10. **Steam EA launch**
+6. Stage 9.7 — Endless mode (post-boss retention) [CLOSED]
+7. Stage 9.8 — Quality of Life (Hearth Ember + potions) *(next)*
+8. **itch.io free demo launches here** (`commands/launch-plan.md`)
+9. Stage 11 — Save/load hardening
+10. Stage 12 — Pre-launch polish
+11. **Steam EA launch**
 
 Skipping or reordering this sequence requires explicit user approval
 and a note appended to this file.
@@ -534,18 +535,349 @@ and a note appended to this file.
   (`int` → `DamageResult.damage`) and filters crit hits when
   asserting the deterministic damage value.
 
-## Stage 9.7 — Endless mode  *(execute after Stage 9.5)*
+## Stage 9.7 — Endless mode  *(CLOSED)*
 
-* \[ ] Endless mode portal in boss room (post-clear)
-* \[ ] Wave director: `SpawnDirector` extension that scales
-  `concurrent_cap` + `species` weights per wave, no map change
-* \[ ] Wave counter HUD
-* \[ ] Run summary screen on player death: waves cleared, kills,
-  gold, time. Shareable seed string (Strategic Review #7 viral hook).
-* \[ ] Endless runs are NOT saved; they use the run-start save as a
-  rollback point. Quitting endless = revert to pre-portal state.
-* \[ ] Disabled in demo build via `FEATURE_FLAGS.demo_mode`
-  (`commands/launch-plan.md`)
+* \[x] Endless mode portal in boss room (post-clear). `EndlessPortal`
+  (extends Portal) is instantiated at `EndlessPortalSlot` by
+  `ForsakenCrypt._maybe_spawn_endless_portal()` when
+  `GameState.act_1_complete && !FeatureFlags.demo_mode`. Interact
+  takes the rollback-anchor save via `SaveSystem.save_game()` BEFORE
+  flipping `EndlessRun.active`, so the on-disk file represents the
+  pre-portal state, then routes to `endless_arena`.
+* \[x] Wave director: `EndlessDirector` extends `SpawnDirector` and
+  scales `concurrent_cap`, `respawn_delay`, `elite_chance`, and
+  `species` weights per wave via `_apply_wave_tuning(w)`:
+  cap = `mini(6+w, 14)`, delay = `maxf(5-w*0.25, 1.5)`, elite =
+  `minf(0.05+w*0.02, 0.30)`, quota = `6+w*2`. Four species bands
+  (waves 1, 3, 5, 8) shift the wretch/bog_caller mix. 1.5s lull
+  between waves. No map change between waves — fixed arena geometry.
+* \[x] Wave counter HUD: `WaveCounter` Label in `game.tscn`. Game.gd
+  subscribes to `EventBus.endless_wave_started/_completed` and
+  `EndlessRun.stats_changed` to render `Wave N — X / Y`. Hidden
+  unless `EndlessRun.active`.
+* \[x] Run summary screen: `scenes/ui/endless_summary.tscn`
+  (`CanvasLayer` layer 70). Surfaces waves / kills / gold gained /
+  mm\:ss time + readonly seed LineEdit + Copy button
+  (`DisplayServer.clipboard_set`). Esc closes via
+  `return_requested`. Strategic Review #7 viral hook: shareable seed
+  string `EREBUS-XXXX-XXXX` (40-bit base-32 with I/O/0/1 dropped for
+  hand-transcription clarity, encode/decode round-trip verified).
+* \[x] Endless runs are NOT saved. `SaveSystem.save_game()` no-ops
+  while `EndlessRun.active`. Death triggers
+  `EndlessRun.end_run()` → summary modal; the modal's
+  "Return to Crypt" button calls `EndlessRun.rollback()` then
+  `SaveSystem.load_game()` + `_resume_saved_zone()` to revert
+  bytes-for-bytes to the pre-portal state. The corpse-run penalty
+  (gold/gear drop) is skipped entirely during endless death.
+* \[x] Disabled in demo build via
+  `FeatureFlags.demo_mode` (project setting
+  `application/feature_flags/demo_mode`). New `FeatureFlags`
+  autoload reads the bool at boot; the crypt's portal spawn checks
+  it before instantiating. `launch-plan.md` remains the source of
+  truth for what demo_mode covers.
+* \[x] `--verify9_7` verifier (26 / 26 PASS): autoloads,
+  EventBus signals on whitelist, SceneRouter zone registration,
+  seed round-trip, EndlessRun lifecycle (begin/record_kill/
+  advance_wave/rollback), tuning curves at waves 1/3/5/10/20,
+  species reweight, `_pick_species` determinism off
+  `EndlessRun.seed`, arena scene structure, crypt portal gating
+  (act_1_complete + demo_mode), save guard, game.tscn HUD
+  declarations, summary modal API.
+* \[x] Regression: --verify / --verify3 / --verify7 / --verify8 /
+  --verify9 / --verify9_5 / --verify10 all PASS post-Stage-9.7.
+
+### Stage 9.7 polish (2026-06-03)
+
+User feedback identified zone redundancy (wilderness + endless were
+near-identical farm loops) and a portal-spawn bug (post-boss flag
+flip wasn't observed mid-session). Three design pivots locked:
+
+* **Wilderness role:** campaign-only, finite respawns. Blighted Reach
+  director gets `total_spawn_budget = 16`; once exhausted the zone
+  permanently quiets for the save slot. The crypt remains scripted
+  (kill-the-room contract, already finite). Drives all post-Act-1
+  combat through the descent.
+* **Reward model:** Tower of Ascension milestones. Floors 10 / 25 /
+  50 / 100 grant one-time rewards that persist across runs even
+  through `EndlessRun.rollback()`. Floor 10 = Vitality +1 (alloc),
+  Floor 25 = Depth-Touched Charm (Amulet, +20 HP, class_mask=ALL),
+  Floor 50 = "Delver" cosmetic title, Floor 100 = Crown of the
+  Forsaken (Helm, +1 all attributes, ALL classes). Unique art ships
+  procedural per Stage 12 charter; bitmap pass is parking-lot
+  modular-sprite-polish.
+* **Framing:** "Forsaken Depths" — endless zone reframed as a
+  procedural descent below the crypt's boss room. Lore-coherent with
+  the dungeon lexicon, dressed with stone walls, four braziers,
+  central blood-sigil. HUD relabels Wave → Floor. Crypt portal
+  display name "The Descent".
+
+Implementation:
+
+* \[x] Portal spawn bug — `ForsakenCrypt._on_any_enemy_died` listens
+  for ActBoss death (filtered) and re-runs `_maybe_spawn_endless_
+  portal()`. Idempotent via `has_endless_portal()` guard so re-entry
+  doesn't double-spawn. EventBus whitelist preserved (reuses
+  `enemy_died`).
+* \[x] `SpawnDirector.total_spawn_budget` export + `_budget_remaining`
+  state. -1 sentinel = unlimited (back-compat). >=0 decrements per
+  spawn and gates `_spawn_one` at zero. `budget_remaining()` +
+  `has_finite_budget()` helpers. Director joins `spawn_director`
+  group for save discovery.
+* \[x] SaveSystem schema v12 → v13. New keys: `director_budgets`
+  (Dict[zone_name, int]), `endless_milestones` (Array[int]),
+  `titles` (Array[String]). `_snapshot_director_budgets` walks the
+  group; `consume_pending_director_budget` per-zone pop on director
+  `_ready`. `_migrate_v12_to_v13` seeds empty defaults and rewrites
+  stale `endless_arena` zone_id to `forsaken_depths` (defensive —
+  endless never persists).
+* \[x] Forsaken Depths rename: `endless_arena.tscn` →
+  `forsaken_depths.tscn`, `EndlessArena` → `ForsakenDepths`,
+  `EndlessEntry` → `DepthsEntry`. SceneRouter zone id updated.
+  EndlessPortal target updated. Scene reskinned: stone wall tops,
+  four corner braziers, central blood-sigil, brick floor seams.
+* \[x] Tower of Ascension milestones: `EndlessRun.MILESTONES` dict
+  keyed by floor. `_maybe_claim_milestone` fired from `advance_wave`
+  (idempotent via `GameState.endless_milestones.has(floor)`).
+  Reward kinds: `stat` (writes `alloc_*`), `item` (Inventory.add_item),
+  `title` (`GameState.titles.append`). Per-emitter signal
+  `milestone_reached(floor, reward)` (AD-08 — not EventBus).
+* \[x] Rollback survival: `EndlessRun.begin` snapshots
+  `_milestones_at_start`. `milestones_new_this_run()` returns the
+  diff. `game.gd._on_endless_summary_return` reads it BEFORE
+  rollback, then `EndlessRun.recommit_milestones()` re-grants after
+  the save-load wipes them, then `SaveSystem.save_game()` persists.
+  Permanent progress survives the run-end wipe.
+* \[x] Two new uniques in `data/items/uniques/`:
+  `depth_touched_charm.tres` (slot=AMULET, hp_max+20),
+  `crown_of_the_forsaken.tres` (slot=HEAD, +1 all four attributes,
+  4 def / 5 res base). class_mask=ALL on both. Database loads
+  automatically (item count 18 → 20).
+* \[x] HUD: Wave → Floor in label text. Summary modal:
+  "TRIAL ENDED" → "DESCENT ENDED", "Waves cleared" → "Floors
+  cleared", "Return to Crypt" → "Ascend". Crypt portal display
+  name "The Descent".
+* \[x] `MilestoneModal` (`scenes/ui/milestone_modal.tscn` + `.gd`,
+  CanvasLayer layer 75): inline modal that pauses run via
+  `Engine.time_scale = 0` while visible. Esc or Continue resumes.
+  Game.gd wires `EndlessRun.milestone_reached` → show, modal
+  `continue_pressed` → hide.
+* \[x] `--verify9_7` extended to 42 / 42 PASS: finite budget gate
+  + group registration + save snapshot/restore, milestone grants
+  for all 3 reward kinds, idempotency on re-visit, both items
+  loaded with correct affixes, save schema v13 + migration +
+  stale-zone-id rewrite, milestone modal API. Existing checks
+  updated for `forsaken_depths` rename.
+* \[x] Stage 9 verifier relaxed: `SAVE_VERSION >= 12` (was `==`).
+* \[x] Regression: all 12 verifiers
+  (`verify / verify3 / verify4 / verify5 / verify6 / verify7 /
+  verify7_5 / verify8 / verify9 / verify9_5 / verify9_7 /
+  verify10`) PASS post-polish.
+
+### Stage 9.7 polish — second pass (2026-06-04)
+
+Three more bugs surfaced after the wilderness/crypt rework:
+
+* \[x] Damage numbers missing in The Maw — `_wire_zone_combat_vfx`
+  looked up the spawn director by hard-coded node name
+  `^"SpawnDirector"`, but the depths' director is named
+  `EndlessDirector` so the signal connect silently no-op'd and
+  wave-spawned enemies never had their `HC.damaged` wired to the
+  damage-number layer. Switched to class-based discovery
+  (`as SpawnDirector` matches subclasses) — walks zone children
+  and connects every SpawnDirector subclass node.
+* \[x] Crypt rooms 1+2 respawning post-boss — extended the
+  `act_1_complete` gate from R3 only to the entire `_spawn_initial`
+  body. Once the boss falls, the whole dungeon is permanently quiet
+  for that save slot. Gates 1 and 2 auto-unlock because
+  `_room_alive_count` is 0 on first frame.
+* \[x] Wilderness budget reset on re-entry — Game's `_zone_cache`
+  was tracking enemies + loot but not director budgets. Added
+  `director_budgets` to the snapshot via `_collect_director_budgets()`
+  and push them through new `SaveSystem.set_pending_director_budget()`
+  on transit; SpawnDirector's existing `consume_pending_director_budget`
+  pop in `_ready` picks them up. In-session round-trip + save round-
+  trip now both preserve the count.
+
+### Stage 9.7 polish — third pass (2026-06-04)
+
+User feedback after second-pass fixes:
+
+* \[x] Naming redundancy "Forsaken Crypt" + "Forsaken Depths"
+  resolved by renaming the depths to **"The Maw"** in user-facing
+  strings only. Internal `zone_id` stays `forsaken_depths` (cheap
+  — referenced by EndlessPortal, SceneRouter, save migration).
+  `_zone_display_name` returns "The Maw"; crypt portal display_name
+  now "The Maw"; summary modal title "DESCENT ENDED" →
+  "THE MAW RECEDES".
+* \[x] The Maw had no non-death exit — added a temporary
+  **AscentSpire** Npc subclass at the depths center
+  (`scripts/world/ascent_spire.gd` + `scenes/world/ascent_spire.tscn`).
+  Interact calls `EndlessRun.end_run(false)` which emits
+  `EventBus.endless_run_ended`; game.gd's new listener opens the
+  summary modal. Both death and spire converge on a single
+  end-of-run path. EndlessRun gained `ended_via_death` flag so
+  game.gd knows whether to call `Player.respawn()` (yes on death,
+  no on spire — alive player keeps their save-restored position).
+  The spire is **interim**; Stage 9.8 Hearth Ember replaces it as
+  the universal escape mechanism.
+* \[x] Confirmed not a bug: Phase 3 boss reinforcement (one
+  `shade_wretch` spawned via `ActBoss._spawn_phase3_add`) is the
+  intended Phase 3 mechanic per Stage 9 scope, not a stray wave.
+* \[x] Confirmed already parked: AI fails to path around walls
+  when the player breaks line of sight —
+  `parking_lot.md::monster-pathfinding` covers the "player runs
+  behind a wall, enemy gives up entirely" case as an intentional
+  fallback until navmesh lands (Earliest revisit: post-Stage-9.7,
+  before itch.io demo).
+
+### Stage 9.7 polish — fourth pass (2026-06-04)
+
+User flagged three more issues from playtest screenshots:
+
+* \[x] Lingering yellow vertical shape after kills with a rare drop
+  — root cause: `rare_drop_pillar.tscn`'s `GlowCore` Polygon2D
+  (12 × 38 px, gold) was rendering at constant 0.55 alpha for the
+  full 1.6s pillar lifetime, reading as a "stuck decal" next to
+  the loot. Fixed by adding a tween in
+  `scripts/vfx/rare_drop_pillar.gd._ready` that fades
+  `GlowCore.modulate.a` to 0 over `DURATION` with `TRANS_QUAD /
+  EASE_IN` so the column dissipates instead of popping out.
+* \[x] Player not spawning at The Maw centre — two compounded
+  bugs. (1) `_place_player_for_arrival` used
+  `mp != Vector2.ZERO` as a "marker exists" probe, which silently
+  failed for `DepthsEntry` at (0, 0) and fell through to a less
+  predictable fallback. Added `Zone.has_marker(name)` as an
+  explicit node-existence check; `_place_player_for_arrival` now
+  uses it. (2) The depths' anchor ring was 360-622px from centre,
+  putting the closest N/S anchors right at the player's 720-tall
+  viewport edge — monsters appeared to "spawn on top of the
+  player." Reduced to 4 corner-only anchors at ±560 / ±360 (629px
+  out) and bumped `min_distance_from_player` from 280 to 460 to
+  enforce the safe gap.
+* \[x] Crypt rollback respawn yanked the player to the south-wall
+  `SpawnPoint` instead of the saved boss-room slot — `Player.
+  respawn()` always teleports to `respawn_position`, which the
+  zone transit clobbered to `get_spawn_position()`. Added
+  `Player.revive_in_place()` that re-enables input + restores
+  HP/MP without teleporting. `game.gd._on_endless_summary_return`
+  now calls `revive_in_place` instead of `respawn` for the death
+  path, preserving the save-restored position.
+* \[x] Seed string question — explained in user-facing tooltip
+  below the seed field: "Share this seed — others who run it see
+  the same enemy mix." Currently seeds drive only
+  `EndlessDirector._pick_species` + `_maybe_pick_elite` (anchor
+  pick is player-position dependent, damage rolls are unseeded).
+  Seed input UI parked at `parking_lot.md::seed-input-ui` for
+  Stage 12 polish alongside leaderboards.
+
+All twelve verifiers PASS post-fourth-pass.
+
+### Stage 9.7 polish — fifth pass (2026-06-04)
+
+User added two observations + a debug-infrastructure request:
+
+* \[x] Diagnostic prints proved the player IS at `(0, 0)` after
+  arrival into The Maw (arrival / settle / watch1 / watch2 all
+  zero with zero velocity). The "instantly teleported to corner"
+  perception turned out to be a different issue:
+  `EndlessDirector.concurrent_cap = 7` at wave 1 + four corner-only
+  anchors + zero per-spawn delay = seven wretches dogpiling from all
+  four corners within ~7 frames. Fixed with:
+  - **wave-start grace** `_WAVE_START_GRACE = 2.5s`: `_advance_wave_to`
+    bumps `_cooldown_remaining` to suppress new spawns at wave
+    transitions, so the player has a beat to orient.
+  - **per-spawn stagger** `_SPAWN_INTERVAL = 0.45s`: override of
+    `_spawn_one` bumps `_cooldown_remaining` after each spawn so
+    the cap fills as a trickle rather than a frame-by-frame flood.
+* \[x] Rare-drop pillar VFX retired entirely. World-item drops
+  no longer instantiate `rare_drop_pillar`; the persistent outlined
+  name label + glyph color carry rarity. Scene + script deleted;
+  Stage 9.5 verifier updated; concept parked in
+  `parking_lot.md::rare-drop-ground-vfx` for a future polish pass
+  with proper beam-of-light implementation.
+* \[x] **`DebugLog` autoload** (`scripts/systems/debug_log.gd`) —
+  CLI-flag-gated logging so future bug hunts don't need the
+  one-shot manual `print()` injection / removal cycle. Usage:
+  ```
+  godot -- --debug=transit,combat
+  godot -- --debug=all --debug-file=session.log
+  ```
+  Categories shipped: `transit`, `combat`, `input`, `items`,
+  `save`, `endless`, `ai`, `physics`, `skills`, `ui`. New flags
+  auto-recognise — call `DebugLog.log(&"newflag", msg)` from any
+  site and pass `--debug=newflag` to surface it. `--debug=all`
+  always enables. Output format: `[T+12345ms][flag] msg`. Optional
+  `--debug-file` mirrors stdout to a file with `flush()` per line
+  so a crash mid-session still leaves a readable trail.
+* \[x] Game.gd's transit prints converted to `DebugLog.log(&"transit",
+  ...)`. Added per-frame position watch (180 frames / ~3s) under
+  the `transit` flag that fires after each `_place_player_for_arrival`
+  and prints any frame the player's position changes, with delta /
+  velocity / click target / pending NPC context. This is the
+  surface that would have caught the dogpile-not-teleport
+  confusion in a single re-run.
+
+## Stage 9.8 — Quality of Life  *(NEXT — execute after Stage 9.7 polish)*
+
+Bundles two core ARPG affordances the demo will not feel right
+without. Sized to land before the itch.io free demo cutover.
+
+### Hearth Ember (consumable town return)
+
+* \[ ] New consumable item type. `data/items/consumables/hearth_ember.tres`
+  with `kind = ItemKind.CONSUMABLE` (new enum value alongside
+  weapon/armor/etc). Stacks in inventory; right-click to use.
+* \[ ] Use path: 2-second channel during which player cannot move
+  or attack; interrupted by taking damage (lose the ember? or just
+  break the channel — leaning lose-the-ember to keep tension).
+  On completion: teleport to Threshold Camp's `SpawnPoint`, fade
+  in/out via existing scene-transition pattern.
+* \[ ] Drop sources: ~5% trash drop (added to base drop tables for
+  `shade_wretch` and `bog_caller`), guaranteed drop on first Act
+  boss kill (alongside the class-restricted unique).
+* \[ ] Vendor stock: Kallias sells one Hearth Ember per restock at
+  steep price (~150g — balance pass needed). Stock refreshes on
+  zone re-entry following the existing MerchantStock pattern.
+* \[ ] Channel VFX: orange-glow ring at feet + rising ember
+  particles, AudioBank `&"hearth_ember_channel"` loop.
+* \[ ] In The Maw: Ember WORKS but routes through
+  `EndlessRun.end_run(false)` instead of straight to camp — same
+  rollback chain as the AscentSpire. The spire stays as flavour
+  (or retires; Stage 9.8 will decide).
+* \[ ] Save schema bump v13 → v14 if any new state is needed
+  (likely none — consumables are just inventory items).
+* \[ ] `--verify9_8` covers: item resource loads, drop table
+  augmentation, use path no-ops outside an active run, in-Maw use
+  triggers rollback, channel-interrupt loses the ember.
+
+### Health + Mana potions
+
+* \[ ] Two new consumables: `data/items/consumables/health_potion.tres`
+  + `mana_potion.tres`. Instant restore (no channel — failure-modes
+  prefers instant for ARPG twitch feel) of a flat percentage
+  (~35% leaning) or flat amount (TBD via balance pass).
+* \[ ] Cooldown: 8-10 second shared cooldown per potion type to
+  prevent spam-chugging. Per-type, not global — health + mana can
+  fire on the same tick.
+* \[ ] Hotkey: numeric keys `2` and `3` for health/mana (skill slot
+  is `1`). Inventory right-click also works.
+* \[ ] Drop sources: ~12% trash drop combined (split 50/50).
+  Vendor stocks ~3 of each per restock at low price (~25g).
+* \[ ] HUD: small icon row left of SkillIcon showing current potion
+  counts + cooldown veil (reuse SkillIcon's CooldownVeil pattern).
+* \[ ] Potion belt (Stage 12 polish): parking-lot if scope creeps —
+  Act 1 ships with inventory + hotkeys only.
+* \[ ] `--verify9_8` covers: both items load, hotkey paths via
+  PlayerInput, cooldown gates prevent stacking, drop table /
+  vendor stock additions.
+
+### Stage 9.8 closure criteria
+
+* \[ ] Demo build (`FeatureFlags.demo_mode = true`) still surfaces
+  Hearth Ember + potions — these are core affordances, not gated.
+* \[ ] AscentSpire decision: retire (delete the scene) or keep as
+  flavour (decorative interactable that just opens summary).
+* \[ ] All twelve existing verifiers PASS post-Stage-9.8.
 
 ## Stage 11 — Save/load hardening
 

@@ -15,22 +15,25 @@ uniform float pulse_min : hint_range(0.0, 1.0) = 0.55;
 uniform float pulse_max : hint_range(0.0, 1.0) = 1.0;
 
 void fragment() {
+	// Stage 9.7 polish — Godot's shader language forbids `return` in
+	// fragment(), so the source/neighbour/empty branches are folded
+	// into a single nested if/else.
 	vec4 src = texture(TEXTURE, UV);
 	if (src.a > 0.02) {
 		COLOR = src;
-		return;
-	}
-	vec2 ts = TEXTURE_PIXEL_SIZE;
-	float aN = texture(TEXTURE, UV + vec2(0.0, -outline_width) * ts).a;
-	float aS = texture(TEXTURE, UV + vec2(0.0,  outline_width) * ts).a;
-	float aE = texture(TEXTURE, UV + vec2( outline_width, 0.0) * ts).a;
-	float aW = texture(TEXTURE, UV + vec2(-outline_width, 0.0) * ts).a;
-	float neighbour = max(max(aN, aS), max(aE, aW));
-	if (neighbour > 0.02) {
-		float pulse = mix(pulse_min, pulse_max,
-				0.5 + 0.5 * sin(TIME * pulse_speed));
-		COLOR = vec4(outline_color.rgb, outline_color.a * pulse);
 	} else {
-		COLOR = vec4(0.0);
+		vec2 ts = TEXTURE_PIXEL_SIZE;
+		float aN = texture(TEXTURE, UV + vec2(0.0, -outline_width) * ts).a;
+		float aS = texture(TEXTURE, UV + vec2(0.0,  outline_width) * ts).a;
+		float aE = texture(TEXTURE, UV + vec2( outline_width, 0.0) * ts).a;
+		float aW = texture(TEXTURE, UV + vec2(-outline_width, 0.0) * ts).a;
+		float neighbour = max(max(aN, aS), max(aE, aW));
+		if (neighbour > 0.02) {
+			float pulse = mix(pulse_min, pulse_max,
+					0.5 + 0.5 * sin(TIME * pulse_speed));
+			COLOR = vec4(outline_color.rgb, outline_color.a * pulse);
+		} else {
+			COLOR = vec4(0.0);
+		}
 	}
 }

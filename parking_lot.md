@@ -171,6 +171,101 @@ fully complete.
   PR-sized unit. Bitmap and detailed-procedural treatments
   can coexist via the same subnode names.
 
+### rare-drop-ground-vfx — Beam-of-light cue for rare/unique drops
+- Why parked: Stage 9.5 shipped a static yellow Polygon2D "GlowCore"
+  + golden particle burst on rare drops. Both read as unexplained
+  glyphs rather than the genre-standard beam-of-light from D3 / PoE.
+  Stripped in Stage 9.7 polish. The persistent outlined name label
+  + colored glyph (gold for uniques, blue for rares) carry the
+  rarity signal at a glance — same way text colour does in D2.
+- Earliest revisit: Stage 12 (pre-launch polish) once we have
+  proper VFX authoring.
+- Notes: if revisited, target a vertical fading beam (alpha
+  gradient top-to-bottom, ~120 px tall, ~6 px wide) at the drop
+  position, lifetime ~1.0 s. Particle burst should be radial
+  outward from the floor, not vertical, so it reads as a landing
+  thump. Test against the dark crypt floor specifically — gold
+  glow disappeared against The Maw's dimmer floor in playtest.
+
+### seed-input-ui — Let the player enter a specific seed for The Maw
+- Why parked: Stage 9.7 ships the seed string as a copyable
+  bragging chip in the summary modal — it identifies which
+  species/elite RNG path the run took, but there's no way to
+  paste it back. A "Roll random / Enter specific seed" prompt on
+  the EndlessPortal would close the replayability loop. Belongs
+  with the leaderboard / community features rather than core
+  gameplay.
+- Earliest revisit: Stage 12 (pre-launch polish) or post-itch.io
+  demo when leaderboard infra lands.
+- Notes: `EndlessRun.decode_seed` already exists and round-trips.
+  UI: small modal on portal interact with "Random" + "Custom"
+  buttons; custom path opens a LineEdit pre-filled with the
+  last-run's seed (read from save). Validate the format before
+  feeding to `EndlessRun.begin(seed)`. Save adds a
+  `last_endless_seed: int` field. Verifier checks round-trip
+  and invalid-input rejection.
+
+### boss-phase3-tell — Visual telegraph for ActBoss Phase 3 adds
+- Why parked: Phase 3 (boss HP ≤ 33%) calls `_spawn_phase3_add`
+  which spawns one shade_wretch reinforcement. Behaviour is
+  intentional per Stage 9 scope but it has no visual telegraph,
+  so a playtester reads it as a wave bug. A short pre-spawn cue
+  (boss roar + screen pulse + summoned add fades in instead of
+  popping) would make the mechanic readable.
+- Earliest revisit: Stage 12 pre-launch polish (alongside title
+  screen / options).
+- Notes: reuse the existing CameraShake + HitStop autoloads for
+  the roar, lerp the new wretch's modulate.a from 0 to 1 over
+  ~0.4s. Optional: ground-glow particle ring at the spawn
+  position the moment before the wretch lands. Cheap, big
+  readability win.
+
+### potion-belt — Dedicated potion belt UI slot row
+- Why parked: Stage 9.8 ships potions accessible via inventory +
+  numeric hotkeys (2 = health, 3 = mana). A separate belt row
+  pinned above the action bar is a discoverability / readability
+  win that involves its own scene, drag-drop wiring with the
+  inventory, and a save schema add. Not blocking demo or EA.
+- Earliest revisit: Stage 12 (pre-launch polish).
+- Notes: 4-slot belt, drag from inventory into a slot to bind,
+  the slot tracks its source stack so picking up matching potions
+  refills the belt automatically. Cooldown veil rides on the slot
+  not the source item.
+
+### ember-channel-interrupt-rules — Hearth Ember interrupt design
+- Why parked: Stage 9.8 ships with a straightforward "taking
+  damage interrupts the channel and consumes the ember." The
+  alternative — "interrupt but keep the ember" — is more forgiving
+  but loses tension. Decided 2026-06-04 alongside the Hearth Ember
+  spec to default to lose-the-ember; revisit only if playtest
+  shows it's too punishing.
+- Earliest revisit: Stage 12 polish or post-itch.io demo feedback.
+- Notes: knob is `data/items/consumables/hearth_ember.tres`
+  `consume_on_interrupt: bool`. UI surfacing — maybe a "channeled
+  goods" tooltip note.
+
+### ascent-spire-retire — Decide AscentSpire's fate after Hearth Ember
+- Why parked: Stage 9.7 polish added the AscentSpire as the only
+  non-death exit from The Maw. Stage 9.8 ships Hearth Ember which
+  works everywhere including in-Maw. Spire then has two options:
+  (a) retire — delete the scene + script, or (b) keep as flavour
+  with no mechanic (just decorative + lore stinger). Stage 9.8
+  closure criteria decides.
+- Earliest revisit: end of Stage 9.8.
+- Notes: if kept, consider giving it a non-exit interaction
+  (lore line, faint hum, ambient effect) so it doesn't feel like
+  vestigial UI.
+
+### consumable-uniques — Rare-quality consumables with named effects
+- Why parked: Stage 9.8 ships generic Hearth Ember + Health/Mana
+  potions only. The "unique potion" pattern (e.g., a one-time
+  Greater Ember with no cooldown, a Vial of the Drowned with HP +
+  short-term resist) is a content lever that wants its own affix
+  system. Belongs alongside the affix-tier work in Stage 11+.
+- Earliest revisit: post-Steam-EA content drops.
+- Notes: would extend ItemKind.CONSUMABLE with an affix list;
+  unique consumables ride the same prefix discipline as gear.
+
 ### flying-summons — Summons that traverse ledges/cliffs but not solid walls
 - Why parked: zone geometry is single-plane in Act 1 (no cliffs or
   pits — perimeter walls are the only verticality concept). A

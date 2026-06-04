@@ -662,6 +662,262 @@ dead. Fix landed alongside the Phase 2 polish commit.
 
 ---
 
+## #20 — Autoload method named `log()` shadows GDScript's built-in
+
+**Symptom:** Every script that calls `log(x)` (natural-log
+math) fails to parse with `Too many arguments for "log()" call.
+Expected at most 1 but received 2.` once an autoload defines
+`func log(flag, msg)`. Cascade: the autoload fails to load,
+so EVERY call to `AutoloadName.log(...)` in the project errors
+`Nonexistent function 'log' in base 'Nil'`.
+
+**Root cause:** `log()` is a global GDScript function (returns
+the natural log of a float). Method names on autoloads share the
+global namespace because autoloads are name-resolved at script
+parse time. Defining a same-name method on an autoload shadows
+the global for any script that calls it as a bare function call
+without the autoload qualifier — and at the parse level the
+parser sees the wrong signature.
+
+**Prevention:** Never name an autoload method after a GDScript
+built-in. The hot list includes `log`, `print`, `printerr`,
+`push_warning`, `push_error`, `sin`, `cos`, `sqrt`, `abs`,
+`min`, `max`, `clamp`, `floor`, `ceil`, `round`, `sign`,
+`hash`, `is_inf`, `is_nan`, `len`, `range`, `str`. Pick
+verbs that don't collide: `write`, `emit_event`, `record`,
+`note`. DebugLog landed on `write(flag, msg)`.
+
+**Recovery:** Rename the method, then sweep all callers
+(`grep -rn "AutoloadName.old_name("`). Land both changes in
+the same commit so the parse error window is zero.
+
+**First incident:** Stage 9.7 polish — `DebugLog.log(...)`
+shipped, broke every autoload reference project-wide, took out
+the transit instrumentation that was the whole point of building
+DebugLog in the first place.
+
+---
+
+## #21 — Adding ANY conditional block to HealthComponent.take_damage silently breaks ActBoss phase transitions
+
+**Symptom:** Adding a no-op `if DebugLog.is_enabled(&"combat"): ...`
+block inside `HealthComponent.take_damage` (after `damaged.emit`,
+before the `_was_dead` check) caused `stage9_verify`'s phase-2
+and phase-3 threshold checks to fail, even though the block is
+completely skipped at runtime (no flag enabled). `stage5_verify`
+broke at the same time (minion despawn check failed). Both
+tests pass again the moment the block is removed.
+
+**Root cause:** Best guess is a Godot 4.6.3 GDScript optimization
+quirk where adding any control flow to `take_damage` re-orders
+the signal-emit / `_was_dead` latch sequence in a way that
+desynchronises observers — specifically, `ActBoss._on_damaged`
+(which calls `_check_phase_transition`) ends up seeing stale
+`current_stats.current_hp` because the new branch sits in
+between the `damaged.emit(...)` and the next read. The hot path
+is delicate. The `is_enabled` guard's runtime no-op doesn't
+matter — what matters is that the function shape changed.
+
+**Prevention:** `HealthComponent.take_damage` is a hot path with
+signal-driven observers. Do not add ANY new control flow or
+debug calls between `damaged.emit` and the `_was_dead` check.
+If you need debug logging for combat, instrument at the
+*signal handler* level (Game.gd's `_on_combatant_damaged` /
+`_on_enemy_died_feel`) where the observer already paid the
+context-switch cost.
+
+**Recovery:** Strip the block, re-run `--verify9` and
+`--verify5` until they pass. Move the instrumentation to a
+signal handler.
+
+**First incident:** Stage 9.7 polish — adding combat logging
+for the new `DebugLog` flag system. Took two bisects to confirm
+even the `is_enabled`-guarded branch was the trigger.
+
+---
+
+## #22 — `var x := A.name if cond else "literal"` infers Variant → parse error
+
+**Symptom:** Adding a one-liner like
+```gdscript
+var k := _killer.name if _killer != null else "<?>"
+```
+breaks the entire script: `Parse Error: The variable type is being
+inferred from a Variant value, so it will be typed as Variant.
+(Warning treated as error.)`. The host scene (game.tscn) can't load,
+so its `_ready` never runs — symptoms downstream look like "the
+character has no sprite" or "interact doesn't work" rather than a
+parse error, because earlier autoloads + the Player node still
+spawn.
+
+**Root cause:** `Node.name` is `StringName`. String literals like
+`"<?>"` are `String`. A ternary with mixed branches has no common
+inferred type, so `:=` defaults to Variant — which the project's
+strict warning settings treat as an error (correctly — Variant
+inference is almost always unintentional).
+
+**Prevention:** When writing a ternary that mixes `StringName` and
+`String`, annotate the variable type explicitly and wrap one side
+to match. Idiom:
+```gdscript
+var k: String = String(_killer.name) if _killer != null else "<?>"
+```
+The `String(...)` cast on the StringName side forces a uniform
+String result. Same trick works for `NodePath`/`String` mixes.
+
+**Recovery:** If a sprite, NPC, or modal mysteriously stops
+appearing on a fresh launch with no obvious error, *check the
+terminal output, not the godot.log file*. Godot's GUI process
+buffers only boot lines to the log; parse errors print to stderr
+in real time and are missed if you only read the file. Run the
+game from a terminal redirected via `2>&1 | tee /tmp/erebus.log`
+to capture them.
+
+**First incident:** Stage 9.7 polish — added `var k := _killer.name
+if _killer != null else "<?>"` to game.gd inside DebugLog
+instrumentation. Parse failed, game.gd never loaded, Player
+spawned with no sprite + no input wiring. Hours lost diagnosing
+"sprite system" before the terminal output revealed the parse
+error.
+
+---
+
+## #23 — Residual `Camera2D.offset` from CameraShake carries across zone transit
+
+**Symptom:** Player teleports into a new zone (e.g. The Maw) but
+appears to spawn "at a corner" instead of the entry marker. Logs
+show `player.global_position == DepthsEntry` exactly — the position
+is correct. The CAMERA is what's off-centre. Player at world
+`(0, 0)` renders at the bottom-right of the visible viewport because
+the camera's `offset` is still at some leftover jitter value.
+
+**Root cause:** `CameraShake.kick(amount, duration)` runs a tween
+that fades `Camera2D.offset` back to zero over `duration`. If a kick
+fires immediately before a zone transit (e.g. boss crit lands as
+the player walks into the portal), the tween is still in progress
+when `_do_transit` runs. The transit doesn't touch the camera, so
+the tween keeps running on the same Camera2D instance (Player + its
+camera survive the zone swap), but the `_place_player_for_arrival`
+teleport happens BEFORE the tween's final zero-restore step. Result:
+a non-zero offset latched in.
+
+**Prevention:** Reset CameraShake on every zone transit. Added
+`CameraShake.reset()` — kills the running tween and zeroes
+`Camera2D.offset` synchronously. `_place_player_for_arrival` calls
+it as the last step of the immediate teleport.
+
+**Recovery:** If a Maw spawn (or any zone transit) reads as "wrong
+position" but the `[arrival]` / `[settle]` debug lines confirm the
+player IS at the entry marker, suspect the camera offset. Print
+`_player.get_node("Camera2D").offset` at that point — if non-zero,
+CameraShake needs a reset call from your code path.
+
+**First incident:** Stage 9.7 polish — boss combat in the crypt
+immediately before The Maw portal interact. Repro: take damage from
+boss in Phase 3 (frequent crit shakes), walk to portal, enter.
+Camera offset persists into The Maw.
+
+---
+
+## #24 — In-function placement of class-body `var` declarations
+
+**Symptom:** `Parse Error: Unexpected "Indent" in class body.` from
+GDScript at a line that looks fine in isolation. As with failure
+mode #22, the whole script fails to load and the host scene's
+`_ready` doesn't run — sprite missing, input dead, etc.
+
+**Root cause:** A `var x: T = ...` line meant to live at class
+scope ends up *between* statements of a function, so the parser
+sees the next function-body line as a continuation of class scope
+with unexpected indentation. Common when editing with a small
+context window: you append a tiny instrumentation block at the
+end of one function and want to add backing fields for it, drop
+the `var` lines below the block, but accidentally land them
+*before* the closing line of the function instead of *after*.
+
+**Prevention:**
+1. Class-scope `var` declarations live ABOVE the first `func` in a
+   file or grouped just before the function that uses them.
+   Treat them as part of the function's "header," not its body.
+2. After ANY edit that adds class-scope state alongside function
+   logic, run `godot --headless --quit-after 200` (the boot smoke
+   test) before claiming the change is done. It catches parse
+   errors in < 2s and would have prevented this regression both
+   times.
+
+**Recovery:** Move misplaced `var` declarations above the function
+body or to a class-scope block.
+
+**First incident:** Stage 9.7 polish, second occurrence. Added a
+movement watcher whose state fields got dropped mid-function in
+`game.gd._place_player_for_arrival`.
+
+---
+
+## #25 — `add_child` before `global_position` teleports the player to enemy spawn anchor
+
+**Symptom:** ~1-2 seconds after a wave begins (or any deferred spawn
+fires), the player teleports to a spawn-anchor coordinate. Logs show
+the position change happens BETWEEN physics ticks, with `vel=(0,0)`
+and `intent=(0,0)`, and no script-level assignment to
+`_player.global_position` fires. The destination is offset by a few
+pixels in y from the anchor — that's depenetration shoving the
+player just outside the enemy's collision shape.
+
+**Root cause:** When a CharacterBody2D scene is instantiated and
+`add_child`'d to the tree, its default `global_position` is `(0, 0)`
+— the world origin. If the code path is
+
+```gdscript
+container.add_child(inst)         # collider registers at (0,0)
+inst.global_position = anchor.gp  # moved next line, same frame
+```
+
+the enemy's collision shape registers with the physics server at
+world `(0, 0)` for ONE FRAME, *even though the next line
+synchronously reassigns the position*. The physics server captures
+the contact between the new collider and any other CharacterBody2D
+also at `(0, 0)` (the player, since they spawned at `DepthsEntry`
+at the origin). On the NEXT physics tick, the engine resolves that
+contact by depenetrating one body, and because the player has
+`velocity=0` while the enemy has been programmatically moved to the
+anchor, the engine teleports the player to the enemy's *new*
+position to clear the contact.
+
+**Prevention:** ALWAYS set position before `add_child` when
+spawning a CharacterBody2D (or any Node2D with a collider) at a
+world coordinate. The node treats `position` (local) as world
+while not in the tree, and parent-transform is applied on
+`add_child`. Pattern:
+
+```gdscript
+inst.position = anchor.global_position  # stages world value
+container.add_child(inst)                # enters tree at correct spot
+```
+
+This holds whenever `container.global_position == (0, 0)` (true for
+all current zones). If a future zone has a non-origin root, use
+`inst.position = anchor.global_position - container.global_position`
+instead.
+
+**Recovery:** Find every `container.add_child(inst)` followed by
+`inst.global_position = X` and swap the order. Surfaces in this
+project:
+- `scripts/systems/spawn_director.gd::_spawn_one`
+- `scenes/game.gd::_spawn_enemy_snapshot`
+- `scripts/zones/forsaken_crypt.gd::_spawn_room`
+
+Future spawn paths must follow the same pattern.
+
+**First incident:** Stage 9.7 polish — first Maw run after wave-
+start grace expired. User repeatedly reported "teleporting to the
+corner where monsters attack me." The debug log's
+`_physics_process` watcher caught the jump between ticks with
+`vel=0`, ruling out walking and direct assignment, then the absence
+of any `[SITE:]` log narrowed it to the physics server itself.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

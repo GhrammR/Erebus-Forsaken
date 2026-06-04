@@ -1,0 +1,190 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/zones/forsaken_depths.gd" id="1_depths"]
+[ext_resource type="Script" path="res://scripts/systems/endless_director.gd" id="2_ed"]
+[ext_resource type="Resource" path="res://data/modifiers/elite_fast.tres" id="3_fast"]
+[ext_resource type="Resource" path="res://data/modifiers/elite_tough.tres" id="4_tough"]
+[ext_resource type="PackedScene" path="res://scenes/world/ascent_spire.tscn" id="5_spire"]
+
+[sub_resource type="RectangleShape2D" id="rect_n"]
+size = Vector2(1280, 40)
+
+[sub_resource type="RectangleShape2D" id="rect_s"]
+size = Vector2(1280, 40)
+
+[sub_resource type="RectangleShape2D" id="rect_e"]
+size = Vector2(40, 880)
+
+[sub_resource type="RectangleShape2D" id="rect_w"]
+size = Vector2(40, 880)
+
+[node name="ForsakenDepths" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_depths")
+zone_id = &"forsaken_depths"
+
+[node name="VoidBackground" type="ColorRect" parent="."]
+mouse_filter = 2
+z_index = -100
+z_as_relative = false
+offset_left = -2400.0
+offset_top = -2000.0
+offset_right = 2400.0
+offset_bottom = 2000.0
+color = Color(0.008, 0.006, 0.012, 1)
+
+[node name="Ground" type="Polygon2D" parent="."]
+z_index = -10
+polygon = PackedVector2Array(-600, -400, 600, -400, 600, 400, -600, 400)
+color = Color(0.045, 0.04, 0.05, 1)
+
+[node name="GroundSeams" type="Polygon2D" parent="."]
+z_index = -9
+modulate = Color(1, 1, 1, 0.55)
+polygon = PackedVector2Array(-600, 0, 600, 0, 600, 4, -600, 4)
+color = Color(0.02, 0.018, 0.022, 1)
+
+[node name="GroundSeamsV" type="Polygon2D" parent="."]
+z_index = -9
+modulate = Color(1, 1, 1, 0.55)
+polygon = PackedVector2Array(-2, -400, 2, -400, 2, 400, -2, 400)
+color = Color(0.02, 0.018, 0.022, 1)
+
+[node name="Sigil" type="Polygon2D" parent="."]
+z_index = -8
+modulate = Color(1, 1, 1, 0.35)
+polygon = PackedVector2Array(0, -90, 78, -45, 78, 45, 0, 90, -78, 45, -78, -45)
+color = Color(0.45, 0.18, 0.12, 1)
+
+[node name="SigilInner" type="Polygon2D" parent="."]
+z_index = -8
+modulate = Color(1, 1, 1, 0.5)
+polygon = PackedVector2Array(0, -50, 43, -25, 43, 25, 0, 50, -43, 25, -43, -25)
+color = Color(0.62, 0.28, 0.18, 1)
+
+[node name="WallTopN" type="Polygon2D" parent="."]
+z_index = -7
+polygon = PackedVector2Array(-640, -440, 640, -440, 640, -400, -640, -400)
+color = Color(0.08, 0.07, 0.085, 1)
+
+[node name="WallTopS" type="Polygon2D" parent="."]
+z_index = -7
+polygon = PackedVector2Array(-640, 400, 640, 400, 640, 440, -640, 440)
+color = Color(0.08, 0.07, 0.085, 1)
+
+[node name="WallTopE" type="Polygon2D" parent="."]
+z_index = -7
+polygon = PackedVector2Array(600, -440, 640, -440, 640, 440, 600, 440)
+color = Color(0.08, 0.07, 0.085, 1)
+
+[node name="WallTopW" type="Polygon2D" parent="."]
+z_index = -7
+polygon = PackedVector2Array(-640, -440, -600, -440, -600, 440, -640, 440)
+color = Color(0.08, 0.07, 0.085, 1)
+
+[node name="Pillars" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="P_NW" type="Polygon2D" parent="Pillars"]
+position = Vector2(-440, -260)
+polygon = PackedVector2Array(-18, -36, 18, -36, 18, 12, -18, 12)
+color = Color(0.11, 0.10, 0.12, 1)
+
+[node name="P_NE" type="Polygon2D" parent="Pillars"]
+position = Vector2(440, -260)
+polygon = PackedVector2Array(-18, -36, 18, -36, 18, 12, -18, 12)
+color = Color(0.11, 0.10, 0.12, 1)
+
+[node name="P_SW" type="Polygon2D" parent="Pillars"]
+position = Vector2(-440, 260)
+polygon = PackedVector2Array(-18, -36, 18, -36, 18, 12, -18, 12)
+color = Color(0.11, 0.10, 0.12, 1)
+
+[node name="P_SE" type="Polygon2D" parent="Pillars"]
+position = Vector2(440, 260)
+polygon = PackedVector2Array(-18, -36, 18, -36, 18, 12, -18, 12)
+color = Color(0.11, 0.10, 0.12, 1)
+
+[node name="Braziers" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="B_NW" type="Polygon2D" parent="Braziers"]
+position = Vector2(-440, -300)
+polygon = PackedVector2Array(-9, -8, 9, -8, 6, 4, -6, 4)
+color = Color(0.95, 0.55, 0.25, 1)
+
+[node name="B_NE" type="Polygon2D" parent="Braziers"]
+position = Vector2(440, -300)
+polygon = PackedVector2Array(-9, -8, 9, -8, 6, 4, -6, 4)
+color = Color(0.95, 0.55, 0.25, 1)
+
+[node name="B_SW" type="Polygon2D" parent="Braziers"]
+position = Vector2(-440, 220)
+polygon = PackedVector2Array(-9, -8, 9, -8, 6, 4, -6, 4)
+color = Color(0.95, 0.55, 0.25, 1)
+
+[node name="B_SE" type="Polygon2D" parent="Braziers"]
+position = Vector2(440, 220)
+polygon = PackedVector2Array(-9, -8, 9, -8, 6, 4, -6, 4)
+color = Color(0.95, 0.55, 0.25, 1)
+
+[node name="Walls" type="Node2D" parent="."]
+
+[node name="N" type="StaticBody2D" parent="Walls"]
+position = Vector2(0, -420)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/N"]
+shape = SubResource("rect_n")
+
+[node name="S" type="StaticBody2D" parent="Walls"]
+position = Vector2(0, 420)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/S"]
+shape = SubResource("rect_s")
+
+[node name="E" type="StaticBody2D" parent="Walls"]
+position = Vector2(620, 0)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/E"]
+shape = SubResource("rect_e")
+
+[node name="W" type="StaticBody2D" parent="Walls"]
+position = Vector2(-620, 0)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/W"]
+shape = SubResource("rect_w")
+
+[node name="SpawnPoint" type="Marker2D" parent="."]
+position = Vector2(0, 0)
+
+[node name="DepthsEntry" type="Marker2D" parent="."]
+position = Vector2(0, 0)
+
+[node name="AscentSpire" parent="." instance=ExtResource("5_spire")]
+position = Vector2(0, 320)
+
+[node name="SpawnAnchors" type="Node2D" parent="."]
+
+[node name="A0" type="Marker2D" parent="SpawnAnchors"]
+position = Vector2(-560, -360)
+
+[node name="A1" type="Marker2D" parent="SpawnAnchors"]
+position = Vector2(560, -360)
+
+[node name="A2" type="Marker2D" parent="SpawnAnchors"]
+position = Vector2(560, 360)
+
+[node name="A3" type="Marker2D" parent="SpawnAnchors"]
+position = Vector2(-560, 360)
+
+[node name="Enemies" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="EndlessDirector" type="Node" parent="."]
+script = ExtResource("2_ed")
+concurrent_cap = 6
+respawn_delay = 5.0
+initial_spawn_count = 0
+min_distance_from_player = 460.0
+elite_chance = 0.05
+elite_table = Array[EliteModifier]([ExtResource("3_fast"), ExtResource("4_tough")])

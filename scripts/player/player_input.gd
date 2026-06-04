@@ -43,32 +43,43 @@ func _unhandled_input(event: InputEvent) -> void:
 			_click_target = owner_body.get_global_mouse_position()
 			_has_click_target = true
 			click_target_set.emit(_click_target)
+			DebugLog.write(&"input", "click target=(%d,%d)" % [
+					int(_click_target.x), int(_click_target.y)])
 	elif event is InputEventKey:
 		var ke := event as InputEventKey
 		if not ke.pressed or ke.echo:
 			return
 		if ke.keycode == KEY_ESCAPE:
 			pause_pressed.emit()
+			DebugLog.write(&"input", "key Esc -> pause")
 			get_viewport().set_input_as_handled()
 		elif ke.keycode == KEY_SPACE:
 			attack_pressed.emit()
+			DebugLog.write(&"input", "key Space -> attack")
 		elif ke.keycode == KEY_1:
 			skill_1_pressed.emit()
+			DebugLog.write(&"input", "key 1 -> skill_1")
 		elif ke.keycode == KEY_K:
 			debug_kill_self_pressed.emit()
+			DebugLog.write(&"input", "key K -> debug_kill_self")
 		elif ke.keycode == KEY_I:
 			inventory_toggle_pressed.emit()
+			DebugLog.write(&"input", "key I -> inv toggle")
 		elif ke.keycode == KEY_F5:
 			save_pressed.emit()
+			DebugLog.write(&"input", "key F5 -> save")
 		elif ke.keycode == KEY_F9:
 			load_pressed.emit()
+			DebugLog.write(&"input", "key F9 -> load")
 		elif ke.keycode == KEY_E:
 			interact_pressed.emit()
+			DebugLog.write(&"input", "key E -> interact")
 		elif ke.keycode in [KEY_W, KEY_A, KEY_S, KEY_D]:
 			# WASD overrides click target the moment a key is pressed.
 			if _has_click_target:
 				_has_click_target = false
 				click_target_cleared.emit()
+				DebugLog.write(&"input", "WASD pressed -> click target cleared")
 
 func _physics_process(_delta: float) -> void:
 	if owner_body == null:

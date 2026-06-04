@@ -20,6 +20,29 @@ const _CAMERA_GROUP: StringName = &"feel_camera"
 var _tween: Tween = null
 var _camera: Camera2D = null
 
+## Cancel any running shake and zero the offset immediately. Used by
+## the zone-transit chain so a residual offset from a kick fired
+## just before the portal interact doesn't carry into the new zone
+## (camera then renders the destination scene off-centre — reads as
+## "the player spawned in a corner" when the player is actually at
+## the entry marker, see failure-modes #23).
+func reset() -> void:
+	if _tween != null and _tween.is_valid():
+		_tween.kill()
+	_tween = null
+	var cam := _resolve_camera()
+	if cam != null:
+		var before := cam.offset
+		cam.offset = Vector2.ZERO
+		DebugLog.write(&"transit", "CameraShake.reset cam=%s offset_was=%s -> (0,0)" % [
+				cam.get_path(), before])
+	else:
+		DebugLog.write(&"transit", "CameraShake.reset cam=<not found>")
+
+func current_offset() -> Vector2:
+	var cam := _resolve_camera()
+	return cam.offset if cam != null else Vector2.ZERO
+
 func kick(amount: float, duration: float = 0.18) -> void:
 	if amount <= 0.0 or duration <= 0.0:
 		return

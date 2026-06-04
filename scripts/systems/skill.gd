@@ -41,6 +41,9 @@ func _process(delta: float) -> void:
 func try_activate(caster: Node, facing_dir: Vector2) -> bool:
 	if _cd_remaining > 0.0:
 		skill_failed.emit("cooldown")
+		if DebugLog.is_enabled(&"skills"):
+			DebugLog.write(&"skills", "%s blocked (cooldown %.2fs remaining)" % [
+					display_name, _cd_remaining])
 		return false
 	var stats: Stats = _stats_of(caster)
 	if stats == null:
@@ -48,11 +51,17 @@ func try_activate(caster: Node, facing_dir: Vector2) -> bool:
 		return false
 	if not stats.spend_mp(mp_cost):
 		skill_failed.emit("insufficient_mp")
+		if DebugLog.is_enabled(&"skills"):
+			DebugLog.write(&"skills", "%s blocked (need %d MP, have %d)" % [
+					display_name, mp_cost, stats.current_mp])
 		return false
 	_cd_remaining = cooldown
 	AudioBank.play_sfx(&"skill_cast")
 	_execute(caster, facing_dir)
 	skill_used.emit(display_name)
+	if DebugLog.is_enabled(&"skills"):
+		DebugLog.write(&"skills", "%s cast (mp -%d -> %d/%d, cd=%.2fs)" % [
+				display_name, mp_cost, stats.current_mp, stats.max_mp, cooldown])
 	return true
 
 func cooldown_remaining() -> float:

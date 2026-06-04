@@ -24,12 +24,21 @@ func get_spawn_position() -> Vector2:
 	return m.global_position if m != null else global_position
 
 ## Generic lookup for named NPC slots (Marker2D children named e.g.
-## "VendorSpot", "QuestSpot"). Returns ZERO if not found.
+## "VendorSpot", "QuestSpot"). Returns ZERO if not found — callers
+## who need to distinguish "not found" from "marker at world origin"
+## should use `has_marker()` first.
 func get_marker_position(marker_name: StringName) -> Vector2:
 	var m := get_node_or_null(NodePath(String(marker_name))) as Marker2D
 	if m == null:
 		return Vector2.ZERO
 	return m.global_position
+
+## Explicit existence check. Stage 9.7 polish — `_place_player_for_arrival`
+## used `mp != Vector2.ZERO` as a "marker exists" probe, which silently
+## failed for `DepthsEntry` at (0, 0) and dropped the player at a
+## fallback position instead of dead-centre in The Maw.
+func has_marker(marker_name: StringName) -> bool:
+	return get_node_or_null(NodePath(String(marker_name))) != null
 
 ## Inject the active player. The zone places the player at its spawn
 ## point and ensures the player's respawn_position is wired to the

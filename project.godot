@@ -29,6 +29,13 @@ AudioBank="*res://scripts/autoload/audio_bank.gd"
 ItemInstanceRegistry="*res://scripts/autoload/item_instance_registry.gd"
 CameraShake="*res://scripts/systems/camera_shake.gd"
 HitStop="*res://scripts/systems/hit_stop.gd"
+FeatureFlags="*res://scripts/systems/feature_flags.gd"
+EndlessRun="*res://scripts/systems/endless_run.gd"
+DebugLog="*res://scripts/systems/debug_log.gd"
+
+[application/feature_flags]
+
+demo_mode=false
 
 [audio]
 

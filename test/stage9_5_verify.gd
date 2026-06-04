@@ -181,9 +181,12 @@ func _verify_skill_icon(fail: int) -> int:
 # ---- VFX scenes ----------------------------------------------------------
 
 func _verify_vfx_scenes(fail: int) -> int:
+	# Stage 9.7 polish dropped the rare_drop_pillar — playtester read
+	# it as a "random glyph promotion" rather than a beam-of-light
+	# cue. The persistent outline shader on the item label still
+	# does the lifting (covered by _verify_outline_shader below).
 	for path in [
 		"res://scenes/vfx/level_up_ring.tscn",
-		"res://scenes/vfx/rare_drop_pillar.tscn",
 	]:
 		var ok := load(path) != null
 		print("[%s] %s loads" % [_ok(ok), path])

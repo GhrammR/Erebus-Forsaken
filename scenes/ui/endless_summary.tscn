@@ -1,0 +1,107 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/endless_summary.gd" id="1_es"]
+
+[node name="EndlessSummary" type="CanvasLayer"]
+layer = 70
+script = ExtResource("1_es")
+
+[node name="Dimmer" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.65)
+
+[node name="Panel" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 1
+
+[node name="Center" type="CenterContainer" parent="Panel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Center"]
+custom_minimum_size = Vector2(440, 360)
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="Title" type="Label" parent="Panel/Center/VBox"]
+theme_override_colors/font_color = Color(0.95, 0.55, 0.35, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 48
+horizontal_alignment = 1
+text = "THE MAW RECEDES"
+
+[node name="Stats" type="GridContainer" parent="Panel/Center/VBox"]
+columns = 2
+theme_override_constants/h_separation = 32
+theme_override_constants/v_separation = 8
+
+[node name="WaveLabel" type="Label" parent="Panel/Center/VBox/Stats"]
+theme_override_colors/font_color = Color(0.78, 0.72, 0.62, 1)
+text = "Floors cleared"
+
+[node name="WaveValue" type="Label" parent="Panel/Center/VBox/Stats"]
+theme_override_colors/font_color = Color(0.95, 0.85, 0.7, 1)
+horizontal_alignment = 2
+text = "0"
+
+[node name="KillsLabel" type="Label" parent="Panel/Center/VBox/Stats"]
+theme_override_colors/font_color = Color(0.78, 0.72, 0.62, 1)
+text = "Kills"
+
+[node name="KillsValue" type="Label" parent="Panel/Center/VBox/Stats"]
+theme_override_colors/font_color = Color(0.95, 0.85, 0.7, 1)
+horizontal_alignment = 2
+text = "0"
+
+[node name="GoldLabel" type="Label" parent="Panel/Center/VBox/Stats"]
+theme_override_colors/font_color = Color(0.78, 0.72, 0.62, 1)
+text = "Gold gained"
+
+[node name="GoldValue" type="Label" parent="Panel/Center/VBox/Stats"]
+theme_override_colors/font_color = Color(1.0, 0.85, 0.35, 1)
+horizontal_alignment = 2
+text = "0 g"
+
+[node name="TimeLabel" type="Label" parent="Panel/Center/VBox/Stats"]
+theme_override_colors/font_color = Color(0.78, 0.72, 0.62, 1)
+text = "Time"
+
+[node name="TimeValue" type="Label" parent="Panel/Center/VBox/Stats"]
+theme_override_colors/font_color = Color(0.95, 0.85, 0.7, 1)
+horizontal_alignment = 2
+text = "00:00"
+
+[node name="SeedHint" type="Label" parent="Panel/Center/VBox"]
+theme_override_colors/font_color = Color(0.55, 0.50, 0.42, 1)
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+text = "Share this seed — others who run it see the same enemy mix."
+
+[node name="SeedRow" type="HBoxContainer" parent="Panel/Center/VBox"]
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="SeedLabel" type="Label" parent="Panel/Center/VBox/SeedRow"]
+theme_override_colors/font_color = Color(0.78, 0.72, 0.62, 1)
+text = "Seed: "
+
+[node name="SeedValue" type="LineEdit" parent="Panel/Center/VBox/SeedRow"]
+custom_minimum_size = Vector2(220, 32)
+editable = false
+text = "EREBUS-XXXX-XXXX"
+
+[node name="CopyButton" type="Button" parent="Panel/Center/VBox/SeedRow"]
+custom_minimum_size = Vector2(60, 32)
+text = "Copy"
+
+[node name="ReturnButton" type="Button" parent="Panel/Center/VBox"]
+custom_minimum_size = Vector2(240, 48)
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 22
+text = "Ascend"

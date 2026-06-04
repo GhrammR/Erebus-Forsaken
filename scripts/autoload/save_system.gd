@@ -4,7 +4,7 @@ extends Node
 ## migrate() step. The on-disk format is human-readable so a tester can
 ## hand-edit corruption cases (rules/failure-modes.md #7 leans on this).
 
-const SAVE_VERSION: int = 12
+const SAVE_VERSION: int = 13
 const SAVE_PATH: String = "user://save_slot_1.dat"
 
 signal save_completed(success: bool)
@@ -15,8 +15,25 @@ signal load_completed(success: bool)
 ## entry. Never persisted at the field level.
 var _pending_enemy_snapshot: Array = []
 var _pending_loot_snapshot: Array = []
+## Stage 9.7 polish — per-zone SpawnDirector budgets. Keyed by zone
+## name (zone scene root, which equals the SpawnDirector's parent's
+## name). SpawnDirector._ready consumes once via the
+## consume_pending_director_budget() pop.
+var _pending_director_budgets: Dictionary = {}
+## Stage 9.7 polish — endless milestones the player has already
+## claimed. Persisted across runs (they're permanent). Read by
+## EndlessDirector on _advance_wave_to.
+var _pending_milestones: Array = []
 
 func save_game() -> bool:
+	# Stage 9.7 — endless runs are explicitly NOT saved. The save on
+	# disk from before portal entry IS the rollback anchor; writing
+	# again during a run would destroy it. The path no-ops silently
+	# so existing callers (zone auto-save, manual S) don't need to
+	# branch on run mode.
+	if EndlessRun.active:
+		save_completed.emit(false)
+		return false
 	var player := _player()
 	if player == null:
 		push_warning("SaveSystem.save_game: no player in GameState")
@@ -31,6 +48,10 @@ func save_game() -> bool:
 	file.store_string(JSON.stringify(data, "\t"))
 	file.close()
 	save_completed.emit(true)
+	DebugLog.write(&"save", "save_game OK (zone=%s pos=(%d,%d) v=%d)" % [
+			String(GameState.current_zone_id),
+			int(player.global_position.x), int(player.global_position.y),
+			SAVE_VERSION])
 	return true
 
 func load_game() -> bool:
@@ -58,6 +79,9 @@ func load_game() -> bool:
 		return false
 	_apply(player, data)
 	load_completed.emit(true)
+	DebugLog.write(&"save", "load_game OK (zone=%s v_from_disk=%d)" % [
+			String(GameState.current_zone_id),
+			int(data.get("version", 0))])
 	return true
 
 func has_save() -> bool:
@@ -95,6 +119,8 @@ func migrate(old: Dictionary) -> Dictionary:
 		old = _migrate_v10_to_v11(old)
 	if v < 12:
 		old = _migrate_v11_to_v12(old)
+	if v < 13:
+		old = _migrate_v12_to_v13(old)
 	return old
 
 func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
@@ -186,6 +212,26 @@ func _migrate_v9_to_v10(old: Dictionary) -> Dictionary:
 		old["corpse"] = { "corpses": [], "next_id": 1, "spills": [] }
 	return old
 
+func _migrate_v12_to_v13(old: Dictionary) -> Dictionary:
+	# v12 had no per-zone spawn budget or claimed-milestone state.
+	# Legacy saves default to empty dicts/lists — directors run at
+	# their @export budget (or unlimited for pre-existing zones), and
+	# no milestones have been earned yet.
+	old["version"] = 13
+	if not old.has("director_budgets"):
+		old["director_budgets"] = {}
+	if not old.has("endless_milestones"):
+		old["endless_milestones"] = []
+	if not old.has("titles"):
+		old["titles"] = []
+	# Stale endless zone id from a pre-rename save (Stage 9.7 polish
+	# changed endless_arena -> forsaken_depths). Saves never persist
+	# endless zones because of the SaveSystem guard, but the cache
+	# could carry one across — map old to new defensively.
+	if old.get("zone_id", "") == "endless_arena":
+		old["zone_id"] = "forsaken_depths"
+	return old
+
 func _migrate_v11_to_v12(old: Dictionary) -> Dictionary:
 	# v11 had no Act-boss completion flags. Legacy saves predate the
 	# boss landing, so both default false — the player simply hasn't
@@ -239,8 +285,26 @@ func _snapshot(player: Node) -> Dictionary:
 		"item_instances": ItemInstanceRegistry.snapshot(),
 		"act_1_complete": GameState.act_1_complete,
 		"boss_first_kill": GameState.boss_first_kill,
+		"director_budgets": _snapshot_director_budgets(),
+		"endless_milestones": GameState.endless_milestones.duplicate(),
+		"titles": GameState.titles.duplicate(),
 	}
 	return snap
+
+func _snapshot_director_budgets() -> Dictionary:
+	# Per-zone SpawnDirector budget remaining. Keyed by zone name so a
+	# load route can pop the matching value when each zone's director
+	# _readys. Unlimited (-1) budgets are omitted to keep saves clean.
+	var out: Dictionary = {}
+	for n in get_tree().get_nodes_in_group(&"spawn_director"):
+		var sd := n as SpawnDirector
+		if sd == null or not sd.has_finite_budget():
+			continue
+		var parent := sd.get_parent()
+		if parent == null:
+			continue
+		out[String(parent.name)] = sd.budget_remaining()
+	return out
 
 func _snapshot_active_zone_loot() -> Array:
 	# WorldItem and GoldPickup join the "loot" group in their _ready.
@@ -307,6 +371,24 @@ func consume_pending_loot_snapshot() -> Array:
 	_pending_loot_snapshot = []
 	return s
 
+## Game.gd uses this to push an in-session budget for the destination
+## zone before its SpawnDirector _readys. Same key contract as the
+## save snapshot — zone-scene-root name.
+func set_pending_director_budget(zone_name: StringName, budget: int) -> void:
+	_pending_director_budgets[String(zone_name)] = budget
+
+## Pop the saved budget for a given zone name (the SpawnDirector's
+## parent's name). Returns null when no entry exists — the director
+## then falls through to its @export default. Variant return so
+## "no entry" and "budget=0" stay distinguishable.
+func consume_pending_director_budget(zone_name: StringName) -> Variant:
+	var key := String(zone_name)
+	if not _pending_director_budgets.has(key):
+		return null
+	var v: int = int(_pending_director_budgets[key])
+	_pending_director_budgets.erase(key)
+	return v
+
 func _apply(player: Node, data: Dictionary) -> void:
 	var class_id := StringName(data.get("class_id", ""))
 	var cd: ClassData = Database.get_class_data(class_id) as ClassData
@@ -338,8 +420,11 @@ func _apply(player: Node, data: Dictionary) -> void:
 	GameState.current_zone_id = StringName(data.get("zone_id", "threshold_camp"))
 	GameState.act_1_complete = bool(data.get("act_1_complete", false))
 	GameState.boss_first_kill = bool(data.get("boss_first_kill", false))
+	GameState.endless_milestones = (data.get("endless_milestones", []) as Array).duplicate()
+	GameState.titles = (data.get("titles", []) as Array).duplicate()
 	_pending_enemy_snapshot = data.get("enemies", []) as Array
 	_pending_loot_snapshot = data.get("loot", []) as Array
+	_pending_director_budgets = (data.get("director_budgets", {}) as Dictionary).duplicate()
 	CorpseSystem.restore(data.get("corpse", {}))
 	# Stats restore needs to happen AFTER inventory restore so equip
 	# bonuses are applied before we set current_hp / mp.
