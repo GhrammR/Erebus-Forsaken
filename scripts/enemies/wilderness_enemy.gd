@@ -138,12 +138,20 @@ func _get_player() -> Node2D:
 ## without making the minion useless as a tank.
 const _MINION_DISTANCE_BIAS: float = 0.85
 const _MINION_GROUP: StringName = &"bone_servant_minions"
+## Walls live on physics layer 1. LOS raycast drops any target the
+## enemy cannot physically reach, so a wretch on the other side of
+## a sealed gate won't mash into the wall trying to swing at the
+## player or a bone-servant minion. Proper navmesh pathing around
+## walls is parking_lot.md::monster-pathfinding; this gate is the
+## minimum to keep behaviour readable.
+const _WALL_MASK: int = 1
 
 func _get_target() -> Node2D:
 	var player := _get_player()
-	var best: Node2D = player
+	var best: Node2D = null
 	var best_d := INF
-	if player != null:
+	if player != null and _has_line_of_sight(player):
+		best = player
 		best_d = (player.global_position - global_position).length()
 	for m in get_tree().get_nodes_in_group(_MINION_GROUP):
 		if not is_instance_valid(m):
@@ -154,11 +162,35 @@ func _get_target() -> Node2D:
 		if "current_stats" in n and n.current_stats != null \
 				and n.current_stats.is_dead():
 			continue
+		if not _has_line_of_sight(n):
+			continue
 		var d := (n.global_position - global_position).length() / _MINION_DISTANCE_BIAS
 		if d < best_d:
 			best_d = d
 			best = n
 	return best
+
+func _has_line_of_sight(target: Node2D) -> bool:
+	if target == null:
+		return false
+	var space := get_world_2d().direct_space_state
+	if space == null:
+		return true
+	# Cast from chest to chest so floor / debris colliders don't
+	# false-positive block.
+	var from := global_position + Vector2(0, -24)
+	var to := target.global_position + Vector2(0, -24)
+	var params := PhysicsRayQueryParameters2D.create(from, to, _WALL_MASK)
+	params.exclude = [self]
+	# CRITICAL: when the enemy presses against a thick wall, its
+	# chest-y offset can fall *inside* the wall's collider. Without
+	# hit_from_inside, the ray's origin is treated as outside the
+	# collider and the ray reports zero hits — i.e. "clear LOS"
+	# straight through the wall. Setting this flag makes the ray
+	# report an immediate hit when starting inside a wall, which
+	# correctly gates the target as "unreachable."
+	params.hit_from_inside = true
+	return space.intersect_ray(params).is_empty()
 
 ## Subclasses override to swing a hitbox or spawn a projectile. The
 ## base call enforces the windup delay and animation; the subclass

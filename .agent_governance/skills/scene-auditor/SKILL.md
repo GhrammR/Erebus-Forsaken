@@ -69,6 +69,22 @@ description: Detect orphaned nodes, broken signal connections, missing @onready 
      Then for each, verify either the .tscn or the script disables
      `input_pickable`.
 
+10. **Feel-pass contract coverage** (rules/feel-pass.md)
+    - Every row of the feel-pass.md event table must have both an
+      AudioBank call site and a visual hook somewhere in
+      production code (`scripts/`, `scenes/`).
+    - Audio side: grep for `play_sfx(&"<id>"` OR a bare `&"<id>"`
+      reference (covers dynamic lookups like
+      `AudioBank._PICKUP_SFX.get(id, &"pickup_item")`).
+    - Visual side: grep for the row's canonical marker (HUD node
+      name, VFX preload, CameraShake/HitStop call, or scene
+      preload). The Stage 9.5 verifier
+      (`test/stage9_5_verify.gd::_verify_contract_visuals`) carries
+      the canonical marker list; scene-auditor reuses it.
+    - FAIL if either column is missing for any contract row.
+    - WARN if a row's marker appears only in a workbench
+      (`test/`) directory and nowhere in production code.
+
 7. **Passive Controls absorbing input** (failure-modes.md #9)
    - Any `Control` subtype meant for display only (backgrounds,
      HUD labels, debug overlays, decorative panels) must set

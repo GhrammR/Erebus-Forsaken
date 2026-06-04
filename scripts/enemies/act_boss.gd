@@ -348,6 +348,11 @@ func _has_line_of_sight(target: Node2D) -> bool:
 	var to := target.global_position + Vector2(0, -24)
 	var params := PhysicsRayQueryParameters2D.create(from, to, _WALL_MASK)
 	params.exclude = [self]
+	# When the boss stands close to a wall its chest-y offset can
+	# fall *inside* the wall collider; without hit_from_inside the
+	# ray reports zero hits and would falsely declare LOS through
+	# the wall.
+	params.hit_from_inside = true
 	var result := space.intersect_ray(params)
 	return result.is_empty()
 

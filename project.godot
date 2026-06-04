@@ -27,6 +27,8 @@ QuestSystem="*res://scripts/autoload/quest_system.gd"
 CorpseSystem="*res://scripts/autoload/corpse_system.gd"
 AudioBank="*res://scripts/autoload/audio_bank.gd"
 ItemInstanceRegistry="*res://scripts/autoload/item_instance_registry.gd"
+CameraShake="*res://scripts/systems/camera_shake.gd"
+HitStop="*res://scripts/systems/hit_stop.gd"
 
 [audio]
 

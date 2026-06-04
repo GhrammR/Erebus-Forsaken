@@ -42,6 +42,9 @@ func _ready() -> void:
 	if "--verify9" in args:
 		add_child(load("res://test/stage9_verify.tscn").instantiate())
 		return
+	if "--verify9_5" in args:
+		add_child(load("res://test/stage9_5_verify.tscn").instantiate())
+		return
 	if "--verify10" in args:
 		add_child(load("res://test/stage10_verify.tscn").instantiate())
 		return

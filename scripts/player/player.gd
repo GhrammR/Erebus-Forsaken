@@ -75,6 +75,12 @@ func _ready() -> void:
 	# collider — visible as a moving click-to-move dead zone. See
 	# failure-modes.md #13.
 	input_pickable = false
+	# Stage 9.5 — register the player's Camera2D so CameraShake.kick()
+	# finds it without a hardcoded NodePath. Workbenches without a
+	# player wired in just have no camera in the group; kicks no-op.
+	var cam := $Camera2D as Camera2D
+	if cam != null:
+		cam.add_to_group(&"feel_camera")
 	_input.owner_body = self
 	_input.move_intent_changed.connect(_on_move_intent_changed)
 	_input.attack_pressed.connect(_on_attack_pressed)
@@ -225,6 +231,11 @@ func _on_damaged(_amount: int, _source: Node) -> void:
 		AudioBank.play_sfx(&"player_hurt")
 	if _amount <= 0 or _life != LifeState.ALIVE:
 		return
+	# Stage 9.5 — feel-pass.md "hit taken" contract: red flash + camera
+	# shake. Tuned up after first playtest — the 4px kick was too
+	# subtle to register as feedback; 9px reads as "ouch" without
+	# making the screen unreadable.
+	CameraShake.kick(9.0, 0.18)
 	# Always run the flash, even mid-attack. Gating on CombatState.READY
 	# meant a hit landed during a swing skipped the lerp-back, leaving
 	# the sprite stuck on whatever modulate frame the previous flash

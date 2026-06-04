@@ -19,9 +19,12 @@ func _ready() -> void:
 	var dmg_on_hit := 0
 	for i in SAMPLES:
 		var d := DamageResolver.resolve(atk, dummy)
-		if d > 0:
+		if d.damage > 0:
 			hits += 1
-			dmg_on_hit = d   # damage is deterministic on hit
+			if not d.is_crit:
+				# Stage 9.5: crits are ~5% and 2x damage; sample only
+				# non-crits when asserting the deterministic value.
+				dmg_on_hit = d.damage
 	var hit_rate := float(hits) / float(SAMPLES)
 	var ok_rate := hit_rate >= 0.85 and hit_rate <= 0.97
 	var ok_dmg := dmg_on_hit == 15
@@ -35,7 +38,7 @@ func _ready() -> void:
 	var pyt_dmg := 0
 	for i in 200:
 		var d := DamageResolver.resolve(atk, dummy)
-		if d > 0: pyt_dmg = d
+		if d.damage > 0 and not d.is_crit: pyt_dmg = d.damage
 	var ok_p := pyt_dmg == 10
 	print("[%s] Pythia hit dmg=%d (expect 10)" % [("OK  " if ok_p else "FAIL"), pyt_dmg])
 	if not ok_p: fail += 1
@@ -46,14 +49,14 @@ func _ready() -> void:
 	var sh_dmg := 0
 	for i in 200:
 		var d := DamageResolver.resolve(atk, dummy)
-		if d > 0: sh_dmg = d
+		if d.damage > 0 and not d.is_crit: sh_dmg = d.damage
 	var ok_sh := sh_dmg == 11
 	print("[%s] Shade-Hunter hit dmg=%d (expect 11)" % [("OK  " if ok_sh else "FAIL"), sh_dmg])
 	if not ok_sh: fail += 1
 
 	# Null attack / null defender -> 0, no crash
-	var ok_nil := DamageResolver.resolve(null, dummy) == 0 \
-		and DamageResolver.resolve(atk, null) == 0
+	var ok_nil := DamageResolver.resolve(null, dummy).damage == 0 \
+		and DamageResolver.resolve(atk, null).damage == 0
 	print("[%s] null inputs return 0" % ("OK  " if ok_nil else "FAIL"))
 	if not ok_nil: fail += 1
 
@@ -61,7 +64,7 @@ func _ready() -> void:
 	atk.source = null
 	var floor_hits := 0
 	for i in SAMPLES:
-		if DamageResolver.resolve(atk, dummy) > 0: floor_hits += 1
+		if DamageResolver.resolve(atk, dummy).damage > 0: floor_hits += 1
 	var floor_rate := float(floor_hits) / float(SAMPLES)
 	var ok_floor := floor_rate >= 0.25 and floor_rate <= 0.36
 	print("[%s] HIT_FLOOR enforced: zero-AR rate=%.3f (expect ~0.30)" % [

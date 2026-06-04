@@ -239,6 +239,13 @@ func _has_line_of_sight(target: Node2D) -> bool:
 	var to := target.global_position + Vector2(0, -20)
 	var params := PhysicsRayQueryParameters2D.create(from, to, _WALL_MASK)
 	params.exclude = [self]
+	# When the minion presses against a thick wall, the chest-y
+	# offset can fall *inside* the wall's collider. Without
+	# hit_from_inside the ray treats the origin as outside the
+	# collider and reports zero hits — i.e. "clear LOS" straight
+	# through the wall. Flipping this on makes the ray fire an
+	# immediate hit when starting inside the wall.
+	params.hit_from_inside = true
 	return space.intersect_ray(params).is_empty()
 
 func _get_player() -> Node2D:

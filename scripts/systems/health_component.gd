@@ -6,6 +6,12 @@ class_name HealthComponent extends Node
 signal damaged(amount: int, source: Node)
 signal healed(amount: int)
 signal died(killer: Node)
+## Stage 9.5 — fires alongside `damaged` when the resolver flagged the
+## hit as a crit. Listeners (game-side DamageNumber spawner, AudioBank
+## via game.gd wire) use it to spawn the golden variant + trigger
+## hit_crit sfx + HitStop.pulse. Per-emitter signal, not a bus signal
+## — AD-08 EventBus whitelist preserved.
+signal crit_landed(amount: int, source: Node)
 
 @export var stats: Stats
 
@@ -27,13 +33,16 @@ func set_stats(new_stats: Stats) -> void:
 func take_damage(attack: Attack) -> int:
 	if stats == null or _was_dead:
 		return 0
-	var final_damage := DamageResolver.resolve(attack, stats)
-	var taken := stats.take_damage(final_damage, attack)
+	var result := DamageResolver.resolve(attack, stats)
+	var taken := stats.take_damage(result.damage, attack)
 	# Emit damaged even on 0 (miss) so the workbench/HUD can show "MISS".
-	damaged.emit(taken, attack.source if attack != null else null)
+	var src: Node = attack.source if attack != null else null
+	damaged.emit(taken, src)
+	if result.is_crit and taken > 0:
+		crit_landed.emit(taken, src)
 	if not _was_dead and stats.is_dead():
 		_was_dead = true
-		died.emit(attack.source if attack != null else null)
+		died.emit(src)
 	return taken
 
 func heal(amount: int) -> void:

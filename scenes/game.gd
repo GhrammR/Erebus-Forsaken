@@ -34,9 +34,29 @@ const _TUTORIAL_SCRIPT := preload("res://scripts/ui/tutorial_prompt.gd")
 @onready var _help: Label = $HUD/Help
 @onready var _status: Label = $HUD/Status
 @onready var _info: Label = $HUD/DebugInfo
+@onready var _quest_chip: Label = $HUD/QuestChip
+@onready var _zone_toast: Label = $HUD/ZoneNameToast
+@onready var _kill_counter: Label = $HUD/KillCounter
+@onready var _save_toast: Label = $HUD/SaveToast
+@onready var _gold_hud: Label = $HUD/GoldHUD
+@onready var _skill_icon: Control = $HUD/SkillIcon
 @onready var _click_marker: Node2D = $ClickMarker
 @onready var _dn_layer: Node2D = $DamageNumberLayer
 @onready var _death_screen: CanvasLayer = $DeathScreen
+
+# Stage 9.5 — HUD feel state.
+var _kill_count: int = 0
+var _kill_fade_tween: Tween = null
+var _zone_toast_tween: Tween = null
+var _quest_chip_tween: Tween = null
+var _save_toast_tween: Tween = null
+## Kill counter is **cumulative** across the run — it never resets
+## inside a session. The fade is visibility only: the count keeps
+## ticking, the label just dims so it doesn't sit at full brightness
+## when nothing's happening.
+const _KILL_VISIBLE_HOLD: float = 2.5
+const _KILL_FADE_DURATION: float = 0.8
+const _KILL_DIM_ALPHA: float = 0.25
 
 var _zone: Zone = null
 
@@ -65,7 +85,9 @@ func _ready() -> void:
 	# summons like Bone Servant) looks Game up via this group and calls
 	# wire_combatant_vfx() so its damage numbers fire.
 	add_to_group(&"game_host")
-	_help.text = "Click=move  |  WASD  |  E=interact  |  I=inventory  |  F5=save  |  F9=load  |  Esc=pause"
+	# Trimmed after Stage 9.5 playtest — the full keymap pushed the
+	# Help label across the top-centre and ate the KillCounter row.
+	_help.text = "Click=move  WASD  E=interact  I=inv  F5/F9=save/load  Esc=pause"
 
 	# Default class on first launch; load_game below may overwrite it.
 	# Stage 10: character_select.tscn stashes the player's pick in
@@ -89,6 +111,7 @@ func _ready() -> void:
 	_wire_zone_npcs()
 	_wire_player_combat_vfx()
 	_wire_zone_combat_vfx()
+	_wire_feel_hud()
 
 	SceneRouter.set_zone_host(self)
 
@@ -427,6 +450,146 @@ func _wire_player_combat_vfx() -> void:
 	var hc := _player.get_health_component()
 	if hc != null and not hc.damaged.is_connected(_on_combatant_damaged):
 		hc.damaged.connect(_on_combatant_damaged.bind(_player))
+	if hc != null and not hc.crit_landed.is_connected(_on_combatant_crit):
+		hc.crit_landed.connect(_on_combatant_crit.bind(_player))
+
+# ---------------------------------------------------------------- Stage 9.5
+# Feel-pass HUD wiring. All listeners route through this one place so
+# the scene-auditor #10 check has a single grep target.
+
+func _wire_feel_hud() -> void:
+	_skill_icon.bind(_player.get_skill_1())
+	var w := _player.get_node_or_null(^"Wallet") as Wallet
+	if w != null:
+		_last_gold_seen = w.gold
+		_gold_hud.text = "%d g" % w.gold
+	# Quest chip: slides in on accept, flashes gold + clears on complete.
+	if not QuestSystem.quest_state_changed.is_connected(_on_quest_state_changed):
+		QuestSystem.quest_state_changed.connect(_on_quest_state_changed)
+	# Zone-name fade-in on every zone transit. EventBus.zone_changed
+	# already fires from _do_transit.
+	if not EventBus.zone_changed.is_connected(_on_zone_changed_feel):
+		EventBus.zone_changed.connect(_on_zone_changed_feel)
+	# Kill counter ticks on enemy death.
+	if not EventBus.enemy_died.is_connected(_on_enemy_died_feel):
+		EventBus.enemy_died.connect(_on_enemy_died_feel)
+	# Save / load toasts route through SaveSystem signals so we get
+	# both the manual F5/F9 path and any future auto-save path.
+	if not SaveSystem.save_completed.is_connected(_on_save_completed_feel):
+		SaveSystem.save_completed.connect(_on_save_completed_feel)
+	if not SaveSystem.load_completed.is_connected(_on_load_completed_feel):
+		SaveSystem.load_completed.connect(_on_load_completed_feel)
+	# Wallet pulse: positive deltas only (vendor purchases skip).
+	var wallet := _player.get_node_or_null(^"Wallet") as Wallet
+	if wallet != null and not wallet.gold_changed.is_connected(_on_wallet_pulse):
+		wallet.gold_changed.connect(_on_wallet_pulse)
+	# Level-up ring — wired even though no XP system emits today; the
+	# call site exists per feel-pass.md contract.
+	if not EventBus.player_leveled.is_connected(_on_player_leveled_feel):
+		EventBus.player_leveled.connect(_on_player_leveled_feel)
+	# Kill counter decay is folded into _process which is already
+	# running for the auto-interact / debug-info pass.
+
+func _on_quest_state_changed(quest_id: StringName, new_state: int) -> void:
+	# QuestSystem.QuestState enum: NOT_STARTED=0, ACCEPTED=1,
+	# COMPLETED=2, TURNED_IN=3.
+	if _quest_chip_tween != null and _quest_chip_tween.is_valid():
+		_quest_chip_tween.kill()
+	match new_state:
+		1:  # ACCEPTED
+			_quest_chip.text = "● %s" % String(quest_id)
+			_quest_chip.modulate = Color(1, 1, 1, 0)
+			_quest_chip_tween = create_tween()
+			_quest_chip_tween.tween_property(_quest_chip, "modulate",
+					Color(1, 1, 1, 1), 0.35)
+			AudioBank.play_sfx(&"quest_accept")
+		2, 3:  # COMPLETED / TURNED_IN
+			AudioBank.play_sfx(&"quest_complete")
+			_quest_chip.modulate = Color(1.4, 1.2, 0.6, 1)
+			_quest_chip_tween = create_tween()
+			_quest_chip_tween.tween_property(_quest_chip, "modulate",
+					Color(1, 1, 1, 0), 0.9)
+			_quest_chip_tween.tween_callback(func(): _quest_chip.text = "")
+
+func _on_zone_changed_feel(zone_id: StringName) -> void:
+	_zone_toast.text = _zone_display_name(zone_id)
+	_zone_toast.modulate = Color(1, 1, 1, 0)
+	if _zone_toast_tween != null and _zone_toast_tween.is_valid():
+		_zone_toast_tween.kill()
+	_zone_toast_tween = create_tween()
+	_zone_toast_tween.tween_property(_zone_toast, "modulate",
+			Color(1, 1, 1, 1), 0.35)
+	_zone_toast_tween.tween_interval(0.9)
+	_zone_toast_tween.tween_property(_zone_toast, "modulate",
+			Color(1, 1, 1, 0), 0.5)
+
+func _on_enemy_died_feel(_enemy: Node, _killer: Node) -> void:
+	_kill_count += 1
+	_kill_counter.text = "kills %d" % _kill_count
+	# Bring the label back to full brightness on every new kill, then
+	# fade to a dim "still tracking" alpha after the hold window. The
+	# count itself never resets — the run total persists.
+	if _kill_fade_tween != null and _kill_fade_tween.is_valid():
+		_kill_fade_tween.kill()
+	_kill_counter.modulate.a = 1.0
+	_kill_fade_tween = create_tween()
+	_kill_fade_tween.tween_interval(_KILL_VISIBLE_HOLD)
+	_kill_fade_tween.tween_property(_kill_counter, "modulate:a",
+			_KILL_DIM_ALPHA, _KILL_FADE_DURATION)
+
+func _on_save_completed_feel(success: bool) -> void:
+	_show_save_toast("Saved." if success else "Save failed.", success)
+
+func _on_load_completed_feel(success: bool) -> void:
+	_show_save_toast("Loaded." if success else "Load failed.", success)
+
+func _show_save_toast(msg: String, success: bool) -> void:
+	_save_toast.text = msg
+	_save_toast.modulate = Color(0.7, 0.95, 0.7, 1) if success else Color(0.95, 0.6, 0.6, 1)
+	if _save_toast_tween != null and _save_toast_tween.is_valid():
+		_save_toast_tween.kill()
+	_save_toast_tween = create_tween()
+	_save_toast_tween.tween_interval(1.0)
+	_save_toast_tween.tween_property(_save_toast, "modulate:a", 0.0, 0.5)
+
+var _last_gold_seen: int = 0
+var _gold_pulse_tween: Tween = null
+
+func _on_wallet_pulse(new_total: int) -> void:
+	# Wallet emits the running total, not a delta — track our own
+	# previous value so vendor purchases (negative delta) skip the
+	# pulse + sfx and only pickups trigger feel.
+	var delta := new_total - _last_gold_seen
+	_last_gold_seen = new_total
+	_gold_hud.text = "%d g" % new_total
+	if delta <= 0:
+		return
+	# Pivot at label centre so the scale grows in place rather than
+	# from the top-left corner (which would shove the label off the
+	# bottom-right edge and look like nothing happened).
+	_gold_hud.pivot_offset = Vector2(_gold_hud.size.x * 0.5,
+			_gold_hud.size.y * 0.5)
+	if _gold_pulse_tween != null and _gold_pulse_tween.is_valid():
+		_gold_pulse_tween.kill()
+	_gold_hud.scale = Vector2(1.8, 1.8)
+	_gold_hud.modulate = Color(1.6, 1.4, 0.6, 1.0)
+	_gold_pulse_tween = create_tween().set_parallel(true)
+	_gold_pulse_tween.tween_property(_gold_hud, "scale",
+			Vector2.ONE, 0.28).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_gold_pulse_tween.tween_property(_gold_hud, "modulate",
+			Color(1.0, 0.85, 0.35, 1.0), 0.28) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	AudioBank.play_sfx(&"pickup_gold")
+
+const _LEVEL_UP_RING := preload("res://scenes/vfx/level_up_ring.tscn")
+
+func _on_player_leveled_feel(new_level: int) -> void:
+	AudioBank.play_sfx(&"levelup")
+	var ring := _LEVEL_UP_RING.instantiate()
+	add_child(ring)
+	(ring as Node2D).global_position = _player.global_position
+	if "level_text" in ring:
+		ring.level_text = "+%d" % new_level
 
 func _wire_zone_combat_vfx() -> void:
 	# Every HealthComponent inside the active zone gets its damaged
@@ -452,6 +615,11 @@ func wire_combatant_vfx(target: Node) -> void:
 		return
 	if not hc.damaged.is_connected(_on_combatant_damaged):
 		hc.damaged.connect(_on_combatant_damaged.bind(target))
+	# Stage 9.5 — crits get the golden DamageNumber + hit_crit sfx +
+	# 3-frame HitStop pulse + tiny camera kick. Bound separately from
+	# `damaged` so a non-crit hit doesn't pay the kick cost.
+	if not hc.crit_landed.is_connected(_on_combatant_crit):
+		hc.crit_landed.connect(_on_combatant_crit.bind(target))
 
 func _on_director_spawned(enemy: Enemy) -> void:
 	wire_combatant_vfx(enemy)
@@ -464,9 +632,27 @@ func _on_combatant_damaged(amount: int, _source: Node, target: Node) -> void:
 		dn.is_miss = true
 	else:
 		dn.text = str(amount)
-		dn.color = Color(1.0, 0.55, 0.35, 1) if amount >= 20 else Color(1.0, 0.92, 0.65, 1)
+		# Pale cream for normal hits, soft pale-red for heavier ones.
+		# Golden is RESERVED for crits (the crit handler spawns its
+		# own DamageNumber with is_crit=true).
+		dn.color = Color(0.98, 0.80, 0.70, 1) if amount >= 20 else Color(0.96, 0.94, 0.86, 1)
 	_dn_layer.add_child(dn)
 	dn.global_position = (target as Node2D).global_position + Vector2(randf_range(-6, 6), -56)
+
+func _on_combatant_crit(amount: int, _source: Node, target: Node) -> void:
+	# The matching `damaged` signal already fired (we ignore that one's
+	# DN spawn for crits by replacing it here — they overlap visually
+	# but the golden one wins z-order via larger scale + sequence).
+	if target == null or not is_instance_valid(target):
+		return
+	var dn := _DAMAGE_NUMBER.instantiate()
+	dn.is_crit = true
+	dn.text = str(amount)
+	_dn_layer.add_child(dn)
+	dn.global_position = (target as Node2D).global_position + Vector2(randf_range(-4, 4), -64)
+	AudioBank.play_sfx(&"hit_crit")
+	HitStop.pulse(3)
+	CameraShake.kick(7.0, 0.16)
 
 func _wire_zone_npcs() -> void:
 	# Vendor and quest panels live above the zone; we connect to
@@ -560,6 +746,9 @@ func _set_status(msg: String, ok: bool) -> void:
 	_status.modulate = Color(0.85, 0.95, 0.65, 1) if ok else Color(0.95, 0.55, 0.45, 1)
 
 func _process(_delta: float) -> void:
+	# Stage 9.5 — kill counter is cumulative; the fade is on the
+	# label's modulate alpha only, driven by the _kill_fade_tween
+	# below. Nothing to tick here per-frame.
 	if _player == null:
 		return
 	# Auto-interact once the player arrives at a clicked Npc/Portal.

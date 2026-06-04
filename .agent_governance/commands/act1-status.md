@@ -250,8 +250,8 @@ them); **execution order** is now:
 2. Stage 7.5 — Audio mini-stage (Feel Pass enablement) **[CLOSED]**
 3. Stage 8 — Dungeon (with affix-tier sub-system) **[CLOSED]**
 4. Stage 9 — Act boss **[CLOSED]**
-5. Stage 9.5 — Feel Pass (sound + juice contract, `rules/feel-pass.md`) *(next)*
-6. Stage 9.7 — Endless mode (post-boss retention)
+5. Stage 9.5 — Feel Pass (sound + juice contract, `rules/feel-pass.md`) **[CLOSED]**
+6. Stage 9.7 — Endless mode (post-boss retention) *(next)*
 7. **itch.io free demo launches here** (`commands/launch-plan.md`)
 8. Stage 11 — Save/load hardening
 9. Stage 12 — Pre-launch polish
@@ -452,27 +452,87 @@ and a note appended to this file.
   --verify6 / --verify7 / --verify7_5 / --verify8 / --verify10
   all PASS post-Stage-9.
 
-## Stage 9.5 — Feel Pass  *(execute after Stage 9; binds `rules/feel-pass.md`)*
+## Stage 9.5 — Feel Pass
 
-* \[ ] `CameraShake` helper (`scripts/systems/camera_shake.gd`):
-  `kick(amount, duration)`. One call site per damage-taken path.
-* \[ ] `HitStop` helper (`scripts/systems/hit_stop.gd`):
-  `pulse(frames := 3)`. Crit hits only.
-* \[ ] Crit math added to DamageResolver (5% base crit, 2× damage)
-  with golden DamageNumber variant
-* \[ ] Hit-flash on every enemy hurtbox (mirror the existing player
-  `_flash_hit` pattern)
-* \[ ] Gold-pickup pulse + auto-stack animation
-* \[ ] Rare-drop column-of-light VFX (`GPUParticles2D`) + 2px outline
-  via shader
-* \[ ] Cooldown ring overlay on skill icon
-* \[ ] HUD: active-quest chip (top-left), zone-name fade-in (top-right),
-  kill counter (small, top-center)
-* \[ ] Save / Load toast (top-left, 1.5s fade)
-* \[ ] Every event in `rules/feel-pass.md` contract has both an
-  AudioBank call and a visual hook — verifier `--verify9_5` walks
-  the call sites and asserts both exist
-* \[ ] `scene-auditor` check #10 added (feel contract)
+* \[x] `CameraShake` autoload (`scripts/systems/camera_shake.gd`):
+  `kick(amount, duration)`. Player Camera2D joins `&"feel_camera"`
+  group at _ready; kick resolves via group lookup so workbenches
+  without a player no-op cleanly. Multiple kicks merge — running
+  tween is killed and replaced rather than stacked.
+* \[x] `HitStop` autoload (`scripts/systems/hit_stop.gd`):
+  `pulse(frames := 3)`. Slams `Engine.time_scale = 0.0` for the
+  pulse duration, restores to 1.0 via a `process_always`
+  SceneTreeTimer (ticks under zero time-scale). Second pulse
+  during a running one extends rather than stacks.
+* \[x] Crit math in DamageResolver: `CRIT_CHANCE = 0.05`,
+  `CRIT_MULT = 2.0`. New `DamageResult` Resource
+  (`scripts/systems/damage_result.gd`) replaces the bare `int`
+  return so the crit flag rides alongside the magnitude. AD-04
+  preserved — DamageResolver still owns the math; HealthComponent
+  consumes the resource and emits the new local `crit_landed`
+  signal alongside `damaged`. AD-08 EventBus whitelist preserved
+  (crit_landed is per-emitter, not bus).
+* \[x] DamageNumber crit variant: `is_crit` field, golden colour,
+  1.4× scale, longer rise. `Game._on_combatant_crit` spawns the
+  golden variant + plays `hit_crit` + `HitStop.pulse(3)` +
+  `CameraShake.kick(3.0, 0.10)`. Wired for every combatant via
+  `wire_combatant_vfx` (Player + zone enemies + scripted crypt
+  spawns + Bone Servant via the existing `&"game_host"` path).
+* \[x] Hit-flash on every enemy hurtbox — already landed Stage 9
+  polish (Enemy + BoneServantMinion + Player tween-based flashes
+  that target the same node anim_hit writes to).
+* \[x] Player hit-taken camera shake: `CameraShake.kick(4.0, 0.12)`
+  in `Player._on_damaged` (gated on `_amount > 0` + ALIVE).
+* \[x] Gold-pickup pulse + HUD gold readout: new `HUD/GoldHUD`
+  Label (bottom-right). `Game._on_wallet_pulse` listens to
+  `Wallet.gold_changed`, tracks the previous total so negative
+  deltas (vendor purchases) skip the pulse, scales the label
+  1.3× → 1.0× over 0.18s, plays `pickup_gold` sfx.
+* \[x] Rare-drop column-of-light VFX: `scenes/vfx/rare_drop_pillar.tscn`
+  (`GPUParticles2D` + glow polygon, 1.6s auto-cleanup). 2px outline
+  shader at `art/shaders/item_outline.gdshader` — neighbour-sampling
+  pass with a pulsing alpha, applied to the WorldItem label via
+  `_apply_rare_dress` when `glyph_color` matches the rare-tier blue
+  or gold-tier (boss unique) palette.
+* \[x] Cooldown ring overlay on skill icon
+  (`scenes/ui/skill_icon.tscn` + `scripts/ui/skill_icon.gd`).
+  `TextureProgressBar` clock-fill, ring fills as cooldown winds
+  down. `skill_ready` sfx + outline pulse fire on the ready edge
+  *only when `cooldown >= 1.0`* (Volley, Bone Servant) — fast-spam
+  skills (Spear Lunge, Oracle Bolt) stay quiet.
+* \[x] HUD chips:
+  - `QuestChip` (top-left, slides in on QuestSystem ACCEPTED,
+    flashes gold + clears on COMPLETED / TURNED_IN)
+  - `ZoneNameToast` (top-right, 0.35s fade-in + 0.9s hold +
+    0.5s fade-out on `EventBus.zone_changed`)
+  - `KillCounter` (top-centre, ticks on `EventBus.enemy_died`,
+    decays after 3s of no kills, folded into `_process`)
+* \[x] Save / Load toast: `HUD/SaveToast` (top-left), driven by
+  `SaveSystem.save_completed` / `load_completed` signals.
+  1.0s hold + 0.5s fade. Green on success, red on failure.
+  Existing `Status` label remains for non-save zone-enter messages.
+* \[x] Level-up VFX: `scenes/vfx/level_up_ring.tscn` (expanding ring
+  + `+N` popup). Listens to `EventBus.player_leveled`; no XP system
+  emits in Act 1 but the call site is ready for Act 2.
+* \[x] Quest audio wired: `quest_accept` / `quest_complete` sfx
+  on `QuestSystem.quest_state_changed` (state 1 / 2-3).
+* \[x] `--verify9_5` verifier (44/44 PASS): autoloads,
+  DamageResult shape, crit rate band ([0.02, 0.10] over ~600
+  hits), HC.crit_landed signal, DamageNumber.is_crit field,
+  CameraShake / HitStop no-op cleanly, HUD nodes present
+  (QuestChip / ZoneNameToast / KillCounter / SaveToast /
+  GoldHUD / SkillIcon), VFX scenes load, outline shader loads,
+  feel-pass contract audio (every event has a call site) +
+  visuals (every event has a canonical hook marker in
+  production code).
+* \[x] `scene-auditor` check #10 documented (feel-pass contract
+  coverage — every contract row needs both an audio call site
+  and a visual hook; reuses the verifier's marker list).
+* \[x] Regression: --verify / --verify3 / --verify4 / --verify5 /
+  --verify6 / --verify7 / --verify7_5 / --verify8 / --verify9 /
+  --verify10 all PASS post-Stage-9.5. Stage 3 verifier touched
+  (`int` → `DamageResult.damage`) and filters crit hits when
+  asserting the deterministic damage value.
 
 ## Stage 9.7 — Endless mode  *(execute after Stage 9.5)*
 

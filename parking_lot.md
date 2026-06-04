@@ -55,6 +55,24 @@ fully complete.
   behaviour-tree skeleton, parameterised per entity. Bone Servant's
   `_pick_patrol_point` already has a TODO pointer here.
 
+### clickable-skill-hud — Click-to-cast on HUD skill tiles
+- Why parked: Stage 9.5 ships the cooldown indicator as
+  display-only (`mouse_filter = IGNORE`) so it doesn't eat
+  click-to-move (failure-modes.md #14). Letting the tile accept
+  clicks needs careful input precedence: a click on the tile
+  should cast the skill, a click anywhere else should still
+  move. The implementation is small but the testing matrix
+  isn't (tile + modal-open + skill-on-cooldown + dead player +
+  click-and-drag), so it's polish, not Feel Pass scope.
+- Earliest revisit: Stage 12 (pre-launch polish), alongside
+  the title-screen and options-menu pass.
+- Notes: same Esc-to-close + mouse-filter discipline as the
+  modal contract. The HUD tile would be hover-highlighted
+  (tween modulate on `mouse_entered`), `gui_input` consumes
+  `MOUSE_BUTTON_LEFT` only when over the tile, and `try_activate`
+  routes through the existing skill path. The keybind ("1") and
+  the click do the same thing — no parallel cooldown state.
+
 ### walk-run-toggle — Movement-mode switch with a small stat trade
 - Why parked: Act 1 ships one movement speed per entity. Toggling
   between walk and run is a UX hook that wants its own input
@@ -110,18 +128,33 @@ fully complete.
 ### monster-pathfinding — Proper navmesh pathfinding for AI
 - Why parked: Stage 9 wretches and the Bone Servant just steer
   toward their target. With walls between, they walk into the
-  wall. LOS-gate on target acquisition (Stage 9 polish) papered
-  over the worst case for the minion (no LOS = no target), but
-  a wretch that *can* see the player through a doorway will
-  still mash into the wall instead of routing through. Real
-  fix: NavigationRegion2D per zone, NavigationAgent2D per
-  enemy, `set_target_position` instead of raw steering.
-- Earliest revisit: post-Stage-9.7. The Feel Pass first, then
-  endless mode, then pathfinding before itch.io.
-- Notes: bake the navmesh on zone load (not in editor) so
-  procedurally adjusted zones still work. Boss is exempt —
-  its phases are scripted; raw steering is fine for an arena
-  encounter.
+  wall. LOS-gate on target acquisition (Stage 9 polish, hardened
+  in Stage 9.5 with `hit_from_inside = true` so chest-inside-wall
+  doesn't false-positive "clear") papered over the worst case
+  (no LOS = no target = idle), but two derived behaviours remain
+  parked:
+  - **"Player runs behind a wall, enemy gives up entirely"** —
+    currently intended fallback. Without navmesh the enemy can't
+    route around; idle is the only readable outcome. Navmesh
+    should replace this with a "path to last known position,
+    then search briefly" routine before deaggro.
+  - **"Enemy stuck against a wall doesn't retarget when a
+    Bone Servant attacks it"** — without pathing the wretch
+    can't re-evaluate while pressed against an unreachable
+    target's wall. Navmesh + a "took damage from someone I'm
+    not targeting → retarget" hook on `HealthComponent.damaged`
+    would close this. Today the minion gets free swings on a
+    stuck wretch — known and parked.
+  - Real fix: `NavigationRegion2D` per zone (baked on zone load,
+    not editor-time, so procedurally adjusted zones still work),
+    `NavigationAgent2D` per enemy, `set_target_position` instead
+    of raw steering, plus the damage-retarget hook above.
+- Earliest revisit: post-Stage-9.7. Feel Pass first, then endless
+  mode, then pathfinding before itch.io demo.
+- Notes: boss is exempt — phases are scripted, raw steering is
+  fine for an arena encounter. Linked: [[smart-ai-presence]] for
+  the "what does the enemy do between actions" pass that would
+  ride alongside navmesh.
 
 ### modular-sprite-polish — Per-part replacement polish pass
 - Why parked: every procedural sprite already follows the
