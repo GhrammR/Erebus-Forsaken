@@ -914,25 +914,45 @@ dev-debug instrumentation added.
 * `rules/testing.md` § **Parse-time smoke test** — `godot --headless
   --quit-after 1 -- --splash` runs before any `.gd`-touching commit.
 
-## Stage 9.8.1 — Hotfix: Ember Maw-route bug *(NEXT)*
+## Stage 9.8.1 — Hotfix: Ember Maw-route bug **[CLOSED 2026-06-04]**
 
-Channel completes correctly inside The Maw but the `EndlessRun.end_run`
-→ `endless_run_ended` → summary modal chain does not visibly fire.
-Player remains in The Maw with `_channeling` cleared.
+**Diagnosis correction:** The original task description claimed the
+summary modal failed to surface. Re-reading `/tmp/erebus.log`
+(T+91604 `end_run via=ascend` → T+92944 `load_game OK
+zone=forsaken_crypt` → T+92945 BIG_JUMP teleport) proved the modal +
+rollback chain ran correctly. The real bug matched the user's
+verbatim report: Ember-in-Maw landed the player at the pre-portal
+anchor (crypt boss room) instead of Threshold Camp.
 
-* \[ ] Add `[endless]` DebugLog entries inside `EndlessRun.end_run` to
-  confirm signal emission.
-* \[ ] Confirm `EventBus.endless_run_ended` is connected to
-  `game.gd::_on_endless_run_ended` at the time the Ember channel
-  completes (no late-bind race).
-* \[ ] Repro from `/tmp/erebus.log`: T+89616 channel_start →
-  T+91604 channel_complete → silence. Fix until the summary modal
-  surfaces in this case.
-* \[ ] Smoke playtest: Ember inside Maw → summary modal → rollback →
-  arrival at Threshold Camp `SpawnPoint`.
-* \[ ] Smoke playtest: Ember outside Maw (from crypt or wilderness) →
-  SceneRouter transit → arrival at Threshold Camp `SpawnPoint`.
-* \[ ] `--verify9_8` extended to cover the route signal path.
+That's "working as designed" for the death case (rollback to anchor
+preserves endless's no-save model) but wrong for Ember, which is the
+voluntary town-return affordance. Stage 19 will incidentally fix the
+anchor by moving the Maw entrance to town; 9.8.1 ensures Ember always
+reads as "go to town" regardless of where the anchor lives.
+
+* \[x] `EndlessRun.ended_via_ember: bool` added; `end_run(false)`
+  sets it true (Ember), `end_run(true)` sets it false (death).
+  Preserved across `rollback()` so game.gd's summary-return chain
+  can read it after the load wipes other state.
+* \[x] `end_run` DebugLog tag corrected: `via=ember` for the
+  voluntary-exit branch (was `via=ascend`, a holdover from the
+  retired AscentSpire).
+* \[x] `game.gd::_on_endless_summary_return` branches on the flag:
+  on Ember exit, after the existing rollback + load + milestone-
+  recommit chain, sets `GameState.current_zone_id = threshold_camp`,
+  re-saves, and force-transits to `threshold_camp / SpawnPoint`.
+  Death path unchanged — still routes through `_resume_saved_zone()`.
+  `[endless]` DebugLog entries trace which arm fired.
+* \[x] `--verify9_8` extended (8 new asserts, 57 → 65 total):
+  `ended_via_ember` field exists, flag flips correctly for both
+  end_run branches, `rollback()` preserves the flag, game.gd source
+  references `ended_via_ember` and routes to `threshold_camp`.
+* \[x] All thirteen verifiers PASS post-hotfix.
+* \[x] Smoke playtest: Ember inside Maw → summary modal → rollback
+  → arrival at Threshold Camp `SpawnPoint` (user-confirmed 2026-06-04).
+* \[x] Smoke playtest: Ember outside Maw (from crypt or wilderness)
+  → SceneRouter transit → arrival at Threshold Camp `SpawnPoint`
+  (user-confirmed 2026-06-04).
 
 ## Stage 11 — AI asset-generation pipeline
 

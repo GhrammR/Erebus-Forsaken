@@ -33,6 +33,7 @@ func _ready() -> void:
 	fail = _verify_ascent_spire_removed(fail)
 	fail = _verify_potion_bar_script(fail)
 	fail = _verify_player_input_hotkey(fail)
+	fail = _verify_ember_exit_routing(fail)
 
 	print("--- Stage 9.8 verify: %s ---" % ("ALL PASS" if fail == 0 else "%d FAIL" % fail))
 	get_tree().quit(fail)
@@ -276,4 +277,42 @@ func _verify_player_input_hotkey(fail: int) -> int:
 			"PlayerInput handles KEY_3 (mana potion)", fail)
 	fail = _expect(src.contains("_use_first_consumable"),
 			"PlayerInput defines _use_first_consumable", fail)
+	return fail
+
+# ---- Stage 9.8.1 — Ember exit routing ------------------------------------
+
+func _verify_ember_exit_routing(fail: int) -> int:
+	# EndlessRun must carry the ember-exit flag and set it correctly
+	# from end_run(false). Death sets it false; Ember sets it true.
+	var er: Node = Engine.get_main_loop().root.get_node_or_null(^"EndlessRun")
+	fail = _expect(er != null, "EndlessRun autoload exists", fail)
+	if er == null:
+		return fail
+	fail = _expect("ended_via_ember" in er,
+			"EndlessRun.ended_via_ember field exists", fail)
+	er.active = true
+	er.start_time_ms = Time.get_ticks_msec()
+	er.end_run(false)
+	fail = _expect(bool(er.ended_via_ember) == true,
+			"end_run(false) sets ended_via_ember = true", fail)
+	fail = _expect(bool(er.ended_via_death) == false,
+			"end_run(false) leaves ended_via_death = false", fail)
+	er.active = true
+	er.start_time_ms = Time.get_ticks_msec()
+	er.end_run(true)
+	fail = _expect(bool(er.ended_via_ember) == false,
+			"end_run(true) sets ended_via_ember = false", fail)
+	fail = _expect(bool(er.ended_via_death) == true,
+			"end_run(true) sets ended_via_death = true", fail)
+	# rollback() must NOT clobber the flag — game.gd reads it after.
+	er.rollback()
+	fail = _expect(bool(er.ended_via_death) == true,
+			"rollback() preserves ended_via_death for caller", fail)
+	# game.gd source must branch on ended_via_ember and route to
+	# threshold_camp on the Ember path.
+	var game_src := FileAccess.get_file_as_string("res://scenes/game.gd")
+	fail = _expect(game_src.contains("ended_via_ember"),
+			"game.gd reads EndlessRun.ended_via_ember", fail)
+	fail = _expect(game_src.contains("\"threshold_camp\""),
+			"game.gd routes ember exit to threshold_camp", fail)
 	return fail

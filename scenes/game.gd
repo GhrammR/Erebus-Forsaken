@@ -408,6 +408,11 @@ func _on_endless_summary_return() -> void:
 	# -> save -> resume zone. Milestones are the one piece of
 	# permanent progress that survives an endless run.
 	var new_milestones := EndlessRun.milestones_new_this_run()
+	var via_ember: bool = EndlessRun.ended_via_ember
+	var via_death: bool = EndlessRun.ended_via_death
+	DebugLog.write(&"endless", "summary_return via=%s milestones_new=%d" % [
+			"ember" if via_ember else ("death" if via_death else "?"),
+			new_milestones.size()])
 	EndlessRun.rollback()
 	var ok := SaveSystem.load_game()
 	if ok:
@@ -419,7 +424,23 @@ func _on_endless_summary_return() -> void:
 			# Persist the rolled-back-but-with-milestones state. Active
 			# is already off, so the save guard doesn't trip.
 			SaveSystem.save_game()
-		_resume_saved_zone()
+		# Stage 9.8.1 — Ember is the "go to town" affordance, NOT
+		# "respawn at anchor." Override the resume-saved-zone path
+		# (which today returns to crypt R3 because that's where the
+		# pre-portal save lives) with a forced transit to Threshold
+		# Camp. Persist the new zone so a subsequent reload doesn't
+		# yank the player back to the crypt. Stage 19 moves the Maw
+		# entrance to town and incidentally fixes the anchor too, but
+		# Ember should always read as "town return" regardless.
+		if via_ember:
+			GameState.current_zone_id = &"threshold_camp"
+			SaveSystem.save_game()
+			DebugLog.write(&"endless", "ember exit -> threshold_camp/SpawnPoint")
+			_do_transit.call_deferred(
+					StringName("threshold_camp"), true,
+					StringName("SpawnPoint"), true)
+		else:
+			_resume_saved_zone()
 		# If the run ended via death the player's LifeState is DEAD and
 		# input is suppressed (see Player._on_died); the load restored
 		# HP/MP + position but not the input-process flags or life/
@@ -427,7 +448,7 @@ func _on_endless_summary_return() -> void:
 		# the player away from the save-restored position (the south-
 		# wall SpawnPoint would replace the boss-room rollback slot).
 		# Hearth Ember path leaves the player alive — nothing to do.
-		if EndlessRun.ended_via_death:
+		if via_death:
 			_player.revive_in_place.call_deferred()
 	_refresh_wave_counter()
 

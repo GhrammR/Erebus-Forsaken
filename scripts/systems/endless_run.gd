@@ -62,6 +62,14 @@ var _milestones_at_start: Array = []
 ## player as-is (Hearth Ember path — Stage 9.8 replaced AscentSpire
 ## as the only voluntary-exit route).
 var ended_via_death: bool = false
+## Stage 9.8.1 — true when the run ended via Hearth Ember (the
+## voluntary town-return affordance). game.gd's summary-return chain
+## reads this AFTER rollback to override `_resume_saved_zone()` with
+## a forced transit to Threshold Camp, so Ember reads as "go to town"
+## instead of "respawn at the pre-portal anchor" (which today, before
+## Stage 19 moves the Maw entrance to town, lands the player back in
+## the crypt boss room). Preserved across `rollback()`.
+var ended_via_ember: bool = false
 
 const _SEED_ALPHABET: String = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
@@ -192,10 +200,11 @@ func snapshot_stats() -> Dictionary:
 
 func end_run(via_death: bool = false) -> Dictionary:
 	ended_via_death = via_death
+	ended_via_ember = not via_death
 	var stats := snapshot_stats()
 	EventBus.endless_run_ended.emit(stats)
 	DebugLog.write(&"endless", "end_run via=%s wave=%d kills=%d gold+%d time=%dms" % [
-			"death" if via_death else "ascend",
+			"death" if via_death else "ember",
 			int(stats.get("wave", 0)), int(stats.get("kills", 0)),
 			int(stats.get("gold_gained", 0)), int(stats.get("elapsed_ms", 0))])
 	return stats

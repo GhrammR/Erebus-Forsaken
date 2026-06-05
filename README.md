@@ -2,15 +2,15 @@
 
 A dark-fantasy, Greek-mythology isometric ARPG. Solo development in Godot 4.
 
-> **Status:** Pre-alpha. Stages 0–9.8 complete (bootstrap, stats, movement,
-> combat, items, skills, town + quests, wilderness, dungeons, interim
-> act boss, feel pass, endless mode, consumables + potions). Strategic
-> Review v2 (2026-06-04) reset Act 1's content target: 10+ wilderness
-> zones, 5+ dungeons, 5+ quests, paper-doll equipment, AI-generated
-> voice + portraits, waypoints, seeded procgen, all sized for 2+ hours
-> of first-run gameplay. Stages 11–21 (Strategic Review v2) are the
-> path there; Stage 9.8.1 (Ember Maw-route hotfix) is the immediate
-> next step. Release plan: **single dual launch on Steam + itch.io
+> **Status:** Pre-alpha. Stages 0–9.8.1 complete (bootstrap, stats,
+> movement, combat, items, skills, town + quests, wilderness, dungeons,
+> interim act boss, feel pass, endless mode, consumables + potions,
+> Ember Maw-route hotfix). Strategic Review v2 (2026-06-04) reset
+> Act 1's content target: 10+ wilderness zones, 5+ dungeons, 5+ quests,
+> paper-doll equipment, AI-generated voice + portraits, waypoints,
+> seeded procgen, all sized for 2+ hours of first-run gameplay.
+> Stages 11–21 (Strategic Review v2) are the path there; Stage 11
+> (AI asset-generation pipeline) is the immediate next step. Release plan: **single dual launch on Steam + itch.io
 > the same day** when content-complete — no staged demo, no EA split.
 > The project is being built in public from the first commit.
 
@@ -86,9 +86,10 @@ Highlights worth a look:
   and `SaveSystem` v14 round-trips full state to versioned JSON storing
   item IDs (AD-06), not paths. Item-outline shader for rare drops on
   the ground.
-- Consumables (Stage 9.8): Hearth Ember (2s channel → Threshold Camp;
-  in The Maw routes through `EndlessRun.end_run(false)`; damage cancels
-  + consumes), Health/Mana Potions (flat HoT/MoT over 3s, per-type 8s
+- Consumables (Stage 9.8 / 9.8.1): Hearth Ember (2s channel → Threshold
+  Camp; in The Maw ends the run via `EndlessRun.end_run(false)` and
+  routes to Threshold Camp on summary close, NOT the pre-portal anchor;
+  damage cancels + consumes), Health/Mana Potions (flat HoT/MoT over 3s, per-type 8s
   cooldown, hotkeys `2`/`3`), Ichor Potion (unique 50% HP + 50% MP
   instant, 30s cooldown). HUD potion bar with per-slot cooldown veil.
   Cooldown remainders persist across save/load (no quit-and-load reset).
