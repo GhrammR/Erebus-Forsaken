@@ -33,6 +33,7 @@ FeatureFlags="*res://scripts/systems/feature_flags.gd"
 EndlessRun="*res://scripts/systems/endless_run.gd"
 DebugLog="*res://scripts/systems/debug_log.gd"
 ConsumableUse="*res://scripts/systems/consumable_use.gd"
+BitmapMode="*res://scripts/systems/bitmap_mode.gd"
 
 [application/feature_flags]
 

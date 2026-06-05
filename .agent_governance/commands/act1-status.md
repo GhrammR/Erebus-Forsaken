@@ -255,9 +255,8 @@ stable for already-closed work; new stages are appended. Existing
 5. Stage 9.5 — Feel Pass **[CLOSED]**
 6. Stage 9.7 — Endless mode (interim placement — see Stage 19) **[CLOSED]**
 7. Stage 9.8 — Quality of Life (Hearth Ember + potions) **[CLOSED]**
-8. **Stage 9.8.1 — Hotfix: Ember Maw-route bug** *(next; required before any new content)*
-9. Stage 11 — AI asset-generation pipeline (Replicate + ElevenLabs
-   wrappers, sidecar contract, LFS setup)
+8. Stage 9.8.1 — Hotfix: Ember Maw-route bug **[CLOSED]**
+9. Stage 11 — AI asset-generation pipeline **[CLOSED]**
 10. Stage 12 — Town → wilderness walkable transition (replace portal)
 11. Stage 13 — Wilderness procedural generation (seeded RNG, biome
     templates, aesthetic variants for trees / rocks / enemy skins)
@@ -954,33 +953,60 @@ reads as "go to town" regardless of where the anchor lives.
   → SceneRouter transit → arrival at Threshold Camp `SpawnPoint`
   (user-confirmed 2026-06-04).
 
-## Stage 11 — AI asset-generation pipeline
+## Stage 11 — AI asset-generation pipeline  **[CLOSED 2026-06-04]**
 
 Stage was previously "Save/load hardening" (renumbered to Stage 22).
 The 2026-06-04 scope reset claimed Stage 11 for the hybrid art /
 audio / video pipeline so every later stage can pull on it.
 
-* \[ ] `tools/asset_gen/` directory created with `gen_sprite.sh`,
-  `gen_voice.sh`, `gen_sfx.sh`, `gen_video.sh` shells. Each calls a
-  documented API endpoint, writes both the asset and its sidecar.
-* \[ ] `tools/asset_gen/README.md` documents key setup (Replicate,
-  ElevenLabs) and how to invoke each wrapper. Keys live in
-  `~/.config/erebus-secrets/`, **never** in the repo.
-* \[ ] Reproducibility sidecar schema implemented (see
-  `rules/asset-generation.md`). Every asset commit ships both the
-  binary + the `.json`.
-* \[ ] Git LFS configured via `.gitattributes` for `*.png` > 1MB,
-  `*.ogg`, `*.webm`, `*.mp4`. Sidecars stay on plain git.
-* \[ ] `BitmapMode` autoload (or feature flag) that gates whether
-  bitmap layers render. Default ON; `--procedural-only` CLI flag
-  forces OFF (testing fallback path).
-* \[ ] Hybrid-baseline assertion in `audit.md`: every entity with a
-  bitmap layer also has a procedural fallback child node.
-* \[ ] Failure mode entry if any pipeline gotcha surfaces during
-  testing (e.g., LFS clone size, sidecar drift, prompt regressions).
-* \[ ] `--verify11` covers: directory exists, sidecar schema validates,
-  LFS attributes set, BitmapMode autoload registered, procedural
-  fallback rendering verified when bitmap missing.
+* \[x] `tools/asset_gen/` directory created with `gen_sprite.sh`,
+  `gen_voice.sh`, `gen_sfx.sh`, `gen_video.sh` shells + shared
+  `lib/common.sh` (secrets sourcing, sha256, sidecar writer +
+  validator hook, JSON builder). All four wrappers ship in
+  **dry-run mode** — they emit a stub asset + a full sidecar so the
+  contract is exercised end-to-end without spend. `--live` flag is
+  the explicit opt-in once a key file exists; live code paths are
+  stubbed with `err "live mode not yet implemented"` until a real
+  asset stage needs them.
+* \[x] `tools/asset_gen/README.md` documents the `~/.config/erebus-secrets/`
+  layout (replicate.env, elevenlabs.env, runway.env), wrapper usage,
+  sidecar contract pointer, and cost discipline (per-stage $20 / $50 /
+  $100+ ceilings from `rules/asset-generation.md`).
+* \[x] Reproducibility sidecar schema validator
+  (`tools/asset_gen/validate_sidecar.py`). Enforces every required
+  key (tool, model, prompt, seed, params, output\_sha256,
+  generated\_at ISO-8601 UTC, generated\_by, purpose, license,
+  cost\_usd >= 0), known-tool whitelist, sha256 hex format. Run
+  automatically by every wrapper write and exposed as a standalone
+  CLI for repo-wide sweeps.
+* \[x] `.gitattributes` configured for LFS: `*.ogg / *.wav / *.mp3 /
+  *.webm / *.mp4 / *.mov` always go through LFS. Sidecars (`*.json`)
+  explicitly pinned to plain git via `-filter -diff -merge text`.
+  Large PNGs (>1MB) get tracked per-file via `git lfs track`
+  at write time — small-PNG sprite case stays on plain git so the
+  repo remains clonable without LFS.
+* \[x] `BitmapMode` autoload (`scripts/systems/bitmap_mode.gd`),
+  registered in `project.godot` after `ConsumableUse`. Default
+  `enabled = true`. CLI flag `--procedural-only` (read from
+  `OS.get_cmdline_user_args()` in `_ready`) forces OFF process-wide.
+  Per-emitter `mode_changed(enabled: bool)` signal lets sprite
+  scenes react to runtime toggle without polling. Sprite-side
+  integration lands in Stage 15 (paper-doll); the autoload + flag
+  are enough for Stage 11.
+* \[x] Hybrid-baseline assertion section added to `commands/audit.md`
+  (item #10). Covers: bitmap-without-procedural detection, the
+  `--procedural-only` smoke launch as the runtime check, and a
+  find-based sidecar sweep that fails on any committed binary with
+  no `.json` sibling. Cost-ceiling reminder included.
+* \[x] `--verify11` (33 / 33 PASS): every wrapper present +
+  executable, validator accepts good fixture, validator rejects
+  fixture missing required keys, dry-run `gen_sprite.sh` end-to-end
+  + produced sidecar validates, `.gitattributes` LFS rules + sidecar
+  carve-out, BitmapMode autoload (registered, default-on,
+  `mode_changed` signal round-trips through `set_enabled`),
+  `--procedural-only` source-level wiring, `rules/asset-generation.md`
+  + `audit.md` hybrid section present.
+* \[x] Regression: all 13 verifiers PASS post-Stage-11.
 
 ## Stage 12 — Town → wilderness walkable transition
 

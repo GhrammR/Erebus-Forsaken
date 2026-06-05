@@ -2,15 +2,16 @@
 
 A dark-fantasy, Greek-mythology isometric ARPG. Solo development in Godot 4.
 
-> **Status:** Pre-alpha. Stages 0–9.8.1 complete (bootstrap, stats,
+> **Status:** Pre-alpha. Stages 0–11 complete (bootstrap, stats,
 > movement, combat, items, skills, town + quests, wilderness, dungeons,
 > interim act boss, feel pass, endless mode, consumables + potions,
-> Ember Maw-route hotfix). Strategic Review v2 (2026-06-04) reset
-> Act 1's content target: 10+ wilderness zones, 5+ dungeons, 5+ quests,
-> paper-doll equipment, AI-generated voice + portraits, waypoints,
-> seeded procgen, all sized for 2+ hours of first-run gameplay.
-> Stages 11–21 (Strategic Review v2) are the path there; Stage 11
-> (AI asset-generation pipeline) is the immediate next step. Release plan: **single dual launch on Steam + itch.io
+> Ember Maw-route hotfix, AI asset-generation pipeline). Strategic
+> Review v2 (2026-06-04) reset Act 1's content target: 10+ wilderness
+> zones, 5+ dungeons, 5+ quests, paper-doll equipment, AI-generated
+> voice + portraits, waypoints, seeded procgen, all sized for 2+ hours
+> of first-run gameplay. Stages 12–21 (Strategic Review v2) are the
+> path there; Stage 12 (town → wilderness walkable transition) is the
+> immediate next step. Release plan: **single dual launch on Steam + itch.io
 > the same day** when content-complete — no staged demo, no EA split.
 > The project is being built in public from the first commit.
 
@@ -141,6 +142,7 @@ godot --headless --path . -- --verify9_5    # Feel pass + crit + LOS  (Stage 9.5
 godot --headless --path . -- --verify9_7    # Endless mode + The Maw  (Stage 9.7)
 godot --headless --path . -- --verify9_8    # Consumables + potions   (Stage 9.8)
 godot --headless --path . -- --verify10     # Character select        (Stage 10)
+godot --headless --path . -- --verify11     # AI asset-gen pipeline   (Stage 11)
 ```
 
 Debug instrumentation (Stage 9.7):

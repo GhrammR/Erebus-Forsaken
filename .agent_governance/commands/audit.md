@@ -43,7 +43,30 @@ report; does not auto-fix.
      a bitmap with the procedural fallback preserved (per
      `rules/asset-pipeline.md`).
 
-10. **Parking lot review**
+10. **Hybrid-baseline assertion (Stage 11)**
+    - Every sprite scene that exposes a bitmap layer MUST also keep a
+      procedural fallback child node (per the hybrid contract in
+      `rules/asset-pipeline.md` and `rules/asset-generation.md`).
+    - Smoke this by launching with `--procedural-only`: the project
+      must still render every entity legibly. Any entity that vanishes
+      or shows obvious gaps is a hybrid-contract violation.
+    - Every committed bitmap, audio, or video asset under `art/bitmap/`,
+      `audio/`, or `video/` MUST have a `.json` sidecar of the same
+      basename. Sweep with:
+      ```
+      find art/bitmap audio video -type f \
+        \( -name '*.png' -o -name '*.ogg' -o -name '*.wav' \
+           -o -name '*.mp3' -o -name '*.webm' -o -name '*.mp4' \) 2>/dev/null \
+        | while read f; do
+            sidecar="${f%.*}.json"
+            [[ -f "$sidecar" ]] || echo "MISSING SIDECAR: $f"
+          done
+      ```
+      Zero hits required. Each missing sidecar is a violation.
+    - Sum `cost_usd` across sidecars added since the last stage close to
+      confirm spend stayed under the stage's cost ceiling.
+
+11. **Parking lot review**
     - Read `parking_lot.md`. Promote nothing into active scope unless it
       replaces a current Act 1 item.
 
