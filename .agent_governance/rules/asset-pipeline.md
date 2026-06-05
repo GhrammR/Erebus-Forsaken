@@ -91,42 +91,72 @@ opens.
 | Shade-Hunter   | Bow, hooded silhouette    | Charcoal, pale teal accent  |
 | Ossuary Priest | Wand + bone shoulder bulk | Bone white, sickly green    |
 
-## Category 2 — Bitmap assets (post-Act-1-polish)
+## Category 2 — Bitmap / audio assets (hybrid polish layer)
 
-PNG/texture files. Claude Code **cannot** generate these. Approved sources:
+PNG/texture/audio files. Sourced from:
 
-- **Kenney.nl** — free, open license, isometric and dark-fantasy packs.
+- **AI generation pipeline** — see `rules/asset-generation.md` for the
+  contract. Replicate (images/SFX/video), ElevenLabs (voice), and similar
+  third-party services, wrapped behind `tools/asset_gen/` scripts. Files
+  arrive in the repo via Git LFS (>1MB) or plain git (small assets),
+  each accompanied by a reproducibility sidecar.
+- **Kenney.nl** — free, open license.
 - **OpenGameArt.org** — community, check license per asset.
-- **Midjourney / Stable Diffusion** — generated, ~$10–30/month.
-- **Fiverr** — commissioned, $5–15 per sprite.
+- **Commissioned art** — when AI output is insufficient for a hero asset.
 
 ### Integration rule (the only one that matters)
 
-> A bitmap asset replaces a procedural sprite **only after** the mechanic
-> that sprite represents is fully functional, tested, and signed off.
+> A bitmap or audio asset replaces a procedural form **only after** the
+> mechanic it represents is fully functional, tested, and signed off.
 
 If the Myrmidon's basic attack still has a damage bug, the Myrmidon does not
 get a bitmap. Procedural sprite stays. Fix the bug first. This rule prevents
 the most common solo-dev failure: spending a week on art for a system that
 gets rewritten next week.
 
-### Swap mechanics
+### Hybrid contract (2026-06-04)
 
-When a bitmap arrives:
-1. Drop file into `art/bitmap/<category>/`.
-2. Swap the procedural `Node2D` for a `Sprite2D` in the entity scene.
-3. Keep the procedural script in the file tree (do not delete). It is the
-   fallback if the bitmap source becomes unavailable.
-4. Verify the bitmap pivots at feet, matches the established silhouette,
+Every visible entity in the game **must** have a working procedural form
+*before* a bitmap is even attempted. The procedural form is what ships if
+the bitmap pipeline produces nothing usable. Practical consequences:
+
+- A new enemy lands with `art/procedural/enemies/<name>_sprite.tscn` and
+  is playable. Only after the procedural form is in and the mechanic is
+  signed off does generation get scheduled.
+- A new item lands with its `ItemGlyph` color/shape entry on the resource.
+  Only after the item itself works (drop → pickup → equip → effect)
+  does an icon get generated.
+- A new NPC lands with their procedural sprite and dialogue text. Only
+  after the dialogue tree is in does voice line generation get scheduled.
+- A missing bitmap **never** blocks a verifier, a stage closure, or a
+  playtest. If the bitmap is broken or missing, the procedural form
+  draws automatically.
+
+### Swap mechanics (bitmap arrival)
+
+When a bitmap arrives (generated or sourced):
+1. Sidecar `.json` lands alongside it (see `rules/asset-generation.md`).
+2. Drop file into `art/bitmap/<category>/`. Use Git LFS for >1MB.
+3. Update the entity's scene to expose a `Sprite2D` child node and a
+   procedural fallback child node, gated by `BitmapMode.enabled`.
+4. The procedural script **stays** in the file tree. It is the fallback
+   if a bitmap source becomes unavailable, fails to import, or is
+   intentionally disabled (e.g., `--procedural-only` flag).
+5. Verify the bitmap pivots at feet, matches the established silhouette,
    and reads at gameplay zoom.
-5. Animations migrate from `AnimationPlayer` modulate/rotation tracks to
-   sprite frame tracks. The animation *names* stay the same so calling code
-   does not change.
+6. Animations migrate from `AnimationPlayer` modulate/rotation tracks to
+   sprite frame tracks. The animation **names** stay the same so calling
+   code does not change.
 
 ## Audio
 
-Same two-category model when audio enters scope:
-- Category 1: silence with on-screen damage numbers and screen-shake cues.
-- Category 2: licensed/sourced audio, integrated after mechanics are sound.
+Same hybrid contract:
+- **Procedural fallback**: silence with on-screen damage numbers and
+  screen-shake cues (current `AudioBank` already no-ops on missing
+  `.ogg` files — that's the procedural baseline).
+- **Hybrid bitmap layer**: AI-generated SFX (Replicate/ElevenLabs SFX),
+  AI-generated NPC voice (ElevenLabs), licensed music. Drop into
+  `audio/sfx/`, `audio/voice/`, `audio/music/`. Sidecar `.json` required.
 
-Audio is out of Act 1 scope until combat feel is settled.
+Audio is in scope as soon as the procedural baseline is solid — the
+pipeline is the limiter, not the design.

@@ -20,6 +20,7 @@ extends Node
 ##   physics  — collisions, position deltas, push-out events
 ##   skills   — cast, cooldown ticks, MP spends
 ##   ui       — modal open/close, HUD updates
+##   consumables — potion use, cooldown start/expire, ember channel state, regen ticks
 ##
 ## Format on stdout (and the optional log file):
 ##   [T+12345ms][flag] message

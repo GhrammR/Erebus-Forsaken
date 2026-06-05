@@ -16,5 +16,8 @@ entries = [
 { "item_id": &"pythia_staff_starter", "price": 0 },
 { "item_id": &"shade_bow_starter", "price": 0 },
 { "item_id": &"ossuary_wand_starter", "price": 0 },
+{ "item_id": &"hearth_ember", "price": 0 },
+{ "item_id": &"health_potion", "price": 0 },
+{ "item_id": &"mana_potion", "price": 0 },
 ]
 sell_back_ratio = 0.5

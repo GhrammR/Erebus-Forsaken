@@ -4,7 +4,7 @@ extends Node
 ## migrate() step. The on-disk format is human-readable so a tester can
 ## hand-edit corruption cases (rules/failure-modes.md #7 leans on this).
 
-const SAVE_VERSION: int = 13
+const SAVE_VERSION: int = 14
 const SAVE_PATH: String = "user://save_slot_1.dat"
 
 signal save_completed(success: bool)
@@ -121,6 +121,8 @@ func migrate(old: Dictionary) -> Dictionary:
 		old = _migrate_v11_to_v12(old)
 	if v < 13:
 		old = _migrate_v12_to_v13(old)
+	if v < 14:
+		old = _migrate_v13_to_v14(old)
 	return old
 
 func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
@@ -212,6 +214,15 @@ func _migrate_v9_to_v10(old: Dictionary) -> Dictionary:
 		old["corpse"] = { "corpses": [], "next_id": 1, "spills": [] }
 	return old
 
+func _migrate_v13_to_v14(old: Dictionary) -> Dictionary:
+	# Stage 9.8 — consumable cooldowns persist across save/load to block
+	# quit-and-load spam. Legacy v13 saves predate ConsumableUse; default
+	# to no cooldowns in flight.
+	old["version"] = 14
+	if not old.has("consumable_cooldowns"):
+		old["consumable_cooldowns"] = { "cooldowns": {} }
+	return old
+
 func _migrate_v12_to_v13(old: Dictionary) -> Dictionary:
 	# v12 had no per-zone spawn budget or claimed-milestone state.
 	# Legacy saves default to empty dicts/lists — directors run at
@@ -288,6 +299,11 @@ func _snapshot(player: Node) -> Dictionary:
 		"director_budgets": _snapshot_director_budgets(),
 		"endless_milestones": GameState.endless_milestones.duplicate(),
 		"titles": GameState.titles.duplicate(),
+		# v14 (Stage 9.8): persist potion-type cooldown remainders so
+		# quit-and-load can't reset them. Active Ember channels are
+		# dropped on save — matches the "interrupted -> lose the ember"
+		# semantics; quitting mid-channel costs you the ember.
+		"consumable_cooldowns": ConsumableUse.snapshot(),
 	}
 	return snap
 
@@ -422,6 +438,8 @@ func _apply(player: Node, data: Dictionary) -> void:
 	GameState.boss_first_kill = bool(data.get("boss_first_kill", false))
 	GameState.endless_milestones = (data.get("endless_milestones", []) as Array).duplicate()
 	GameState.titles = (data.get("titles", []) as Array).duplicate()
+	# v14 (Stage 9.8): restore potion-type cooldown remainders.
+	ConsumableUse.restore(data.get("consumable_cooldowns", {}))
 	_pending_enemy_snapshot = data.get("enemies", []) as Array
 	_pending_loot_snapshot = data.get("loot", []) as Array
 	_pending_director_budgets = (data.get("director_budgets", {}) as Dictionary).duplicate()

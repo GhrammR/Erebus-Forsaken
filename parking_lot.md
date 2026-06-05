@@ -5,6 +5,41 @@ and so they do not silently leak into active work. Items here move into
 scope only via explicit user approval and only when an Act 1 item is
 fully complete.
 
+**2026-06-04 reconciliation:** the Strategic Review v2 scope reset
+adopted several items previously parked here into the new Stages 11–21
+roadmap in `act1-status.md`. The "Adopted into Act 1" section below
+records what moved; the items themselves are deleted from the parking
+list once their stage entry exists. Adopted items: paper-doll
+equipment rendering (→ Stage 15), item icons (→ Stage 16), NPC voice
++ portraits (→ Stage 17), seeded wilderness generation (→ Stage 13),
+waypoints (→ Stage 14), modular-sprite-polish (→ Stage 11 pipeline +
+Stage 15 paper-doll combined), ember-channel-interrupt-rules
+(resolved in 9.8 spec), ascent-spire-retire (resolved in 9.8 spec).
+
+## Adopted into Act 1 (Strategic Review v2, 2026-06-04)
+
+The following items moved from this parking lot into the rewritten
+execution order in `act1-status.md`:
+
+- `paper-doll-equipment` → Stage 15
+- `item-icons` → Stage 16
+- `npc-voice-portraits` → Stage 17
+- `seeded-wilderness-generation` → Stage 13
+- `waypoint-system` → Stage 14
+- `larger-wilderness-content` → Stage 20
+- `multiple-wilderness-zones` → Stage 20
+- `dungeons-along-the-path` → Stage 20
+- `winding-paths` → Stage 20
+- `walkable-town-to-wilderness` → Stage 12
+- `maw-in-town` → Stage 19
+- `boss-demote-and-final-boss` → Stage 18
+- `more-defined-sprites` → Stage 11 pipeline + Stage 15 paper-doll
+- `5-quests-per-act` → Stage 20
+
+These are *adopted*, not parked. Implementation lives in the stages
+above; the parking lot entries for them (if any existed) have been
+removed.
+
 ## Format
 
 ```
@@ -156,21 +191,6 @@ fully complete.
   the "what does the enemy do between actions" pass that would
   ride alongside navmesh.
 
-### modular-sprite-polish — Per-part replacement polish pass
-- Why parked: every procedural sprite already follows the
-  modular subtree contract (rules/asset-pipeline.md), so a
-  polish pass can replace individual parts without touching
-  silhouette or animation. The pass itself — adding bone
-  textures, flowing cloth shaders, facial detail, weapon
-  details — is a deliberate Stage 12 (or post-launch content
-  drop) item, not something to drift into now.
-- Earliest revisit: Stage 12, after the title screen lands.
-- Notes: priority order based on screen time — Player classes,
-  then standard enemies (wretch, bog-caller), then Act boss,
-  then Bone Servant, then NPCs. Each part swap is its own
-  PR-sized unit. Bitmap and detailed-procedural treatments
-  can coexist via the same subnode names.
-
 ### rare-drop-ground-vfx — Beam-of-light cue for rare/unique drops
 - Why parked: Stage 9.5 shipped a static yellow Polygon2D "GlowCore"
   + golden particle burst on rare drops. Both read as unexplained
@@ -209,16 +229,14 @@ fully complete.
 - Why parked: Phase 3 (boss HP ≤ 33%) calls `_spawn_phase3_add`
   which spawns one shade_wretch reinforcement. Behaviour is
   intentional per Stage 9 scope but it has no visual telegraph,
-  so a playtester reads it as a wave bug. A short pre-spawn cue
-  (boss roar + screen pulse + summoned add fades in instead of
-  popping) would make the mechanic readable.
-- Earliest revisit: Stage 12 pre-launch polish (alongside title
-  screen / options).
-- Notes: reuse the existing CameraShake + HitStop autoloads for
-  the roar, lerp the new wretch's modulate.a from 0 to 1 over
-  ~0.4s. Optional: ground-glow particle ring at the spawn
-  position the moment before the wretch lands. Cheap, big
-  readability win.
+  so a playtester reads it as a wave bug.
+- **Status (2026-06-04):** likely obsoleted by Stage 18 (the
+  current Hekate-Marked Forsaken Boss demotes to a rare-monster
+  encounter and a new final boss takes the act-climax role).
+  The tell may not apply to the rare-monster form; revisit when
+  Stage 18 lands.
+- Earliest revisit: Stage 21 (feel pass at scale), if still
+  applicable to the demoted Forsaken Rare.
 
 ### potion-belt — Dedicated potion belt UI slot row
 - Why parked: Stage 9.8 ships potions accessible via inventory +
@@ -231,30 +249,6 @@ fully complete.
   the slot tracks its source stack so picking up matching potions
   refills the belt automatically. Cooldown veil rides on the slot
   not the source item.
-
-### ember-channel-interrupt-rules — Hearth Ember interrupt design
-- Why parked: Stage 9.8 ships with a straightforward "taking
-  damage interrupts the channel and consumes the ember." The
-  alternative — "interrupt but keep the ember" — is more forgiving
-  but loses tension. Decided 2026-06-04 alongside the Hearth Ember
-  spec to default to lose-the-ember; revisit only if playtest
-  shows it's too punishing.
-- Earliest revisit: Stage 12 polish or post-itch.io demo feedback.
-- Notes: knob is `data/items/consumables/hearth_ember.tres`
-  `consume_on_interrupt: bool`. UI surfacing — maybe a "channeled
-  goods" tooltip note.
-
-### ascent-spire-retire — Decide AscentSpire's fate after Hearth Ember
-- Why parked: Stage 9.7 polish added the AscentSpire as the only
-  non-death exit from The Maw. Stage 9.8 ships Hearth Ember which
-  works everywhere including in-Maw. Spire then has two options:
-  (a) retire — delete the scene + script, or (b) keep as flavour
-  with no mechanic (just decorative + lore stinger). Stage 9.8
-  closure criteria decides.
-- Earliest revisit: end of Stage 9.8.
-- Notes: if kept, consider giving it a non-exit interaction
-  (lore line, faint hum, ambient effect) so it doesn't feel like
-  vestigial UI.
 
 ### consumable-uniques — Rare-quality consumables with named effects
 - Why parked: Stage 9.8 ships generic Hearth Ember + Health/Mana

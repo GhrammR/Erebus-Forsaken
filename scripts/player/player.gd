@@ -32,6 +32,10 @@ var _facing_right: bool = true
 var _life: LifeState = LifeState.ALIVE
 var _combat: CombatState = CombatState.READY
 var _attack_cd_remaining: float = 0.0
+## Stage 9.8 — Hearth Ember channel lock. While true, movement intent
+## is zeroed in _physics_process and attack / skill inputs early-return.
+## ConsumableUse owns the lifecycle; Player just consults the flag.
+var _channeling: bool = false
 
 ## Stage 5: primary skill slot. Swapped in assign_class.
 var _skill_1: Skill = null
@@ -93,6 +97,14 @@ func _ready() -> void:
 	_health.died.connect(_on_died)
 	_hitbox.base_damage = ATTACK_BASE_DAMAGE
 	_hitbox.owner_body = self
+	# Stage 9.8 — register with ConsumableUse so InventoryPanel and
+	# PlayerInput hotkeys can find the active player without traversing
+	# the scene tree. Cleared in _exit_tree.
+	ConsumableUse.set_active_player(self)
+
+func _exit_tree() -> void:
+	if ConsumableUse.get_active_player() == self:
+		ConsumableUse.set_active_player(null)
 
 func assign_class(cd: ClassData) -> void:
 	assert(cd != null, "Player.assign_class: ClassData is null")
@@ -190,6 +202,11 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector2.ZERO
 		move_and_slide()
 		return
+	if _channeling:
+		velocity = Vector2.ZERO
+		move_and_slide()
+		_update_anim()
+		return
 	velocity = _intent * WALK_SPEED
 	move_and_slide()
 	_update_anim()
@@ -227,7 +244,7 @@ func _on_move_intent_changed(direction: Vector2) -> void:
 		facing_dir = direction
 
 func _on_skill_1_pressed() -> void:
-	if _life != LifeState.ALIVE or _skill_1 == null:
+	if _life != LifeState.ALIVE or _skill_1 == null or _channeling:
 		return
 	_skill_1.try_activate(self, facing_dir)
 
@@ -241,6 +258,8 @@ func _on_attack_pressed() -> void:
 
 func attack() -> void:
 	if _life != LifeState.ALIVE:
+		return
+	if _channeling:
 		return
 	if _combat != CombatState.READY:
 		return
@@ -411,3 +430,15 @@ func play_sprite_anim(anim_name: StringName) -> void:
 
 func is_alive() -> bool:
 	return _life == LifeState.ALIVE
+
+## Stage 9.8 — Hearth Ember channel lock. ConsumableUse owns the
+## lifecycle: it flips this to true when the channel starts and back
+## to false on completion / interruption / item-loss. Player just
+## reads the flag in _physics_process / attack() / skill_1.
+func set_channeling(value: bool) -> void:
+	_channeling = value
+	if value:
+		_intent = Vector2.ZERO
+
+func is_channeling() -> bool:
+	return _channeling

@@ -2,9 +2,17 @@
 
 A dark-fantasy, Greek-mythology isometric ARPG. Solo development in Godot 4.
 
-> **Status:** Pre-alpha. Stages 0–4 complete (bootstrap, stat foundation,
-> player movement, combat core, itemization). Stage 5 (one skill per class)
-> is next. The project is being built in public from the first commit.
+> **Status:** Pre-alpha. Stages 0–9.8 complete (bootstrap, stats, movement,
+> combat, items, skills, town + quests, wilderness, dungeons, interim
+> act boss, feel pass, endless mode, consumables + potions). Strategic
+> Review v2 (2026-06-04) reset Act 1's content target: 10+ wilderness
+> zones, 5+ dungeons, 5+ quests, paper-doll equipment, AI-generated
+> voice + portraits, waypoints, seeded procgen, all sized for 2+ hours
+> of first-run gameplay. Stages 11–21 (Strategic Review v2) are the
+> path there; Stage 9.8.1 (Ember Maw-route hotfix) is the immediate
+> next step. Release plan: **single dual launch on Steam + itch.io
+> the same day** when content-complete — no staged demo, no EA split.
+> The project is being built in public from the first commit.
 
 ---
 
@@ -51,28 +59,53 @@ Highlights worth a look:
 ## Current state
 
 - Godot 4.6.3 project, GDScript, GL Compatibility renderer.
-- Five autoloads: `GameState`, `SaveSystem` (versioned, AD-07),
-  `EventBus` (whitelisted signals, AD-08), `SceneRouter`, `Database` (AD-03).
+- Autoloads: `GameState`, `SaveSystem` (versioned, AD-07), `EventBus`
+  (whitelisted signals, AD-08), `SceneRouter`, `Database` (AD-03),
+  `ItemInstanceRegistry`, `CameraShake`, `AudioBank`, `DebugLog`,
+  `EndlessRun`, `ConsumableUse`.
 - Stat system: four attributes (Strength / Dexterity / Vitality / Pneuma),
-  five Act 1 derived stats (MaxHP, MaxMP, Defense, AttackRating, Resistance).
-  All four classes' base values live in `data/classes/`. Stats math
-  goes through one Resource (AD-01); no inline attribute arithmetic.
+  five Act 1 derived stats (MaxHP, MaxMP, Defense, AttackRating,
+  Resistance). All four classes' base values live in `data/classes/`.
+  Stats math goes through one Resource (AD-01); no inline attribute
+  arithmetic. Crit math added in Stage 9.5.
 - Player: one `CharacterBody2D` scene, class injected at runtime via
   `assign_class(ClassData)` (AD-02). Click-to-move primary, WASD
-  secondary (AD-09). Pause menu, camera follow, sprite L/R flip.
+  secondary (AD-09). All four classes (Myrmidon, Pythia, Shade-Hunter,
+  Ossuary Priest) drawn procedurally. Pause menu, camera follow,
+  sprite L/R flip, in-place revive, corpse-run death penalty.
 - Combat: every hit funnels through `DamageResolver.resolve()` (AD-04).
   `HealthComponent`, `HitboxComponent`, `HurtboxComponent` as composed
-  Nodes/Areas, not subclasses. Damage numbers, death state, respawn.
-- Items: `ItemData` Resources for 13 seed items across 7 equipment slots
-  (WEAPON / OFFHAND / HEAD / CHEST / LEGS / RING / AMULET). Fixed-affix
-  bonuses fold into Stats via a fourth `equip_*` layer. `Inventory`
-  is a 24-slot list (AD-10), drops go through `WorldItem` walk-over
-  auto-pickup, and `SaveSystem` v2 round-trips full state to versioned
-  JSON storing item IDs (AD-06), not paths.
-- Procedural sprites only — Myrmidon (player) and training dummies.
-  Canonical animation names `idle/walk/attack/cast/hit/die` (AD-11)
-  exist on every sprite so the eventual bitmap swap is a node-type
-  change, not a code rewrite.
+  Nodes/Areas. Damage numbers, crit math, hit-stop, screen shake,
+  feel pass (Stage 9.5) on every player-affecting event.
+- Skills: one skill per class (Stage 5), cooldowns + costs, HUD skill icon
+  with cooldown veil.
+- Items: `ItemData` Resources for weapons / armor / uniques / consumables
+  across 7 equipment slots. Class-restricted unique sigils guaranteed on
+  first Act boss kill. `Inventory` is a 36-slot list (AD-10) with
+  per-class loadouts. Drops go through `WorldItem` walk-over auto-pickup,
+  and `SaveSystem` v14 round-trips full state to versioned JSON storing
+  item IDs (AD-06), not paths. Item-outline shader for rare drops on
+  the ground.
+- Consumables (Stage 9.8): Hearth Ember (2s channel → Threshold Camp;
+  in The Maw routes through `EndlessRun.end_run(false)`; damage cancels
+  + consumes), Health/Mana Potions (flat HoT/MoT over 3s, per-type 8s
+  cooldown, hotkeys `2`/`3`), Ichor Potion (unique 50% HP + 50% MP
+  instant, 30s cooldown). HUD potion bar with per-slot cooldown veil.
+  Cooldown remainders persist across save/load (no quit-and-load reset).
+- Zones: Threshold Camp (town, NPCs, vendor Kallias, quest-giver Eurynome,
+  workbench), Blighted Reach (wilderness, finite spawn budget), Forsaken
+  Crypt (multi-room dungeon w/ act boss Hekate-Marked), Forsaken Depths
+  ("The Maw" — endless mode w/ Tower of Ascension milestones).
+- Endless mode (Stage 9.7): post-boss portal to The Maw, EndlessDirector
+  with wave scaling, milestone rewards at 10/25/50/100, summary modal with
+  seed string, EndlessRun.end_run rollback chain.
+- Save system: v14 schema with backward migration chain (v1 → v14),
+  per-zone state lifecycle (AD-12), corpse persistence across saves.
+- Procedural sprites only (AD-11). All six canonical animation names ship
+  on every sprite so the eventual bitmap swap is a node-type change, not
+  a code rewrite.
+- DebugLog autoload (Stage 9.7): flag-gated logging with file mirror,
+  12 categories, `--debug=flag1,flag2` CLI for targeted instrumentation.
 
 ## Running it
 
@@ -80,22 +113,43 @@ Highlights worth a look:
 godot --path .
 ```
 
-Plus four workbench flags for the systems built so far:
+Workbench flags (each launches an isolated test harness):
 
 ```bash
-godot --path . -- --workbench    # stat workbench (Stage 1)
-godot --path . -- --movement     # movement workbench (Stage 2)
-godot --path . -- --combat       # combat workbench (Stage 3)
-godot --path . -- --loot         # loot + inventory + save/load (Stage 4)
+godot --path . -- --workbench    # stat workbench         (Stage 1)
+godot --path . -- --movement     # movement workbench     (Stage 2)
+godot --path . -- --combat       # combat workbench       (Stage 3)
+godot --path . -- --loot         # loot + inventory       (Stage 4)
+godot --path . -- --skills       # skills workbench       (Stage 5)
+godot --path . -- --town         # town / NPCs / quests   (Stage 6)
 ```
 
-And three headless verifiers (CI-friendly, exit 0 on pass):
+Headless verifiers (CI-friendly, exit 0 on pass):
 
 ```bash
-godot --headless --path . -- --verify    # Stats math (Stage 1)
-godot --headless --path . -- --verify3   # DamageResolver math (Stage 3)
-godot --headless --path . -- --verify4   # Inventory + save round-trip (Stage 4)
+godot --headless --path . -- --verify       # Stats math              (Stage 1)
+godot --headless --path . -- --verify3      # DamageResolver          (Stage 3)
+godot --headless --path . -- --verify4      # Inventory + save        (Stage 4)
+godot --headless --path . -- --verify5      # Skills                  (Stage 5)
+godot --headless --path . -- --verify6      # Town / quests / vendor  (Stage 6)
+godot --headless --path . -- --verify7      # Wilderness              (Stage 7)
+godot --headless --path . -- --verify7_5    # Audio + transitions     (Stage 7.5)
+godot --headless --path . -- --verify8      # Dungeon                 (Stage 8)
+godot --headless --path . -- --verify9      # Act boss + uniques      (Stage 9)
+godot --headless --path . -- --verify9_5    # Feel pass + crit + LOS  (Stage 9.5)
+godot --headless --path . -- --verify9_7    # Endless mode + The Maw  (Stage 9.7)
+godot --headless --path . -- --verify9_8    # Consumables + potions   (Stage 9.8)
+godot --headless --path . -- --verify10     # Character select        (Stage 10)
 ```
+
+Debug instrumentation (Stage 9.7):
+
+```bash
+godot --path . -- --debug=combat,spawn      # enable named DebugLog flags
+godot --path . -- --debug=all               # enable all 12 categories
+```
+
+Logs print to stdout and mirror to `tmp/erebus.log` for post-mortem.
 
 Requires Godot 4.6 or newer. No build steps, no package install.
 
@@ -110,7 +164,23 @@ Requires Godot 4.6 or newer. No build steps, no package install.
 
 There is no roadmap beyond Act 1. Act 1 ships when every box in
 [`act1-status.md`](.agent_governance/commands/act1-status.md) is checked.
-Anything past Act 1 is parked until then.
+Anything past Act 1 is parked until then. The Strategic Review v2
+roadmap (Stages 11–23) covers AI asset pipeline, town-to-wilderness
+walking, seeded procgen, waypoints, paper-doll equipment, item icons,
+NPC voice + portraits, boss demote + new final boss, Maw moved to
+town, the 10+ zones / 5+ dungeons / 5+ quests content target, feel
+pass at scale, save hardening, and pre-launch polish — culminating in
+a single Steam + itch.io dual launch.
+
+## Procedural-plus-AI hybrid art
+
+Procedural sprites drawn in GDScript are the always-shippable baseline
+([`rules/asset-pipeline.md`](.agent_governance/rules/asset-pipeline.md)).
+AI-generated bitmap, voice, and SFX are an optional polish layer; if a
+generated asset isn't ready, the procedural form ships and the feature
+is no less complete. The generation pipeline contract lives in
+[`rules/asset-generation.md`](.agent_governance/rules/asset-generation.md)
+and arrives in Stage 11.
 
 ## Contributing
 

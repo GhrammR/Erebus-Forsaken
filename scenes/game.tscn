@@ -13,6 +13,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/skill_icon.tscn" id="11_skillicon"]
 [ext_resource type="PackedScene" path="res://scenes/ui/endless_summary.tscn" id="12_endsum"]
 [ext_resource type="PackedScene" path="res://scenes/ui/milestone_modal.tscn" id="13_mstone"]
+[ext_resource type="Script" path="res://scripts/ui/potion_bar.gd" id="14_potbar"]
 
 [node name="Game" type="Node2D"]
 y_sort_enabled = true
@@ -151,3 +152,11 @@ offset_left = 16.0
 offset_top = 640.0
 offset_right = 64.0
 offset_bottom = 704.0
+
+[node name="PotionBar" type="Control" parent="HUD"]
+offset_left = 80.0
+offset_top = 648.0
+offset_right = 224.0
+offset_bottom = 700.0
+mouse_filter = 2
+script = ExtResource("14_potbar")

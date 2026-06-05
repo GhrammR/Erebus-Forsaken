@@ -70,6 +70,11 @@ without an explicit user-approved supersede entry.
    the next. A half-built mechanic is technical debt with interest.
 7. **No invented lore, names, or NPCs.** Class names, attribute names, and
    the four-class roster are fixed. New content requires explicit approval.
+8. **README.md stays in sync with the repo.** Every commit that changes
+   user-visible state updates `README.md` so a stranger landing on the
+   GitHub page sees what is actually built. See the *Documentation sync*
+   section of `rules/git-and-github.md`. A drifted README counts as
+   broken — fix it in the same commit.
 
 ## Index
 

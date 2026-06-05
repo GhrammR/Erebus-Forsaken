@@ -21,6 +21,11 @@ const _SFX_BANK: Dictionary = {
 	&"quest_complete": "res://audio/sfx/quest_complete.ogg",
 	&"save":           "res://audio/sfx/save.ogg",
 	&"load":           "res://audio/sfx/load.ogg",
+	&"hearth_ember_channel":  "res://audio/sfx/hearth_ember_channel.ogg",
+	&"hearth_ember_complete": "res://audio/sfx/hearth_ember_complete.ogg",
+	&"hearth_ember_break":    "res://audio/sfx/hearth_ember_break.ogg",
+	&"potion_drink":          "res://audio/sfx/potion_drink.ogg",
+	&"potion_ichor":          "res://audio/sfx/potion_ichor.ogg",
 }
 
 const _AMBIENT_BANK: Dictionary = {

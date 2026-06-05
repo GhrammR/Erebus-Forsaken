@@ -322,6 +322,16 @@ func _drop_first_kill_unique() -> void:
 	AudioBank.play_sfx(&"drop_rare")
 	var drop_pos := global_position + Vector2(randf_range(-14, 14), randf_range(-18, -6))
 	_spawn_world_item.call_deferred(uid, drop_pos)
+	# Stage 9.8 — first kill also guarantees one Hearth Ember (the player
+	# needs an unconditional way home after the boss fight before they
+	# discover the portal) and rolls 25% on an Ichor Potion. These land
+	# alongside the unique with small spread so all three are visible.
+	var ember_pos := global_position + Vector2(randf_range(-14, 14), randf_range(-18, -6))
+	_spawn_world_item.call_deferred(&"hearth_ember", ember_pos)
+	if randf() < 0.25:
+		AudioBank.play_sfx(&"drop_rare")
+		var ichor_pos := global_position + Vector2(randf_range(-14, 14), randf_range(-18, -6))
+		_spawn_world_item.call_deferred(&"ichor_potion", ichor_pos)
 
 static func _player_class_id() -> StringName:
 	var p: Node = GameState.player

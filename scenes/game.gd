@@ -40,6 +40,7 @@ const _TUTORIAL_SCRIPT := preload("res://scripts/ui/tutorial_prompt.gd")
 @onready var _save_toast: Label = $HUD/SaveToast
 @onready var _gold_hud: Label = $HUD/GoldHUD
 @onready var _skill_icon: Control = $HUD/SkillIcon
+@onready var _potion_bar: Control = $HUD/PotionBar
 @onready var _wave_counter: Label = $HUD/WaveCounter
 @onready var _endless_summary: CanvasLayer = $EndlessSummary
 @onready var _milestone_modal: CanvasLayer = $MilestoneModal
@@ -156,10 +157,10 @@ func _ready() -> void:
 		EventBus.endless_wave_completed.connect(_on_endless_wave_completed)
 	if not EndlessRun.stats_changed.is_connected(_on_endless_stats_changed):
 		EndlessRun.stats_changed.connect(_on_endless_stats_changed)
-	# Stage 9.7 polish — AscentSpire ends the run via
-	# EndlessRun.end_run() which emits endless_run_ended. Player
-	# death goes through the same signal so both paths converge on
-	# the summary modal.
+	# Stage 9.7/9.8 — voluntary run-exit (Hearth Ember channel) and
+	# death both fire EndlessRun.end_run() which emits
+	# endless_run_ended. Both paths converge on the summary modal.
+	# (AscentSpire was the interim exit; Stage 9.8 retired it.)
 	if not EventBus.endless_run_ended.is_connected(_on_endless_run_ended):
 		EventBus.endless_run_ended.connect(_on_endless_run_ended)
 	_refresh_wave_counter()
@@ -392,9 +393,10 @@ func _on_player_died() -> void:
 	_death_screen.show_death()
 
 func _on_endless_run_ended(stats: Dictionary) -> void:
-	# Single summary entry point for both death and AscentSpire
-	# interact. Idempotent — if the modal is already up (shouldn't
-	# happen but defensive), show_summary just re-binds the labels.
+	# Single summary entry point for both death and Hearth Ember
+	# voluntary exit. Idempotent — if the modal is already up
+	# (shouldn't happen but defensive), show_summary re-binds the
+	# labels.
 	_endless_summary.show_summary(stats)
 
 func _on_endless_summary_return() -> void:
@@ -424,7 +426,7 @@ func _on_endless_summary_return() -> void:
 		# combat state. revive_in_place() flips those without yanking
 		# the player away from the save-restored position (the south-
 		# wall SpawnPoint would replace the boss-room rollback slot).
-		# AscentSpire path leaves the player alive — nothing to do.
+		# Hearth Ember path leaves the player alive — nothing to do.
 		if EndlessRun.ended_via_death:
 			_player.revive_in_place.call_deferred()
 	_refresh_wave_counter()
@@ -648,6 +650,11 @@ func _wire_player_combat_vfx() -> void:
 
 func _wire_feel_hud() -> void:
 	_skill_icon.bind(_player.get_skill_1())
+	# Stage 9.8 — potion HUD bar polls cooldowns from ConsumableUse and
+	# counts from the player's Inventory. Re-bind after class swap because
+	# the inventory reference is per-loadout.
+	if _potion_bar != null and _potion_bar.has_method(&"bind_player"):
+		_potion_bar.bind_player(_player)
 	var w := _player.get_node_or_null(^"Wallet") as Wallet
 	if w != null:
 		_last_gold_seen = w.gold

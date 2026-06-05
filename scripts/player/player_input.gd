@@ -59,6 +59,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif ke.keycode == KEY_1:
 			skill_1_pressed.emit()
 			DebugLog.write(&"input", "key 1 -> skill_1")
+		elif ke.keycode == KEY_2:
+			_use_first_consumable(&"health_potion")
+			DebugLog.write(&"input", "key 2 -> health_potion")
+		elif ke.keycode == KEY_3:
+			_use_first_consumable(&"mana_potion")
+			DebugLog.write(&"input", "key 3 -> mana_potion")
 		elif ke.keycode == KEY_K:
 			debug_kill_self_pressed.emit()
 			DebugLog.write(&"input", "key K -> debug_kill_self")
@@ -145,3 +151,21 @@ func clear_click_target() -> void:
 	_last_intent = Vector2.ZERO
 	move_intent_changed.emit(Vector2.ZERO)
 	click_target_cleared.emit()
+
+## Stage 9.8 — potion hotkey helper. KEY_2 / KEY_3 find the first
+## stack of the named consumable in the active player's inventory
+## and route through ConsumableUse. Silent no-op when the item is
+## missing or the cooldown is busy — ConsumableUse logs the reason
+## under &"consumables".
+func _use_first_consumable(item_id: StringName) -> void:
+	var player: Node = ConsumableUse.get_active_player()
+	if player == null:
+		return
+	if not ("get_inventory" in player):
+		return
+	var inv: Inventory = player.get_inventory()
+	if inv == null:
+		return
+	if inv.backpack.find(item_id) == -1:
+		return
+	ConsumableUse.try_use(player, item_id, inv)

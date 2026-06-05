@@ -105,6 +105,14 @@ func _render_backpack() -> void:
 		if item == null:
 			row.text = "[%d] ?" % (i + 1)
 			row.disabled = true
+		elif item.kind == ItemData.Kind.CONSUMABLE:
+			# Stage 9.8 — single-click to use, matching the equipment row
+			# semantics. Cooldown / channel checks happen in ConsumableUse,
+			# which logs the rejection reason via &"consumables" flag.
+			row.text = "[%d] %s%s" % [i + 1, item.display_name, _format_consumable_brief(item)]
+			var blocked := ConsumableUse.is_on_cooldown(item.cooldown_id) or ConsumableUse.is_channeling()
+			row.disabled = blocked
+			row.pressed.connect(_on_consumable_pressed.bind(id))
 		else:
 			row.text = "[%d] %s%s" % [i + 1, item.display_name, _format_brief(item)]
 			var can := _inventory.can_equip(item)
@@ -112,6 +120,26 @@ func _render_backpack() -> void:
 			if can:
 				row.pressed.connect(_inventory.equip.bind(id))
 		_backpack_box.add_child(row)
+
+func _on_consumable_pressed(item_id: StringName) -> void:
+	var player: Node = ConsumableUse.get_active_player()
+	if player == null:
+		return
+	ConsumableUse.try_use(player, item_id, _inventory)
+	_refresh()
+
+func _format_consumable_brief(item: ItemData) -> String:
+	match item.use_kind:
+		ItemData.UseKind.HEARTH_EMBER:
+			return "  (channel %.0fs → town)" % item.use_channel_seconds
+		ItemData.UseKind.HEAL_OVER_TIME:
+			return "  (+%d HP / %.0fs)" % [item.use_flat_amount, item.use_duration]
+		ItemData.UseKind.MANA_OVER_TIME:
+			return "  (+%d MP / %.0fs)" % [item.use_flat_amount, item.use_duration]
+		ItemData.UseKind.INSTANT_BOTH_PCT:
+			return "  (+%d%% HP / +%d%% MP)" % [int(item.use_hp_pct * 100.0), int(item.use_mp_pct * 100.0)]
+		_:
+			return ""
 
 func _format_brief(item: ItemData) -> String:
 	var parts: PackedStringArray = []

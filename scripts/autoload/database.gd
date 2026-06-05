@@ -11,6 +11,7 @@ const ITEMS_DIRS: Array[String] = [
 	"res://data/items/weapons/",
 	"res://data/items/armor/",
 	"res://data/items/uniques/",
+	"res://data/items/consumables/",
 ]
 const ENEMIES_DIR: String = "res://data/enemies/"
 const SKILLS_DIR: String = "res://data/skills/"

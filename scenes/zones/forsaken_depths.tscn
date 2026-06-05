@@ -1,10 +1,9 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/zones/forsaken_depths.gd" id="1_depths"]
 [ext_resource type="Script" path="res://scripts/systems/endless_director.gd" id="2_ed"]
 [ext_resource type="Resource" path="res://data/modifiers/elite_fast.tres" id="3_fast"]
 [ext_resource type="Resource" path="res://data/modifiers/elite_tough.tres" id="4_tough"]
-[ext_resource type="PackedScene" path="res://scenes/world/ascent_spire.tscn" id="5_spire"]
 
 [sub_resource type="RectangleShape2D" id="rect_n"]
 size = Vector2(1280, 40)
@@ -159,9 +158,6 @@ position = Vector2(0, 0)
 
 [node name="DepthsEntry" type="Marker2D" parent="."]
 position = Vector2(0, 0)
-
-[node name="AscentSpire" parent="." instance=ExtResource("5_spire")]
-position = Vector2(0, 320)
 
 [node name="SpawnAnchors" type="Node2D" parent="."]
 

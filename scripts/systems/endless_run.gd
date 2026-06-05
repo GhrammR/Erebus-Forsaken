@@ -59,7 +59,8 @@ var _milestones_at_start: Array = []
 ## How the most-recent run ended. game.gd's summary-return chain
 ## reads this to decide whether to call Player.respawn() (true ->
 ## input was suppressed by Player._on_died) or leave the alive
-## player as-is (AscentSpire path).
+## player as-is (Hearth Ember path — Stage 9.8 replaced AscentSpire
+## as the only voluntary-exit route).
 var ended_via_death: bool = false
 
 const _SEED_ALPHABET: String = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"

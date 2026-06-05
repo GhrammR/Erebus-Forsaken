@@ -15,5 +15,9 @@ entries = [
 { "item_id": &"pythia_staff_starter",   "weight": 1 },
 { "item_id": &"shade_bow_starter",      "weight": 1 },
 { "item_id": &"ossuary_wand_starter",   "weight": 1 },
+{ "item_id": &"hearth_ember",           "weight": 2 },
+{ "item_id": &"health_potion",          "weight": 3 },
+{ "item_id": &"mana_potion",            "weight": 3 },
+{ "item_id": &"ichor_potion",           "weight": 1 },
 ]
-no_drop_weight = 8
+no_drop_weight = 12

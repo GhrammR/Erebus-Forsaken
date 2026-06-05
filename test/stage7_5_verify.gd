@@ -37,8 +37,11 @@ func _ready() -> void:
 
 func _verify_sfx_bank(fail: int) -> int:
 	var keys: Array = AudioBank.sfx_bank_keys()
-	var ok_size: bool = keys.size() == 16
-	print("[%s] AudioBank sfx bank has 16 entries (got %d)" \
+	# Stage 7.5 introduced 16 entries; later stages append more (Stage 9.8
+	# added the Hearth Ember + potion cue family). Keep the floor instead
+	# of a hard equality so future stages don't have to rewrite this line.
+	var ok_size: bool = keys.size() >= 16
+	print("[%s] AudioBank sfx bank has >=16 entries (got %d)" \
 			% [("OK  " if ok_size else "FAIL"), keys.size()])
 	if not ok_size: fail += 1
 	for k in _EXPECTED_SFX_KEYS:

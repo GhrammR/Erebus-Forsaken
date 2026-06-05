@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/item_data.gd" id="1_i"]
+
+[resource]
+script = ExtResource("1_i")
+id = &"health_potion"
+display_name = "Health Potion"
+kind = 1
+slot = 0
+class_mask = 15
+level_req = 1
+base_armor_defense = 0
+base_weapon_ar = 0
+base_resist = 0
+affixes = {}
+glyph_color = Color(0.82, 0.18, 0.22, 1)
+glyph_shape = 3
+base_price = 25
+cooldown_id = &"potion_health"
+cooldown_seconds = 8.0
+use_kind = 2
+use_channel_seconds = 0.0
+use_duration = 3.0
+use_flat_amount = 80
+use_hp_pct = 0.0
+use_mp_pct = 0.0

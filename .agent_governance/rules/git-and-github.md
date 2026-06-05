@@ -57,6 +57,31 @@ GitHub history. PR template:
 - bullets to keep reviewers (and future-you) from expecting more
 ```
 
+## Documentation sync on every commit
+
+The GitHub repo is the public face of the project. `README.md` is the
+landing page for anyone who arrives there cold — a stale README makes the
+project look abandoned or misrepresents what is actually built.
+
+**Every commit that changes user-visible state MUST also update
+`README.md` if any of the following are now stale:**
+
+- **Status line** ("Stages 0–N complete, Stage N+1 next") — adjust to the
+  current stage.
+- **Current state** bullets — autoloads, stat list, item count, inventory
+  size, scope of subsystems shipped.
+- **Running it** — workbench flags + verifier flags (any new `--flag`
+  surfaced by `main.gd` / `scenes/main.gd` belongs here).
+- **Roadmap** — only if the Act 1 scope itself shifted (rare).
+
+The check is mechanical: before staging a feature/fix/chore commit, open
+`README.md` and ask "would a stranger reading this know what was just
+landed?" If no, edit it in the same commit. Documentation-only commits
+(`docs: ...`) and pure governance edits are exempt.
+
+When closing a stage, the README update is part of the stage's closure
+criteria — not a separate follow-up commit.
+
 ## What never gets committed
 
 - `.godot/` (Godot 4 editor cache and import data)

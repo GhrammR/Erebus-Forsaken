@@ -413,8 +413,11 @@ func _verify_milestone_items_loaded(fail: int) -> int:
 	return fail
 
 func _verify_save_schema_v13(fail: int) -> int:
-	var ok_version: bool = SaveSystem.SAVE_VERSION == 13
-	print("[%s] SaveSystem.SAVE_VERSION == 13" % _ok(ok_version))
+	# Stage 9.7 introduced schema v13; later stages monotonically bump it
+	# (Stage 9.8 -> v14 for consumable cooldowns). Use >= so this check
+	# tracks the floor without rewriting per stage.
+	var ok_version: bool = SaveSystem.SAVE_VERSION >= 13
+	print("[%s] SaveSystem.SAVE_VERSION >= 13" % _ok(ok_version))
 	if not ok_version: fail += 1
 	# v12 -> v13 migration seeds the new fields
 	var v12: Dictionary = {

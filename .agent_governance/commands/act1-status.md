@@ -240,23 +240,44 @@ HealthComponent + verifier reference DamageResolver.
 
 ---
 
-## Execution order (post Stage 7)
+## Execution order (Strategic Review v2 — 2026-06-04)
 
-Strategic Review v1 (locked 2026-06-03) reordered the post-Stage-7
-sequence. Stage **numbers are stable** (existing commits reference
-them); **execution order** is now:
+**Scope reset:** Act 1's content target grew substantially. Single dual
+release (Steam + itch.io same day; no demo cut). Stage numbers stay
+stable for already-closed work; new stages are appended. Existing
+"Stage 11 — Save/load hardening" renumbers to Stage 22; existing
+"Stage 12 — Pre-launch polish" renumbers to Stage 23.
 
-1. Stage 10 — Character select (identity before content) **[CLOSED]**
-2. Stage 7.5 — Audio mini-stage (Feel Pass enablement) **[CLOSED]**
-3. Stage 8 — Dungeon (with affix-tier sub-system) **[CLOSED]**
-4. Stage 9 — Act boss **[CLOSED]**
-5. Stage 9.5 — Feel Pass (sound + juice contract, `rules/feel-pass.md`) **[CLOSED]**
-6. Stage 9.7 — Endless mode (post-boss retention) [CLOSED]
-7. Stage 9.8 — Quality of Life (Hearth Ember + potions) *(next)*
-8. **itch.io free demo launches here** (`commands/launch-plan.md`)
-9. Stage 11 — Save/load hardening
-10. Stage 12 — Pre-launch polish
-11. **Steam EA launch**
+1. Stage 10 — Character select **[CLOSED]**
+2. Stage 7.5 — Audio mini-stage **[CLOSED]**
+3. Stage 8 — Dungeon **[CLOSED]**
+4. Stage 9 — Act boss (interim — see Stage 18) **[CLOSED]**
+5. Stage 9.5 — Feel Pass **[CLOSED]**
+6. Stage 9.7 — Endless mode (interim placement — see Stage 19) **[CLOSED]**
+7. Stage 9.8 — Quality of Life (Hearth Ember + potions) **[CLOSED]**
+8. **Stage 9.8.1 — Hotfix: Ember Maw-route bug** *(next; required before any new content)*
+9. Stage 11 — AI asset-generation pipeline (Replicate + ElevenLabs
+   wrappers, sidecar contract, LFS setup)
+10. Stage 12 — Town → wilderness walkable transition (replace portal)
+11. Stage 13 — Wilderness procedural generation (seeded RNG, biome
+    templates, aesthetic variants for trees / rocks / enemy skins)
+12. Stage 14 — Waypoint system (themed, persistent, discoverable)
+13. Stage 15 — Equipment paper-doll rendering (bare-hands default;
+    helmet/weapon/armor slots tint the procedural sprite layers)
+14. Stage 16 — Item icons (replace text rows with icon grid)
+15. Stage 17 — NPC voice + portraits (each town NPC ships an intro
+    line, AI-generated voice + portrait)
+16. Stage 18 — Demote Forsaken Boss → rare; refactor `act_1_complete`
+    state machine for the new final-boss model
+17. Stage 19 — The Maw entrance moves to town; gated behind first-quest
+    completion (anchor model preserved)
+18. Stage 20 — Wilderness content authorship: 10+ areas, 5+ dungeons,
+    winding paths, 5+ quests, final-quest = defeat-the-boss request
+19. Stage 21 — Feel pass at scale (revisit `rules/feel-pass.md` for the
+    expanded content; balance all new zones)
+20. Stage 22 — Save/load hardening (was Stage 11)
+21. Stage 23 — Pre-launch polish (was Stage 12)
+22. **Steam + itch.io dual launch** (`commands/launch-plan.md`)
 
 Skipping or reordering this sequence requires explicit user approval
 and a note appended to this file.
@@ -817,81 +838,345 @@ User added two observations + a debug-infrastructure request:
   surface that would have caught the dogpile-not-teleport
   confusion in a single re-run.
 
-## Stage 9.8 — Quality of Life  *(NEXT — execute after Stage 9.7 polish)*
+## Stage 9.8 — Quality of Life  **[CLOSED 2026-06-04]**
 
-Bundles two core ARPG affordances the demo will not feel right
-without. Sized to land before the itch.io free demo cutover.
+Hearth Ember + Health/Mana potions landed alongside a unique Ichor
+Potion, the AscentSpire retired, and governance for README sync +
+dev-debug instrumentation added.
 
 ### Hearth Ember (consumable town return)
 
-* \[ ] New consumable item type. `data/items/consumables/hearth_ember.tres`
-  with `kind = ItemKind.CONSUMABLE` (new enum value alongside
-  weapon/armor/etc). Stacks in inventory; right-click to use.
-* \[ ] Use path: 2-second channel during which player cannot move
-  or attack; interrupted by taking damage (lose the ember? or just
-  break the channel — leaning lose-the-ember to keep tension).
-  On completion: teleport to Threshold Camp's `SpawnPoint`, fade
-  in/out via existing scene-transition pattern.
-* \[ ] Drop sources: ~5% trash drop (added to base drop tables for
-  `shade_wretch` and `bog_caller`), guaranteed drop on first Act
-  boss kill (alongside the class-restricted unique).
-* \[ ] Vendor stock: Kallias sells one Hearth Ember per restock at
-  steep price (~150g — balance pass needed). Stock refreshes on
-  zone re-entry following the existing MerchantStock pattern.
-* \[ ] Channel VFX: orange-glow ring at feet + rising ember
-  particles, AudioBank `&"hearth_ember_channel"` loop.
-* \[ ] In The Maw: Ember WORKS but routes through
-  `EndlessRun.end_run(false)` instead of straight to camp — same
-  rollback chain as the AscentSpire. The spire stays as flavour
-  (or retires; Stage 9.8 will decide).
-* \[ ] Save schema bump v13 → v14 if any new state is needed
-  (likely none — consumables are just inventory items).
-* \[ ] `--verify9_8` covers: item resource loads, drop table
-  augmentation, use path no-ops outside an active run, in-Maw use
-  triggers rollback, channel-interrupt loses the ember.
+* \[x] `ItemData.Kind.EQUIPMENT/CONSUMABLE` enum added; `UseKind`
+  enum dispatches the four use-paths.
+  `data/items/consumables/hearth_ember.tres` ships with kind=1,
+  use_kind=HEARTH_EMBER, channel=2s.
+* \[x] Use path: 2-second channel — player can't move or attack
+  (`Player._channeling` flag gates physics + attack + skill_1).
+  Taking damage interrupts AND consumes the ember (confirmed
+  decision over "just break"). On completion: outside Maw →
+  `SceneRouter.go_to_zone(&"threshold_camp", &"SpawnPoint")`
+  (uses existing host transit fade). In Maw → `EndlessRun.end_run(false)`
+  → summary modal → rollback.
+* \[x] Drop sources: 2-weight entry on `wilderness_basic_drops.tres`
+  (shared by shade_wretch + bog_caller). Guaranteed Hearth Ember on
+  Act boss first-kill alongside the class-restricted unique (added
+  to `act_boss._drop_first_kill_unique`).
+* \[x] Vendor stock: Kallias's `kallias_stock.tres` includes
+  `hearth_ember` at its base price (150g).
+* \[x] Channel SFX bank registered (`hearth_ember_channel`,
+  `_complete`, `_break`) — placeholder audio per asset-pipeline rule.
+  VFX (orange ring + particles) parked to Stage 12 polish; channel
+  state is fully readable from the locked input + DebugLog trace.
+* \[x] In The Maw: Ember routes through `EndlessRun.end_run(false)`
+  — same rollback chain as the (now-retired) AscentSpire.
 
-### Health + Mana potions
+### Health + Mana potions + Ichor Potion (unique)
 
-* \[ ] Two new consumables: `data/items/consumables/health_potion.tres`
-  + `mana_potion.tres`. Instant restore (no channel — failure-modes
-  prefers instant for ARPG twitch feel) of a flat percentage
-  (~35% leaning) or flat amount (TBD via balance pass).
-* \[ ] Cooldown: 8-10 second shared cooldown per potion type to
-  prevent spam-chugging. Per-type, not global — health + mana can
-  fire on the same tick.
-* \[ ] Hotkey: numeric keys `2` and `3` for health/mana (skill slot
-  is `1`). Inventory right-click also works.
-* \[ ] Drop sources: ~12% trash drop combined (split 50/50).
-  Vendor stocks ~3 of each per restock at low price (~25g).
-* \[ ] HUD: small icon row left of SkillIcon showing current potion
-  counts + cooldown veil (reuse SkillIcon's CooldownVeil pattern).
-* \[ ] Potion belt (Stage 12 polish): parking-lot if scope creeps —
-  Act 1 ships with inventory + hotkeys only.
-* \[ ] `--verify9_8` covers: both items load, hotkey paths via
-  PlayerInput, cooldown gates prevent stacking, drop table /
-  vendor stock additions.
+* \[x] `health_potion.tres` and `mana_potion.tres`: flat amount
+  restored linearly over 3s (80 HP / 60 MP), per-type 8s cooldown.
+* \[x] **Decision shift from spec:** instead of percentage standard
+  potions, standard potions restore flat over time and a NEW unique
+  `ichor_potion.tres` restores 50% HP + 50% MP **instantly** on its
+  own 30s cooldown.
+* \[x] Hotkeys 2 (health) / 3 (mana). Ichor is inventory-click only.
+  PlayerInput routes through `ConsumableUse.try_use(player, id,
+  inventory)`.
+* \[x] Drop sources: 3/3/1-weight on wilderness drop table for
+  health/mana/ichor. Ichor also rolls 25% on Act boss first-kill.
+  Ichor NOT in vendor stock — uniqueness preserved.
+* \[x] HUD: `scripts/ui/potion_bar.gd` builds three slot icons
+  programmatically (red/blue/gold) with CooldownVeil pattern; left
+  of SkillIcon. Slot dims when count == 0.
 
 ### Stage 9.8 closure criteria
 
-* \[ ] Demo build (`FeatureFlags.demo_mode = true`) still surfaces
-  Hearth Ember + potions — these are core affordances, not gated.
-* \[ ] AscentSpire decision: retire (delete the scene) or keep as
-  flavour (decorative interactable that just opens summary).
-* \[ ] All twelve existing verifiers PASS post-Stage-9.8.
+* \[x] Demo build still surfaces Hearth Ember + potions — these are
+  core affordances, not gated.
+* \[x] AscentSpire decision: **retire**. Scene/script/uid deleted;
+  `forsaken_depths.tscn` no longer references it.
+* \[x] All twelve existing verifiers PASS post-Stage-9.8.
+* \[x] `--verify9_8` covers: ConsumableUse autoload + API, ItemData
+  enums, all four consumable resources, drop table augmentation,
+  Kallias stock (positive + negative for Ichor), Inventory rejects
+  consumables on `can_equip`, cooldown lifecycle, snapshot/restore
+  round-trip, SAVE_VERSION == 14, v13→v14 migration installs the
+  default cooldowns key, AscentSpire fully removed, PotionBar script
+  + PlayerInput hotkey wiring present.
 
-## Stage 11 — Save/load hardening
+### Governance landed in this stage
+
+* `rules/git-and-github.md` § **Documentation sync** — every commit
+  that changes user-visible state updates `README.md` in the same
+  commit. New CLAUDE.md non-negotiable #8 references it.
+* `rules/testing.md` § **Dev-debug instrumentation** — every new
+  system ships with a DebugLog flag + workbench affordance +
+  headless verifier + failure-mode entries for non-obvious bugs.
+* `rules/testing.md` § **Parse-time smoke test** — `godot --headless
+  --quit-after 1 -- --splash` runs before any `.gd`-touching commit.
+
+## Stage 9.8.1 — Hotfix: Ember Maw-route bug *(NEXT)*
+
+Channel completes correctly inside The Maw but the `EndlessRun.end_run`
+→ `endless_run_ended` → summary modal chain does not visibly fire.
+Player remains in The Maw with `_channeling` cleared.
+
+* \[ ] Add `[endless]` DebugLog entries inside `EndlessRun.end_run` to
+  confirm signal emission.
+* \[ ] Confirm `EventBus.endless_run_ended` is connected to
+  `game.gd::_on_endless_run_ended` at the time the Ember channel
+  completes (no late-bind race).
+* \[ ] Repro from `/tmp/erebus.log`: T+89616 channel_start →
+  T+91604 channel_complete → silence. Fix until the summary modal
+  surfaces in this case.
+* \[ ] Smoke playtest: Ember inside Maw → summary modal → rollback →
+  arrival at Threshold Camp `SpawnPoint`.
+* \[ ] Smoke playtest: Ember outside Maw (from crypt or wilderness) →
+  SceneRouter transit → arrival at Threshold Camp `SpawnPoint`.
+* \[ ] `--verify9_8` extended to cover the route signal path.
+
+## Stage 11 — AI asset-generation pipeline
+
+Stage was previously "Save/load hardening" (renumbered to Stage 22).
+The 2026-06-04 scope reset claimed Stage 11 for the hybrid art /
+audio / video pipeline so every later stage can pull on it.
+
+* \[ ] `tools/asset_gen/` directory created with `gen_sprite.sh`,
+  `gen_voice.sh`, `gen_sfx.sh`, `gen_video.sh` shells. Each calls a
+  documented API endpoint, writes both the asset and its sidecar.
+* \[ ] `tools/asset_gen/README.md` documents key setup (Replicate,
+  ElevenLabs) and how to invoke each wrapper. Keys live in
+  `~/.config/erebus-secrets/`, **never** in the repo.
+* \[ ] Reproducibility sidecar schema implemented (see
+  `rules/asset-generation.md`). Every asset commit ships both the
+  binary + the `.json`.
+* \[ ] Git LFS configured via `.gitattributes` for `*.png` > 1MB,
+  `*.ogg`, `*.webm`, `*.mp4`. Sidecars stay on plain git.
+* \[ ] `BitmapMode` autoload (or feature flag) that gates whether
+  bitmap layers render. Default ON; `--procedural-only` CLI flag
+  forces OFF (testing fallback path).
+* \[ ] Hybrid-baseline assertion in `audit.md`: every entity with a
+  bitmap layer also has a procedural fallback child node.
+* \[ ] Failure mode entry if any pipeline gotcha surfaces during
+  testing (e.g., LFS clone size, sidecar drift, prompt regressions).
+* \[ ] `--verify11` covers: directory exists, sidecar schema validates,
+  LFS attributes set, BitmapMode autoload registered, procedural
+  fallback rendering verified when bitmap missing.
+
+## Stage 12 — Town → wilderness walkable transition
+
+Replace the current portal-style hop with a walkable transition: the
+player walks to the south edge of Threshold Camp and the world
+seamlessly extends into the first wilderness zone. No fade-to-black,
+no scene swap unless the zones are too large to coexist in memory.
+
+* \[ ] Decide: single big zone, or stitched zones with on-the-edge
+  trigger-area transit. Probable path = stitched with seamless transit
+  (preserves `Zone` autoload pattern, simpler save model).
+* \[ ] Build `TownSouthGate` marker + visible road at the south edge
+  of Threshold Camp.
+* \[ ] First wilderness zone gets a `FromTownGate` marker on its
+  north edge; transit pairs them up.
+* \[ ] Save state survives the transition cleanly (no zone cache
+  duplication).
+* \[ ] DebugLog `[transit]` flag exercises the new path.
+* \[ ] `--verify12` covers: bidirectional walk between camp and
+  first wilderness preserves save + position correctness.
+
+## Stage 13 — Wilderness procedural generation
+
+Wilderness zones are seeded per new game. Same `--new-game` (or
+character-create) seed = same world. Different seeds = different
+content, layout, and aesthetics. Loading an existing save replays the
+seed exactly (no drift).
+
+* \[ ] `WorldSeed` autoload: holds the master seed assigned at
+  character create. Persists in save (schema bump).
+* \[ ] Each wilderness zone derives a deterministic sub-seed from
+  `(WorldSeed, zone_index)`.
+* \[ ] Zone layouts use seeded RNG for: terrain block placement,
+  path winding, enemy-spawn anchor positions, prop placement,
+  aesthetic variant pick.
+* \[ ] Aesthetics: at least 3 tree variants, 3 rock variants, 2
+  enemy-skin palette swaps per archetype. All procedural; bitmap
+  variants are Stage 11+15+17 polish.
+* \[ ] Each zone fires within `min_distance_from_town` to
+  `max_distance_from_town` so the chain ramps. Adjacent zones share
+  a path so the player can walk all the way through.
+* \[ ] `--verify13` covers: same seed → identical zone content;
+  different seeds → diverging content; sub-seed derivation is
+  deterministic.
+
+## Stage 14 — Waypoint system
+
+Themed fast-travel between previously-visited wilderness zones. The
+theme: **"The Sundered Ferry"** — placeholder name; replace when art
+lands. Charon's old ferry-paths still cross the underworld; you light a
+brazier at each waypoint you find, and a spectral ferryman returns to
+take you back. (Theme is a working draft; explicit user approval to
+lock the name.)
+
+* \[ ] `Waypoint` interactable scene + script. Placed at a fixed
+  location in each generated wilderness zone (seeded position).
+* \[ ] Save schema entry: discovered waypoints (`Array[StringName]`
+  of zone ids).
+* \[ ] Waypoint UI: pressing E at a waypoint opens a list of
+  discovered destinations. Selecting one transitions there.
+* \[ ] First-time discovery: brief reveal anim + audio cue
+  (procedural fallback OK).
+* \[ ] `--verify14` covers: discovery persists across save/load,
+  travel between waypoints preserves player state, no cross-game
+  waypoint leakage.
+
+## Stage 15 — Equipment paper-doll rendering
+
+The procedural sprite gains slot layers. Equipping a helmet adds a
+helmet node visible on the sprite; equipping a weapon adds the
+weapon visual; unequipping a weapon reverts to a bare-hands stance.
+
+* \[ ] Procedural sprite refactor: `Body/SlotAnchors/(Head, Weapon,
+  Offhand, Armor)` empty `Node2D` slots that child sprites parent
+  into.
+* \[ ] `EquipmentVisual` resource on each `ItemData`: procedural
+  draw or bitmap reference for the slot's render.
+* \[ ] `Inventory.equipment_changed` signal already exists — paper-doll
+  listens and swaps slot children.
+* \[ ] Bare-hands stance: when no weapon equipped, hands close into
+  fists; attack anim mirrors closely-thrown jab.
+* \[ ] Hybrid art contract: paper-doll first ships procedurally.
+  Bitmap polish via Stage 11 pipeline lands later.
+* \[ ] `--verify15` covers: equipping items adds slot nodes;
+  unequipping removes them; save/load preserves visual state.
+
+## Stage 16 — Item icons (inventory grid)
+
+Replace the text-row inventory UI with an icon grid. Drag/drop is
+*not* in scope here (parked); single-click to equip / use persists
+from current `inventory_panel.gd`.
+
+* \[ ] Icon generation per item via Stage 11 pipeline (procedural
+  fallback = the current `ItemGlyph` colored shape).
+* \[ ] `InventoryPanel` swaps text rows for a 6×6 (or 6×N) icon
+  grid. Backpack capacity stays 36 (AD-10).
+* \[ ] Hover tooltip carries the full stats text that used to be the
+  row text.
+* \[ ] Equipment side shows slot icons in their paper-doll
+  positions (Head top, Weapon bottom-left, etc.).
+* \[ ] `--verify16` covers: panel builds the grid, every backpack id
+  resolves an icon (procedural fallback ok), tooltip surfaces stats.
+
+## Stage 17 — NPC voice + portraits
+
+Each town NPC gets a one-time intro line on first interact. The line
+audio is AI-generated (ElevenLabs voice per NPC), the portrait is
+AI-generated (Replicate). Procedural fallback: text-only intro with
+no audio.
+
+* \[ ] NPC roster: Kallias (vendor), Eurynome (quest-giver). Add
+  others as town scope grows.
+* \[ ] Each NPC defines a `voice_id` + `portrait_id` on their data
+  resource. Missing assets fall back gracefully.
+* \[ ] Dialog system extended to show a portrait + play voice line
+  on first interact per save.
+* \[ ] Voice generation budget: $5/NPC ceiling; prompts archive in
+  the sidecar.
+* \[ ] `--verify17` covers: NPC resource references resolve, dialog
+  flow with + without assets, voice plays exactly once per save.
+
+## Stage 18 — Boss demote + final-boss state-machine refactor
+
+Hekate-Marked Forsaken Boss demotes to a regular rare-monster
+encounter. `act_1_complete`, `boss_first_kill`, Maw portal gating,
+class-restricted unique drop, and Eurynome's quest completion all
+re-target a new final-boss entity.
+
+* \[ ] Strip the boss-specific logic from `act_boss.gd`; convert into
+  `forsaken_rare.gd` (a rare-monster spawn in Forsaken Crypt).
+* \[ ] Class-restricted unique drop moves to: rare drop from the new
+  final boss + 5% chance from Forsaken Rare as a vestige.
+* \[ ] `act_1_complete` keys off the new final-boss kill.
+* \[ ] Eurynome's "defeat the boss" quest re-targets the new final
+  boss (Stage 20 places it).
+* \[ ] Maw portal gating (Stage 19) replaces the post-Forsaken-Boss
+  gate.
+* \[ ] Save schema bump for any new state. Migration zeroes out the
+  legacy `boss_first_kill` flag.
+* \[ ] `--verify18` covers: state machine transitions; quest
+  re-target; legacy save migration; Forsaken Rare drops correctly.
+
+## Stage 19 — The Maw entrance moves to town
+
+The Maw is no longer hidden at the back of the crypt. A visible
+brazier / mouth-of-the-pit interactable in Threshold Camp leads
+directly into The Maw. Gated: locked until the player has completed
+at least one quest (gives EndlessRun an anchor to roll back to).
+
+* \[ ] `MawEntrance` interactable in Threshold Camp. Locked state
+  draws differently; locked interact shows a Eurynome flavor line.
+* \[ ] Unlock condition: any quest is in state COMPLETED.
+* \[ ] Stage 9.7's portal in `forsaken_crypt.gd` removed. Crypt
+  becomes a finite explorable area; Forsaken Rare is its capstone.
+* \[ ] EndlessRun's anchor model unchanged — anchor is still
+  whichever zone the player saved in last. The town-gate path just
+  ensures that save exists.
+* \[ ] Save migration: legacy saves with a Maw-portal-spawned state
+  clean up correctly on load.
+* \[ ] `--verify19` covers: gate locked at fresh new-game, unlocked
+  after first quest completion, interactable transits into Maw, exit
+  via Ember/death returns to camp (not crypt).
+
+## Stage 20 — Wilderness content authorship
+
+The big content stage. 10+ wilderness zones, 5+ dungeons, winding
+paths between, 5+ quests. This stage uses every piece of infrastructure
+built in 11–19; if any of those is shaky, fix it before authorship.
+
+* \[ ] Zone templates: 4–6 distinct wilderness templates (e.g.,
+  Ashen Hollow, Veiled Marsh, Lethean Steps, Asphodel Path,
+  Stygian Pass, Echoing Ribs). Names are working drafts.
+* \[ ] Path winding: each zone has a "main road" that does not
+  travel in a straight line; geometric or noise-based path shape.
+* \[ ] 5+ dungeons distributed through the chain. Each is a
+  multi-room interior with a small boss or capstone reward.
+* \[ ] 5+ quests authored. Quest 1 = tutorial / first-quest gate
+  for Maw. Quest 5 = "defeat the boss" town request.
+* \[ ] Final boss encounter authored (designed; lands in this stage
+  via Stage 18's state machine).
+* \[ ] First-playthrough time-to-final-boss = 2+ hours.
+* \[ ] `--verify20` covers: zone count, quest count, dungeon count,
+  Eurynome's final quest references the final boss, save round-trip
+  works at the new content scale.
+
+## Stage 21 — Feel pass at scale
+
+The Stage 9.5 feel pass covered the systems that existed then.
+Stage 21 re-applies the contract to everything authored in 12–20.
+
+* \[ ] Every new zone has its ambient cue (`AudioBank` entry).
+* \[ ] Every new enemy archetype has the full `feel-pass.md` cue
+  set (hit, crit, death).
+* \[ ] Every new quest beat plays a recognizable cue (accept,
+  progress, complete).
+* \[ ] Waypoint discovery + travel cues land.
+* \[ ] Paper-doll equip cues (clink for armor, swing for weapon
+  swap).
+* \[ ] `--verify21` covers: every entity has the required cue
+  entries (procedural-silence fallback counts; AI-generated audio
+  is bonus).
+
+## Stage 22 — Save/load hardening (was Stage 11)
 
 * \[ ] Versioned save format (already in place, AD-07)
-* \[ ] Round-trip across every major state
+* \[ ] Round-trip across every major state at the new content scale
+  (waypoints, paper-doll, voiced NPCs, procgen seeds).
 * \[ ] Atomic save write: write to `save_slot_1.json.tmp`, fsync,
-  rename. Prevents partial saves on crash mid-write
-  (Failure Analysis #19)
-* \[ ] Corrupt-save handling (don't crash; warn; offer to delete)
-* \[ ] Save-import path from itch demo location to Steam user dir
-  (`commands/launch-plan.md`)
-* \[ ] Corrupt-save fixture test in stage11_verify
+  rename. Prevents partial saves on crash mid-write (Failure
+  Analysis #19).
+* \[ ] Corrupt-save handling (don't crash; warn; offer to delete).
+* \[ ] World-seed integrity check: a tampered seed value fails fast
+  with a clear error instead of generating divergent zones.
+* \[ ] Corrupt-save fixture test in `--verify22`.
 
-## Stage 12 — Pre-launch polish
+## Stage 23 — Pre-launch polish (was Stage 12)
 
 * \[ ] Procedural sprites: explicit "ship as procedural" decision
   noted here per class/enemy (Stage 0 charter allows this)
@@ -913,7 +1198,9 @@ without. Sized to land before the itch.io free demo cutover.
 
 When every box above is `\\\\\\\[x]`, and only then:
 
-* Pay Steam fee.
-* Submit for review.
-* Schedule Early Access launch.
+* Pay Steam fee + complete Steamworks paperwork.
+* itch.io page ready (description, screenshots, trailer, build).
+* Submit Steam build for review.
+* Schedule **single dual launch** (Steam + itch.io same day) per
+  `commands/launch-plan.md`. No staged demo; no Early Access split.
 

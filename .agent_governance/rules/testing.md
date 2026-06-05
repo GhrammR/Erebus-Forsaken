@@ -45,6 +45,65 @@ below is true. If you cannot tick every box, the feature is in progress.
 - [ ] Starter skill works, costs MP, has cooldown, hits intended targets.
 - [ ] Death and respawn loop completes end-to-end.
 
+## Dev-debug instrumentation (every new system)
+
+A system that ships without instrumentation is a system whose bugs will be
+debugged with `print` statements added under time pressure. Stage 9.7's
+corner-teleport hunt took multiple sessions because the instrumentation
+that ultimately found it (DebugLog + physics-tick watcher + per-site
+`[SITE:]` markers) didn't exist until the bug forced it. The point of
+this rule is to front-load that work so the *next* bug is cheap to find.
+
+Every new system MUST ship with all four of the following before the
+stage that introduced it can be closed:
+
+1. **At least one DebugLog flag**, registered in
+   `scripts/systems/debug_log.gd`'s known-categories list, written at
+   every state transition the system can fail at — spawn, destruction,
+   damage entry, save snapshot, save restore, cooldown start/expire,
+   signal emit/receive, etc. Cost: one line. Payoff: the next time
+   something goes wrong you turn on the flag and read the trace instead
+   of guessing.
+2. **A workbench affordance** when the system has player-facing
+   behaviour. If a `test/*_workbench.tscn` exists for the system's
+   area, the workbench gets a key, button, or CLI shortcut that
+   force-triggers the system without requiring full game progression.
+   Example: a workbench should let the user spawn a Hearth Ember into
+   inventory at will, not require them to play to the Act boss every
+   time they want to test the channel path.
+3. **A headless verifier** — either `--verifyN` for the introducing
+   stage or a clearly-labeled extension to a prior verifier. The
+   verifier asserts the system's *invariants*, not its happy path:
+   resource shape, save round-trip integrity, signal whitelist
+   compliance (AD-08), cooldown clamps, illegal-state rejection. CI
+   runs verifiers; manual playtest does not.
+4. **A failure-mode entry** in `rules/failure-modes.md` for every
+   non-obvious bug discovered during the stage. Format: symptom → root
+   cause → prevention pattern → recovery recipe. The prevention pattern
+   is what stops a similar bug in the next system; without it the entry
+   is half-finished.
+
+The four items are not negotiable per-feature — every new system goes
+through them. If one genuinely does not apply (e.g., a pure data-only
+class with no runtime state has no DebugLog flag), say so explicitly
+in the stage closure rather than silently skipping it.
+
+## Parse-time smoke test (every commit)
+
+Before staging any commit that touches `.gd` files, run the headless
+parse-check:
+
+```bash
+godot --headless --path . --quit-after 1 -- --splash
+```
+
+This boots the project just far enough to surface parse errors and
+autoload-init crashes, then exits. It is *not* a verifier — it is a
+30-second guard against the failure mode where a typo in a script the
+session never exercised lands in a commit and the next session opens
+to a broken project. Stage 9.7 documented this as failure mode #24
+("var placement"); the smoke test is its institutional shield.
+
 ## How to run a playtest
 
 See `commands/playtest.md`. Each session ends with at least a 5-minute

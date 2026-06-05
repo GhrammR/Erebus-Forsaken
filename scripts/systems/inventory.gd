@@ -60,6 +60,8 @@ func backpack_size() -> int:
 func can_equip(item: ItemData) -> bool:
 	if item == null:
 		return false
+	if item.kind != ItemData.Kind.EQUIPMENT:
+		return false
 	if item.level_req > 0 and stats != null and item.level_req > stats.level:
 		return false
 	if item.class_mask == EquipmentSlot.ClassMask.ALL:
