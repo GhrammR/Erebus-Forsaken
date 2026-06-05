@@ -280,29 +280,35 @@ func _verify_save_corpses_roundtrip(fail: int) -> int:
 # ---- Portals --------------------------------------------------------------
 
 func _verify_portal_target_zones(fail: int) -> int:
-	# Both zone scenes ship with at least one Portal pointing to the
-	# other. Quick structural check — no need to walk the full tree.
+	# Both zone scenes ship with at least one transit node (Portal or
+	# WalkGate) pointing to the other. Stage 12 replaced the camp↔reach
+	# Portals with WalkGates (walkable seam, no E-press) so this check
+	# accepts either base class — only that a path exists between them.
 	var camp: PackedScene = load("res://scenes/zones/threshold_camp.tscn") as PackedScene
 	var wild: PackedScene = load("res://scenes/zones/blighted_reach.tscn") as PackedScene
-	var ok_camp: bool = camp != null and _scene_has_portal_to(camp, &"blighted_reach")
-	print("[%s] threshold_camp ships a Portal -> blighted_reach" \
+	var ok_camp: bool = camp != null and _scene_has_transit_to(camp, &"blighted_reach")
+	print("[%s] threshold_camp ships a transit -> blighted_reach" \
 			% ("OK  " if ok_camp else "FAIL"))
 	if not ok_camp: fail += 1
 
-	var ok_wild: bool = wild != null and _scene_has_portal_to(wild, &"threshold_camp")
-	print("[%s] blighted_reach ships a Portal -> threshold_camp" \
+	var ok_wild: bool = wild != null and _scene_has_transit_to(wild, &"threshold_camp")
+	print("[%s] blighted_reach ships a transit -> threshold_camp" \
 			% ("OK  " if ok_wild else "FAIL"))
 	if not ok_wild: fail += 1
 	return fail
 
-func _scene_has_portal_to(packed: PackedScene, target: StringName) -> bool:
+func _scene_has_transit_to(packed: PackedScene, target: StringName) -> bool:
 	var inst := packed.instantiate()
-	var portals := inst.find_children("*", "Portal", true, false)
 	var hit := false
-	for p in portals:
-		var portal := p as Portal
+	for n in inst.find_children("*", "Portal", true, false):
+		var portal := n as Portal
 		if portal != null and portal.target_zone == target:
 			hit = true
 			break
+	if not hit:
+		for n in inst.find_children("*", "Area2D", true, false):
+			if n is WalkGate and (n as WalkGate).target_zone == target:
+				hit = true
+				break
 	inst.queue_free()
 	return hit

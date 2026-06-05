@@ -1,12 +1,15 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/zones/blighted_reach.gd" id="1_br"]
 [ext_resource type="PackedScene" path="res://art/procedural/world/dead_tree.tscn" id="2_tree"]
 [ext_resource type="PackedScene" path="res://scenes/world/portal.tscn" id="3_portal"]
 [ext_resource type="Script" path="res://scripts/systems/spawn_director.gd" id="4_sd"]
+[ext_resource type="PackedScene" path="res://scenes/world/walk_gate.tscn" id="5_walkgate"]
+[ext_resource type="PackedScene" path="res://art/procedural/zones/tent.tscn" id="6_tent"]
+[ext_resource type="PackedScene" path="res://art/procedural/zones/fire_pit.tscn" id="7_pit"]
 
 [sub_resource type="RectangleShape2D" id="rect_n"]
-size = Vector2(2000, 40)
+size = Vector2(880, 40)
 
 [sub_resource type="RectangleShape2D" id="rect_s"]
 size = Vector2(2000, 40)
@@ -97,8 +100,12 @@ scale = Vector2(0.9, 0.9)
 collision_layer = 1
 collision_mask = 0
 
-[node name="N" type="CollisionShape2D" parent="PerimeterWalls"]
-position = Vector2(0, -600)
+[node name="N_west" type="CollisionShape2D" parent="PerimeterWalls"]
+position = Vector2(-560, -600)
+shape = SubResource("rect_n")
+
+[node name="N_east" type="CollisionShape2D" parent="PerimeterWalls"]
+position = Vector2(560, -600)
 shape = SubResource("rect_n")
 
 [node name="S" type="CollisionShape2D" parent="PerimeterWalls"]
@@ -113,11 +120,11 @@ shape = SubResource("rect_e")
 position = Vector2(-960, 0)
 shape = SubResource("rect_w")
 
-[node name="ReturnPortal" parent="." instance=ExtResource("3_portal")]
-position = Vector2(0, -520)
-display_name = "Threshold Camp"
+[node name="WildernessNorthGate" parent="." instance=ExtResource("5_walkgate")]
+position = Vector2(0, -600)
 target_zone = &"threshold_camp"
 arrival_marker = &"FromBlightedReach"
+display_name = "Wilderness North Gate"
 
 [node name="CryptPortal" parent="." instance=ExtResource("3_portal")]
 position = Vector2(0, 500)
@@ -127,6 +134,46 @@ arrival_marker = &"FromBlightedReach"
 
 [node name="SpawnPoint" type="Marker2D" parent="."]
 position = Vector2(0, -460)
+
+[node name="FromTownGate" type="Marker2D" parent="."]
+position = Vector2(0, -540)
+
+[node name="BeyondCamp" type="Node2D" parent="."]
+z_index = -50
+
+[node name="Ground" type="Polygon2D" parent="BeyondCamp"]
+polygon = PackedVector2Array(-320, -620, 320, -620, 360, -740, 240, -840, -240, -840, -360, -740)
+color = Color(0.075, 0.062, 0.05, 1)
+
+[node name="GroundGlow" type="Polygon2D" parent="BeyondCamp"]
+modulate = Color(1, 1, 1, 0.35)
+polygon = PackedVector2Array(-200, -660, 200, -660, 240, -740, 160, -800, -160, -800, -240, -740)
+color = Color(0.13, 0.10, 0.075, 1)
+
+[node name="FirePit" parent="BeyondCamp" instance=ExtResource("7_pit")]
+position = Vector2(0, -740)
+modulate = Color(0.7, 0.6, 0.55, 0.85)
+scale = Vector2(0.85, 0.85)
+
+[node name="Tent1" parent="BeyondCamp" instance=ExtResource("6_tent")]
+position = Vector2(-180, -700)
+modulate = Color(0.5, 0.46, 0.45, 0.85)
+scale = Vector2(0.8, 0.8)
+
+[node name="Tent2" parent="BeyondCamp" instance=ExtResource("6_tent")]
+position = Vector2(180, -720)
+modulate = Color(0.52, 0.48, 0.46, 0.85)
+scale = Vector2(0.8, 0.8)
+
+[node name="Tent3" parent="BeyondCamp" instance=ExtResource("6_tent")]
+position = Vector2(40, -800)
+modulate = Color(0.48, 0.44, 0.42, 0.75)
+scale = Vector2(0.7, 0.7)
+
+[node name="Fog" type="Polygon2D" parent="BeyondCamp"]
+z_index = 1
+polygon = PackedVector2Array(-360, -610, 360, -610, 360, -700, -360, -700)
+color = Color(0.16, 0.14, 0.18, 0.32)
 
 [node name="FromForsakenCrypt" type="Marker2D" parent="."]
 position = Vector2(0, 440)

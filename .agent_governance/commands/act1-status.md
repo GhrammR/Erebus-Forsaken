@@ -257,7 +257,7 @@ stable for already-closed work; new stages are appended. Existing
 7. Stage 9.8 — Quality of Life (Hearth Ember + potions) **[CLOSED]**
 8. Stage 9.8.1 — Hotfix: Ember Maw-route bug **[CLOSED]**
 9. Stage 11 — AI asset-generation pipeline **[CLOSED]**
-10. Stage 12 — Town → wilderness walkable transition (replace portal)
+10. Stage 12 — Town → wilderness walkable transition **[CLOSED]**
 11. Stage 13 — Wilderness procedural generation (seeded RNG, biome
     templates, aesthetic variants for trees / rocks / enemy skins)
 12. Stage 14 — Waypoint system (themed, persistent, discoverable)
@@ -1008,25 +1008,78 @@ audio / video pipeline so every later stage can pull on it.
   + `audit.md` hybrid section present.
 * \[x] Regression: all 13 verifiers PASS post-Stage-11.
 
-## Stage 12 — Town → wilderness walkable transition
+## Stage 12 — Town → wilderness walkable transition  **[CLOSED 2026-06-04]**
 
-Replace the current portal-style hop with a walkable transition: the
-player walks to the south edge of Threshold Camp and the world
-seamlessly extends into the first wilderness zone. No fade-to-black,
-no scene swap unless the zones are too large to coexist in memory.
+Replaced the camp↔wilderness Portal interactable with a walkable
+seam: a WalkGate trigger sits in a gap in the perimeter wall and
+auto-transits the player when they walk into it. The Crypt entrance
+(and, in Stage 19, the Maw entrance in town) stay as discrete
+Portal interactables — "explicit doorway" semantics where E-press
+is appropriate.
 
-* \[ ] Decide: single big zone, or stitched zones with on-the-edge
-  trigger-area transit. Probable path = stitched with seamless transit
-  (preserves `Zone` autoload pattern, simpler save model).
-* \[ ] Build `TownSouthGate` marker + visible road at the south edge
-  of Threshold Camp.
-* \[ ] First wilderness zone gets a `FromTownGate` marker on its
-  north edge; transit pairs them up.
-* \[ ] Save state survives the transition cleanly (no zone cache
-  duplication).
-* \[ ] DebugLog `[transit]` flag exercises the new path.
-* \[ ] `--verify12` covers: bidirectional walk between camp and
-  first wilderness preserves save + position correctness.
+* \[x] Decision: **stitched zones with on-the-edge trigger** (the
+  act1-status.md "probable path"). One big zone fights the existing
+  `Zone` autoload + `_zone_cache` model, and Stage 13's seeded
+  procgen needs re-rollable boundaries per zone. Stitched is cheaper.
+* \[x] `WalkGate` node (`scripts/world/walk_gate.gd` +
+  `scenes/world/walk_gate.tscn`). `Area2D` with `collision_mask=2`
+  (player CharacterBody2D layer). Procedural `RoadArt` Polygon2D
+  child draws a dark earthy 40×120 path tile. Three re-entry guards:
+  `_armed` (false for `ARMING_DELAY = 0.25s` after `_ready` so the
+  initial physics flush can't fire), `_consumed` (one-shot flag so
+  no two transits queue in a single frame), and caller-side marker
+  placement outside the trigger shape (verifier enforces).
+* \[x] `TownSouthGate` (`threshold_camp.tscn`) at `(0, 400)` pointing
+  at `&"blighted_reach"` with `arrival_marker = &"FromTownGate"`.
+  Camp south wall split into `S_west` (-380, 400) + `S_east`
+  (380, 400), each 600×40, leaving a 160px gap centered on x=0.
+* \[x] `WildernessNorthGate` (`blighted_reach.tscn`) at `(0, -600)`
+  pointing at `&"threshold_camp"` with `arrival_marker =
+  &"FromBlightedReach"`. Reach north wall split into `N_west`
+  (-560, -600) + `N_east` (560, -600), each 880×40, leaving a 160px
+  gap. New `FromTownGate` Marker2D at `(0, -540)` for camp→reach
+  arrivals; existing `SpawnPoint` and `FromForsakenCrypt` markers
+  unchanged.
+* \[x] Save state survives the transition: WalkGate calls the same
+  `SceneRouter.go_to_zone` → `host.transit_to_zone` chain as Portal,
+  so `_zone_cache` + `SaveSystem` round-trip remain unchanged. No
+  schema bump needed for this stage.
+* \[x] DebugLog `[transit]` instrumentation: WalkGate logs
+  `walkgate_entered <name> -> <zone> (arrival=<marker>)` on each
+  successful trigger, so the trail is distinguishable from a Portal
+  interact in the log. Existing `_do_transit` `[transit]` lines
+  already cover the destination side.
+* \[x] `--verify12` (32 / 32 PASS): WalkGate class + scene load,
+  collision_mask=2, both gates present with correct target_zone +
+  arrival_marker, both perimeter walls split (S_west/S_east,
+  N_west/N_east, legacy single 'S'/'N' removed), legacy portals
+  removed, CryptPortal retained, arrival markers verified to sit
+  outside the destination's reverse trigger band, arming guard +
+  one-shot guard + ARMING_DELAY constant present in source.
+* \[x] `--verify7` updated: Portal-only assertion now accepts either
+  Portal or WalkGate for the camp↔reach transit (Stage 12 contract).
+* \[x] **Stage 12.1 — beyond-the-gate dressing.** User asked whether
+  the wilderness should be visible from town (and vice versa). A full
+  D2-style streaming world was rejected as a 2–4 week architectural
+  rewrite that fights AD-12, Stages 13 + 19, and the per-zone save
+  cache — see `parking_lot.md::streaming-world-architecture` for
+  the revisit trigger. Instead, each zone ships a procedural dressing
+  prop on the far side of its gap so the player sees "the world
+  beyond" as they approach:
+  - `BeyondWilderness` (camp, z_index=-50, south of TownSouthGate):
+    dark mucky ground polygon + ground shadow, four darkened dead-tree
+    instances (scaled 0.7–0.85, tinted misty grey-blue), low-alpha
+    fog band straddling the wall plane.
+  - `BeyondCamp` (reach, z_index=-50, north of WildernessNorthGate):
+    warmer brown ground polygon + glow, a darkened firepit instance,
+    three darkened tent instances, fog band.
+  All purely visual — no physics, no enemies, no live data. Renders
+  on every machine because it's just Polygon2D + scene instances.
+* \[x] Regression: all 14 verifiers PASS post-Stage-12 + 12.1.
+* \[ ] Smoke playtest (user-driven): walk south from Threshold Camp,
+  see the wilderness silhouettes through the gap → walk into the gap
+  → arrive in Blighted Reach near the north edge → walk north, see
+  camp silhouettes through the gap → walk back through.
 
 ## Stage 13 — Wilderness procedural generation
 

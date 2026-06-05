@@ -51,6 +51,26 @@ removed.
 
 ---
 
+### streaming-world-architecture — D2-style contiguous outdoor zones
+- Why parked: 2026-06-04. User asked whether camp + wilderness could be
+  one streamed world so the next zone is visible (with live monsters)
+  through the gap. Estimated as a 2–4 week solo-dev rewrite: replace
+  the `Zone` autoload + `_zone_cache` model with a tile/chunk loader,
+  unify SpawnDirector to a global-position model, rewrite the save
+  schema to be coordinate-grid keyed instead of `zone_id`-keyed,
+  introduce off-screen tile culling + eviction. Fights AD-12 (zone
+  state lifecycle), Stage 13 (per-zone seeded procgen relies on
+  discrete boundaries), and Stage 19 (Maw entrance in town). Stage
+  12.1 shipped a cheap dressing pass (silhouettes + fog through the
+  gate) that delivers most of the visual payoff for ~2% of the cost.
+- Earliest revisit: only if Stage 20 (wilderness authorship at scale)
+  reveals that discrete-zone seams actively hurt the felt experience.
+  Re-evaluation should produce evidence (playtest notes, specific
+  encounters that fail) before paying the rewrite cost.
+- Notes: keeping The Maw out of any streaming model would still be
+  correct (its rollback-anchor + endless contract requires a discrete
+  zone). If we revisit, the carve-out for The Maw stays.
+
 ### grid-inventory — Diablo-style grid inventory
 - Why parked: AD-10 — slot list ships Act 1; grid doubles UI complexity.
 - Earliest revisit: post-Act-1 polish, before Act 2.
