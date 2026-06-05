@@ -30,6 +30,11 @@ static func resolve(attack: Attack, defender: Stats) -> DamageResult:
 	var base: int = attack.base_damage
 	if attacker_stats != null:
 		base += attacker_stats.physical_damage_bonus()
+		# Stage 15.1 — equipped weapon adds flat damage. Zero on bare
+		# hands; class skills inherit the same bonus through this same
+		# resolver call so a Pythia staff scales Oracle Bolt the same
+		# way it scales a basic swing.
+		base += attacker_stats.weapon_damage
 	var raw := maxi(MIN_DAMAGE, base - defender.mitigation())
 	var crit := randf() < CRIT_CHANCE
 	var final_damage: int = int(round(float(raw) * CRIT_MULT)) if crit else raw

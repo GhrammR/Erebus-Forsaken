@@ -153,6 +153,7 @@ func _recompute_totals() -> void:
 			continue
 		_add(totals, &"armor_defense",        item.base_armor_defense)
 		_add(totals, &"weapon_attack_rating", item.base_weapon_ar)
+		_add(totals, &"weapon_damage",        item.base_weapon_damage)
 		_add(totals, &"resistance",           item.base_resist)
 		for key in item.affixes.keys():
 			_add(totals, StringName(key), int(item.affixes[key]))

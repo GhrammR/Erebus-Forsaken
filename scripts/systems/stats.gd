@@ -52,6 +52,9 @@ var equip_pneuma: int = 0
 var armor_defense: int = 0
 var equip_hp_max: int = 0
 var weapon_attack_rating: int = 0
+## Stage 15.1 — flat damage contributed by the equipped weapon. Folded
+## into outgoing attack damage by DamageResolver. Zero on bare hands.
+var weapon_damage: int = 0
 var gear_resistance: int = 0
 
 ## Stage 9 — per-skill flat damage bonus contributed by equipment.
@@ -171,6 +174,7 @@ func set_level(new_level: int) -> void:
 func apply_equipment_totals(totals: Dictionary) -> void:
 	armor_defense        = int(totals.get(&"armor_defense", 0))
 	weapon_attack_rating = int(totals.get(&"weapon_attack_rating", 0))
+	weapon_damage        = int(totals.get(&"weapon_damage", 0))
 	gear_resistance      = int(totals.get(&"resistance", 0))
 	equip_strength       = int(totals.get(&"strength", 0))
 	equip_dexterity      = int(totals.get(&"dexterity", 0))

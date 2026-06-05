@@ -258,6 +258,15 @@ func _do_transit(zone_id: StringName, place_at_spawn: bool, arrival_marker: Stri
 	_zone = packed.instantiate() as Zone
 	add_child(_zone)
 	move_child(_zone, _player.get_index())
+	# Stage 15.1 — keep GameState in sync with what the player is
+	# actually standing in. Pre-15.1, current_zone_id was set only on
+	# load + Hearth Ember exit, so a normal WalkGate transit left it
+	# stale. A save mid-zone-transit would record the OLD zone id with
+	# the NEW position, and reload placed the player outside the saved
+	# zone's bounds. See failure-modes "Stage 15.1 — Stale
+	# current_zone_id on transit". Save migration v17→v18 repairs
+	# affected saves on load.
+	GameState.current_zone_id = zone_id
 	if place_at_spawn:
 		_place_player_for_arrival(arrival_marker)
 	else:

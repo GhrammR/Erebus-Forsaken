@@ -48,6 +48,12 @@ enum UseKind {
 @export var base_armor_defense: int = 0
 @export var base_weapon_ar: int = 0
 @export var base_resist: int = 0
+## Stage 15.1 — base damage contributed by an equipped weapon. Added
+## to the attacker's swing/skill base in DamageResolver via
+## Stats.weapon_damage. Bare hands (WEAPON slot empty) -> 0 here ->
+## attacks still land for ATTACK_BASE_DAMAGE + STR bonus. Non-weapon
+## slots leave this at 0 — affixes-only items don't bypass weapons.
+@export var base_weapon_damage: int = 0
 
 @export_group("Affixes (Stage 4 fixed)")
 ## StringName -> int. Supported keys (apply_equipment_totals reads these):

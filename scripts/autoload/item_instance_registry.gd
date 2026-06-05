@@ -58,6 +58,14 @@ func maybe_roll_prefix(base_id: StringName) -> StringName:
 		return base_id
 	if _table == null or _table.size() == 0:
 		return base_id
+	# Stage 15.1 — consumables never roll a prefix. The prefix table's
+	# affixes only apply on equipped items, and slapping "Mighty Mana
+	# Potion" with a +defense affix on a consumable looks like a rare
+	# drop while doing nothing (and burns the rare-drop SFX). Drop
+	# tables can still roll consumables; they just stay base-tier.
+	var base_item: ItemData = Database.items.get(base_id, null) as ItemData
+	if base_item != null and base_item.kind == ItemData.Kind.CONSUMABLE:
+		return base_id
 	var prefix: Dictionary
 	if _forced_index >= 0 and _forced_index < _table.size():
 		prefix = _table.entries[_forced_index] as Dictionary

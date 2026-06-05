@@ -35,6 +35,7 @@ DebugLog="*res://scripts/systems/debug_log.gd"
 ConsumableUse="*res://scripts/systems/consumable_use.gd"
 BitmapMode="*res://scripts/systems/bitmap_mode.gd"
 WorldSeed="*res://scripts/systems/world_seed.gd"
+EquipmentVisuals="*res://scripts/systems/equipment_visuals.gd"
 
 [application/feature_flags]
 

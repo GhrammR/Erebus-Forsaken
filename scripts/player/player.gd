@@ -64,6 +64,11 @@ const _SKILL_BY_CLASS: Dictionary = {
 
 var _sprite_anim: AnimationPlayer = null
 var _sprite_root: Node = null
+## Stage 15 — paper-doll component. Created per assign_class so a class
+## swap rebinds it to the freshly-instantiated sprite. Listens to
+## Inventory.equipment_changed and maintains overlay polygons under
+## the sprite's Body node + toggles the class's built-in weapon arm.
+var _paperdoll: EquipmentPaperdoll = null
 ## Tween driving the hit flash. The per-class sprite hit anims also
 ## carry a modulate track, but the AnimationPlayer doesn't reliably
 ## land the final keyframe on very short LOOP_NONE clips — leaving
@@ -162,6 +167,19 @@ func assign_class(cd: ClassData) -> void:
 	else:
 		if DebugLog.is_enabled(&"class"):
 			DebugLog.write(&"class", "assign_class(%s) -> sprite_scene is NULL" % cd.id)
+
+	# Stage 15 — bind paper-doll to the new sprite + inventory. Deferred
+	# one frame so the class sprite's own _ready (which paints the
+	# Polygon2D children) runs before we add overlays — otherwise the
+	# class's _paint() runs after us and could re-color or reorder
+	# children unpredictably.
+	if _paperdoll == null:
+		_paperdoll = EquipmentPaperdoll.new()
+		_paperdoll.name = "EquipmentPaperdoll"
+		add_child(_paperdoll)
+	if _sprite_root != null:
+		_paperdoll.call_deferred(&"bind", _sprite_root, _inventory, cd.id)
+
 	EventBus.stats_changed.emit(self)
 
 var _phys_watch_prev: Vector2 = Vector2.ZERO

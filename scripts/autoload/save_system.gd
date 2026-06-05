@@ -4,7 +4,7 @@ extends Node
 ## migrate() step. The on-disk format is human-readable so a tester can
 ## hand-edit corruption cases (rules/failure-modes.md #7 leans on this).
 
-const SAVE_VERSION: int = 17
+const SAVE_VERSION: int = 18
 const SAVE_PATH: String = "user://save_slot_1.dat"
 
 signal save_completed(success: bool)
@@ -140,6 +140,8 @@ func migrate(old: Dictionary) -> Dictionary:
 		old = _migrate_v15_to_v16(old)
 	if v < 17:
 		old = _migrate_v16_to_v17(old)
+	if v < 18:
+		old = _migrate_v17_to_v18(old)
 	return old
 
 func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
@@ -272,6 +274,61 @@ func _migrate_v16_to_v17(old: Dictionary) -> Dictionary:
 	old["version"] = 17
 	if not old.has("discovered_waypoints"):
 		old["discovered_waypoints"] = []
+	return old
+
+# Stage 15.1 — playable bounds + safe spawn per zone, used by the
+# v17->v18 stale-zone repair below. Bounds match the zone's
+# PerimeterWalls inner area; spawn matches the zone's SpawnPoint
+# Marker2D. Keep in sync if either zone's geometry changes.
+const _STALE_ZONE_REPAIR: Dictionary = {
+	&"threshold_camp": {
+		"bounds": Rect2(Vector2(-620, -380), Vector2(1240, 760)),
+		"spawn":  Vector2(0, 140),
+	},
+	&"blighted_reach": {
+		"bounds": Rect2(Vector2(-940, -580), Vector2(1880, 1160)),
+		"spawn":  Vector2(0, -460),
+	},
+}
+
+func _migrate_v17_to_v18(old: Dictionary) -> Dictionary:
+	# Stage 15.1 — repair saves written with a stale current_zone_id.
+	# Pre-15.1 transit_to_zone did not update GameState.current_zone_id;
+	# a save mid-zone-switch recorded the OLD zone with the NEW
+	# position. On load the player landed outside the saved zone's
+	# walls (e.g. y=-584 inside threshold_camp whose north wall is
+	# y=-400). Detect that case: if the saved position falls outside
+	# the saved zone's playable bounds AND a known SpawnPoint exists,
+	# snap to the zone's SpawnPoint. Untouched otherwise — a position
+	# inside bounds is correct by construction.
+	old["version"] = 18
+	var zone_id := StringName(old.get("zone_id", ""))
+	var pos: Dictionary = old.get("position", {})
+	if zone_id == &"" or pos.is_empty():
+		return old
+	var repair: Dictionary = _STALE_ZONE_REPAIR.get(zone_id, {})
+	if repair.is_empty():
+		return old
+	var p := Vector2(float(pos.get("x", 0.0)), float(pos.get("y", 0.0)))
+	var bounds: Rect2 = repair["bounds"]
+	if bounds.has_point(p):
+		return old
+	var spawn: Vector2 = repair["spawn"]
+	old["position"] = { "x": spawn.x, "y": spawn.y }
+	# Stage 15.1 — when stale-zone repair fires, the top-level
+	# `enemies` and `loot` snapshots almost certainly belong to the
+	# zone the player was ACTUALLY in (not the one zone_id named).
+	# Restoring them in the wrong zone places monsters at meaningless
+	# coordinates — sometimes inside town with the player. Drop them.
+	# The destination zone re-spawns from its SpawnDirector defaults
+	# on the next entry; cached visits to other zones in `zone_caches`
+	# are keyed by zone_id and remain correct.
+	var dropped_enemies: int = (old.get("enemies", []) as Array).size()
+	var dropped_loot: int = (old.get("loot", []) as Array).size()
+	old["enemies"] = []
+	old["loot"] = []
+	push_warning("SaveSystem v17->v18: stale-zone repair snapped position from %s to %s for zone %s; dropped %d misattributed enemies + %d loot" % [
+			p, spawn, String(zone_id), dropped_enemies, dropped_loot])
 	return old
 
 func _migrate_v12_to_v13(old: Dictionary) -> Dictionary:

@@ -12,7 +12,9 @@ A dark-fantasy, Greek-mythology isometric ARPG. Solo development in Godot 4.
 > equipment, AI-generated voice + portraits, waypoints, seeded procgen,
 > all sized for 2+ hours of first-run gameplay. Stages 15–21 (Strategic
 > Review v2) are the path there; Stage 15 (paper-doll equipment
-> rendering) is the immediate next step. Release plan: **single dual launch on Steam + itch.io
+> rendering) is **done** — equipped helmets/chests/legs/offhand now
+> render on the procedural class sprite, weapon arms hide on
+> bare hands. Release plan: **single dual launch on Steam + itch.io
 > the same day** when content-complete — no staged demo, no EA split.
 > The project is being built in public from the first commit.
 
@@ -147,6 +149,8 @@ godot --headless --path . -- --verify11     # AI asset-gen pipeline   (Stage 11)
 godot --headless --path . -- --verify12     # Walkable town seam      (Stage 12)
 godot --headless --path . -- --verify13     # Seeded wilderness procgen (Stage 13)
 godot --headless --path . -- --verify14     # Sundered Ferry waypoints (Stage 14)
+godot --headless --path . -- --verify15     # Equipment paper-doll    (Stage 15)
+godot --headless --path . -- --verify15_1   # 15.1 hotfix bundle      (Stage 15.1)
 ```
 
 Debug instrumentation (Stage 9.7):

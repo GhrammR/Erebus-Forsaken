@@ -1280,25 +1280,79 @@ Bitmap polish deferred to Stage 21.
   discover its brazier → travel back via menu → arrive at the
   town brazier (not camp center).
 
-## Stage 15 — Equipment paper-doll rendering
+## Stage 15.1 — Hotfix bundle (zone_id + weapon dmg + consumable prefix + save repair)  **[CLOSED 2026-06-05]**
+
+Four bugs surfaced from Stage 15 playtest — all unrelated to the
+paper-doll itself but all blocking the next playtest. Bundled into
+one stage so the on-disk save format only bumps once.
+
+* \[x] **Stale `current_zone_id` on transit** — `_do_transit` now
+  writes `GameState.current_zone_id = zone_id`. Save migration
+  v17→v18 repairs affected saves by snapping out-of-bounds
+  positions back to the recorded zone's SpawnPoint. Per-zone
+  bounds + spawn live in `SaveSystem._STALE_ZONE_REPAIR`.
+  Failure-mode entry added.
+* \[x] **Weapons did not contribute damage** — added
+  `ItemData.base_weapon_damage`, rolled into
+  `Stats.weapon_damage` via Inventory totals, folded into
+  outgoing attack `base` by DamageResolver. Bare hands → 0,
+  swing still resolves on `ATTACK_BASE_DAMAGE + STR/4`. Starter
+  weapons backfilled: spear +10, bow +8, staff/wand +5.
+* \[x] **Consumables rolled rare prefixes** — `maybe_roll_prefix`
+  early-returns when the base item's kind is CONSUMABLE.
+  Equipment drops still roll normally.
+* \[x] **Save migration v17→v18** runs automatically on load.
+  Affected playthrough recoverable without manual edit. When
+  stale-zone repair triggers, the top-level `enemies` + `loot`
+  snapshots are also dropped — they belonged to the zone the
+  player was actually in and would otherwise spawn at wrong-zone
+  coordinates (sometimes inside town with the player). The
+  destination zone re-spawns from SpawnDirector defaults.
+* \[x] `--verify15_1` covers all four: 25 assertions including
+  the exact reported-save position (x=1.05, y=-584.24) repairing
+  to threshold_camp SpawnPoint (0, 140), enemy/loot cleanup on
+  stale repair, and in-bounds saves keeping their snapshots.
+
+## Stage 15 — Equipment paper-doll rendering  **[CLOSED 2026-06-05]**
 
 The procedural sprite gains slot layers. Equipping a helmet adds a
 helmet node visible on the sprite; equipping a weapon adds the
 weapon visual; unequipping a weapon reverts to a bare-hands stance.
 
-* \[ ] Procedural sprite refactor: `Body/SlotAnchors/(Head, Weapon,
-  Offhand, Armor)` empty `Node2D` slots that child sprites parent
-  into.
-* \[ ] `EquipmentVisual` resource on each `ItemData`: procedural
-  draw or bitmap reference for the slot's render.
-* \[ ] `Inventory.equipment_changed` signal already exists — paper-doll
-  listens and swaps slot children.
-* \[ ] Bare-hands stance: when no weapon equipped, hands close into
-  fists; attack anim mirrors closely-thrown jab.
-* \[ ] Hybrid art contract: paper-doll first ships procedurally.
-  Bitmap polish via Stage 11 pipeline lands later.
-* \[ ] `--verify15` covers: equipping items adds slot nodes;
-  unequipping removes them; save/load preserves visual state.
+* \[x] Procedural overlay layout: armor overlays (HEAD/CHEST/LEGS/
+  OFFHAND) parent under each class sprite's existing `Body` node;
+  no .tscn refactor needed. Per-class polygon geometry lives in
+  `EquipmentVisuals` (autoload).
+* \[x] Tier banding: overlay color reflects item magnitude (sum of
+  base armor/AR/resist) — dull / normal / bright. Affix-only items
+  read as dull, gating the visual feedback by quantity not type.
+* \[x] `EquipmentPaperdoll` component on Player listens to
+  `Inventory.equipment_changed` and maintains overlay nodes.
+* \[x] Bare-hands rule: WEAPON slot empty → class's built-in weapon
+  arm (SpearArm / StaffArm / BowArm / WandArm) is `.visible = false`.
+  Equipping a weapon shows the arm + retints by tier. The
+  AnimationPlayer track still drives the hidden arm (verified) so
+  re-equipping snaps to the right rotation.
+* \[x] Myrmidon offhand re-uses the built-in Buckler node (retinted
+  in place); other classes get a procedural disc on the off-hip.
+* \[x] RING / AMULET render nothing in Act 1 (verifier asserts).
+* \[x] Class swap rebinds the paperdoll to the new sprite (Pythia →
+  StaffArm + Pythia overlay polygons; verified).
+* \[x] Hybrid art contract: procedural overlays are the always-
+  shippable baseline. When Stage 11's bitmap pipeline produces a
+  per-slot Sprite2D, the paperdoll will prefer it iff
+  `BitmapMode.enabled` AND the sidecar is present. Procedural is
+  never blocked on AI.
+* \[x] Failure modes: paper-doll bind/_paint race (call_deferred
+  pattern), hidden weapon arm vs AnimationPlayer track — both
+  documented + verifier-guarded.
+* \[x] `--verify15` covers: 35 assertions including registry tables,
+  tier bands, overlay parenting under Body, bare-hands hide,
+  weapon-on-equip show, unequip clears + frees overlay, class swap
+  rebind, AnimationPlayer track survives visibility toggle.
+* \[x] Save/load: nothing extra needed — equipment state lives in
+  `Inventory.equipped` (already versioned). On load, restore() emits
+  `equipment_changed` per slot and the paperdoll rebuilds from that.
 
 ## Stage 16 — Item icons (inventory grid)
 

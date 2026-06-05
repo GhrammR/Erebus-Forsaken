@@ -1067,6 +1067,115 @@ against regression.
 
 ---
 
+## #N — Equipment paper-doll overlay races the class sprite's _paint()
+
+**Symptom:** After Player.assign_class(), the head/chest/legs overlay
+polygons stack underneath the class sprite's own Polygon2D children
+(or above them in the wrong z-order), or the overlay color is wiped
+out on the next paint pass. Visible as overlays vanishing, flickering
+on class swap, or rendering with the wrong tint.
+
+**Root cause:** EquipmentPaperdoll.bind() and the class sprite's
+own _ready/_paint() both run on the same frame. If bind() executes
+synchronously before the sprite has populated its Body node, the
+overlays get parented under an empty Body and may be reordered when
+the class sprite finishes painting.
+
+**Prevention:** Player.assign_class() must call
+`_paperdoll.call_deferred(&"bind", ...)` so the class sprite's
+_ready() completes first. The Stage 15 verifier
+(`stage15_verify::_verify_player_holds_paperdoll`) source-checks
+for the `call_deferred(&"bind"` pattern explicitly.
+
+**Recovery:** Switch the bind call from immediate to call_deferred.
+Confirm with --verify15 + an in-editor smoke test.
+
+**First incident:** Stage 15 design — caught preventatively while
+porting the defer-safe init pattern from Stage 13's SpawnDirector
+hotfix.
+
+---
+
+## #N — Hidden weapon arm breaks AnimationPlayer track
+
+**Symptom:** Bare-handed character cannot attack convincingly — the
+swing anim plays its modulate/timing tracks but the visual weapon
+never appears at the right moment, OR equipping a weapon for the
+first time leaves the weapon arm stuck mid-rotation from the prior
+hidden state.
+
+**Root cause:** Hiding a node by reparenting it elsewhere, or by
+freeing the AnimationPlayer's target, severs the track binding.
+The correct toggle is just `.visible = false` — the AnimationPlayer
+keeps mutating rotation/position behind the scenes so when the arm
+re-appears, it's at the right local frame.
+
+**Prevention:** Paper-doll WEAPON handling ONLY toggles
+`weapon_arm.visible`. Never reparent, queue_free, or replace the
+weapon arm node. Tier retint is per-arm `.modulate` only — does
+not interfere with parent-modulate hit flash.
+`stage15_verify::_verify_anim_tracks_survive_visibility_toggle`
+asserts the rotation track still advances on a hidden arm.
+
+**Recovery:** Revert any reparent/free of the weapon arm; replace
+with visibility toggle. Verify the track still advances by playing
+an attack anim with the arm hidden and inspecting `arm.rotation`
+across two ticks.
+
+**First incident:** Stage 15 design — preventative, anchored to the
+failure-mode #2 lesson (never break a NodePath the anim relies on).
+
+---
+
+## #N — Stale `GameState.current_zone_id` after zone transit
+
+**Symptom:** Player walks through a portal/WalkGate into zone B,
+saves, quits, reloads. Game loads zone A (the OLD zone) but
+restores the player at the position they had in zone B — landing
+them outside zone A's walls, in the void. They appear "north of
+town" (or south of dungeon, etc.) with no visible exit. Enemies
+from the wrong zone may be partly visible through the perimeter
+because their persisted positions belong to a different
+coordinate frame.
+
+**Root cause:** SceneRouter.go_to_zone() delegates to
+Game.transit_to_zone() in the host path. `_do_transit` rebuilds
+the zone subtree and teleports the player to the arrival marker
+but never writes `GameState.current_zone_id`. Pre-15.1 the only
+non-load writes to that field were on the Hearth Ember exit
+(scenes/game.gd:437) and the standalone SceneRouter fallback
+(scripts/autoload/scene_router.gd:58). Saves use
+`GameState.current_zone_id` for the `zone_id` field, so the on-disk
+record disagrees with the player's actual position.
+
+**Prevention:** Every code path that switches the active zone
+MUST update `GameState.current_zone_id` before the next save
+window. Currently:
+- `_do_transit` (line ~257) — added Stage 15.1.
+- Ember exit path (line ~437) — pre-existing.
+- SceneRouter fallback (line ~58) — pre-existing.
+- SaveSystem load — sets it from the saved value.
+
+If a new transit path lands (Stage 19 quest-gated Maw, future
+fast travel), it must do the same. Verifier
+`stage15_1_verify::_verify_zone_id_set_on_transit_source`
+source-checks for the assignment inside `_do_transit`.
+
+**Recovery:** Save migration v17→v18 repairs affected files. It
+detects positions outside the recorded zone's playable Rect2 and
+snaps them to the zone's SpawnPoint. Per-zone bounds + spawns are
+in `_STALE_ZONE_REPAIR` (save_system.gd); keep in sync if a zone's
+PerimeterWalls or SpawnPoint moves.
+
+**First incident:** Stage 15 playtest — user reported "I am to
+the north of town, with monsters around" after quit/reload. Save
+file showed `zone_id: threshold_camp` with `position: (1.05,
+-584.24)`, 184 px past the y=-400 north wall. Fix: write
+`GameState.current_zone_id = zone_id` in `_do_transit` + v17→v18
+repair migration.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

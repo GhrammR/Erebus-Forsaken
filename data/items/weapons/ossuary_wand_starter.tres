@@ -10,6 +10,7 @@ slot = 0
 class_mask = 8
 level_req = 1
 base_weapon_ar = 18
+base_weapon_damage = 5
 affixes = { &"pneuma": 3 }
 glyph_color = Color(0.85, 0.85, 0.75, 1)
 glyph_shape = 1
