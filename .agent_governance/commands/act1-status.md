@@ -265,6 +265,9 @@ stable for already-closed work; new stages are appended. Existing
 14. Stage 16 — Item icons (replace text rows with icon grid)
 15. Stage 17 — NPC voice + portraits (each town NPC ships an intro
     line, AI-generated voice + portrait)
+15.5. Stage 17.5 — Procedural sprite anatomy v2 (bone-servant
+    refactor across player + enemy sprites; lands BEFORE Stage 18
+    so new-boss + Stage 20 enemy authoring don't pay v1 anatomy tax)
 16. Stage 18 — Demote Forsaken Boss → rare; refactor `act_1_complete`
     state machine for the new final-boss model
 17. Stage 19 — The Maw entrance moves to town; gated behind first-quest
@@ -1360,16 +1363,52 @@ Replace the text-row inventory UI with an icon grid. Drag/drop is
 *not* in scope here (parked); single-click to equip / use persists
 from current `inventory_panel.gd`.
 
-* \[ ] Icon generation per item via Stage 11 pipeline (procedural
-  fallback = the current `ItemGlyph` colored shape).
-* \[ ] `InventoryPanel` swaps text rows for a 6×6 (or 6×N) icon
-  grid. Backpack capacity stays 36 (AD-10).
-* \[ ] Hover tooltip carries the full stats text that used to be the
-  row text.
-* \[ ] Equipment side shows slot icons in their paper-doll
-  positions (Head top, Weapon bottom-left, etc.).
-* \[ ] `--verify16` covers: panel builds the grid, every backpack id
-  resolves an icon (procedural fallback ok), tooltip surfaces stats.
+* \[x] Per-item icon Control (`scripts/ui/item_icon.gd`,
+  `class_name ItemIcon extends Control`). 40×40 cell, draws the
+  same shape/color as `ItemGlyph` inside a tier-colored ring
+  (`EquipmentVisuals.TIER_*`, shared with the paper-doll so
+  rare items glow consistently in both UIs). Sidecar bitmap
+  override at `res://data/icons/<item_id>.png` when present
+  (procedural fallback when not — Stage 11 hybrid art policy).
+* \[x] `InventoryPanel` (`scenes/ui/inventory_panel.{gd,tscn}`)
+  swaps the two `VBoxContainer` lists for `GridContainer`s:
+  backpack = 6 columns × 6 rows (36 cells = `Inventory.BACKPACK_CAPACITY`,
+  AD-10), equipment = 3 columns × 4 rows in paper-doll layout
+  (Head top-center, Amulet/Chest/Ring middle row, Legs lower,
+  Weapon/Offhand bottom flanks). Empty slots render as a flat dark
+  cell with a faint border.
+* \[x] Single-click semantics from Stage 4/9.8 preserved: equipment
+  cell → `Inventory.equip(id)` (or `unequip(slot)` from the
+  equipment grid), consumable cell → `_on_consumable_pressed` →
+  `ConsumableUse.try_use`. Disabled state (class/level lock,
+  cooldown, channel-in-progress) dims the icon to 35% alpha and
+  drops the `pressed` wiring.
+* \[x] Hover tooltip (`PanelContainer` parented under the
+  `CanvasLayer`, NOT under a cell — prevents `ScrollContainer`
+  clipping; failure-modes entry added). Tooltip carries the same
+  text the old row used (`_format_brief` / `_format_consumable_brief`)
+  plus the slot name for equipment. Tooltip auto-flips above the
+  cell when it would overflow the viewport bottom.
+* \[x] `--verify16` (`test/stage16_verify.{gd,tscn}`, 19 PASS):
+  - `ItemIcon` API surface (`set_item`, `set_empty`, `set_disabled`,
+    `pressed`/`hovered` signals, `CELL_SIZE = 40×40`).
+  - `BackGrid` is a 6-column `GridContainer` with exactly 36
+    `ItemIcon` children.
+  - `EquipGrid` is a 3-column `GridContainer` with 7 `ItemIcon`
+    cells (one per `EquipmentSlot.ALL_SLOTS` entry).
+  - Every backpack id resolves to a non-empty icon (no leftover text
+    fallback).
+  - Hovering an icon shows the tooltip and the tooltip text contains
+    the item's display name + stats brief.
+  - Consumable cell wires `pressed -> _on_consumable_pressed`
+    (not `Inventory.equip`).
+* \[x] Verifier matrix: Stages 1, 3, 4, 5, 6, 7, 7.5, 9, 9.5, 9.7,
+  9.8, 10, 11, 12, 13, 14, 15, 15.1, 16 all PASS. Stage 8 still
+  shows the pre-existing synth-prefix save round-trip failure
+  inherited from before Stage 16 (unchanged by this stage; tracked
+  separately).
+* \[x] README updated (status line + `--verify16` in the verifier
+  list).
 
 ## Stage 17 — NPC voice + portraits
 
@@ -1388,6 +1427,173 @@ no audio.
   the sidecar.
 * \[ ] `--verify17` covers: NPC resource references resolve, dialog
   flow with + without assets, voice plays exactly once per save.
+
+## Stage 17.5 — Procedural sprite anatomy v2
+
+Rebuild the procedural sprite anatomy across all four player
+classes, all NPCs, and every existing enemy archetype around a set
+of **anatomy families**. The Bone Servant's current anatomy is
+*its own* — it's a skeleton — and stays as the UNDEAD family
+anchor; it is NOT applied to humans or other creatures. Each
+sprite picks an anatomy family appropriate to what it is.
+
+Modular sprite contract (one Polygon2D per semantic part, AD-11) is
+preserved across all families — only the part *set* per family
+differs.
+
+**Anatomy families (six shared + per-unique-boss bespoke):**
+
+| Family    | Part-set sketch                                                    | Sprites this stage                                  |
+|-----------|--------------------------------------------------------------------|------------------------------------------------------|
+| HUMAN     | Skull-under-skin, neck, torso (no visible ribs), upper/lower arms, hands, hips, upper/lower legs, feet — full joint pivots. | 4 player classes (Myrmidon, Pythia, Shade-Hunter, Ossuary Priest) + NPCs (Kallias, Eurynome) |
+| HUMANOID  | HUMAN base + species mods (extra digits, tail anchor, horn pair, etc.). Reserved part slots for Stage 20 monstrous mortals. | Contract only — no sprites yet                       |
+| UNDEAD    | Skeleton subtype: skull, jaw, sternum, ribs, spine, pelvis, articulated limbs, hip cloth (Bone Servant template). Wraith subtype: hood + cloak + face void + tattered hem + articulated upper limbs; no legs (floats). | Bone Servant (skeleton-subtype anchor, **unchanged**), Shade Wretch (wraith subtype, **new anatomy**), Bog Caller (wraith subtype, **new anatomy**) |
+| BEAST     | Quadruped base: head, body trunk, four legs with shoulder/hip pivots, tail anchor. | Contract only — no sprites yet                       |
+| DEMON     | HUMAN base + infernal mods: horn pair, hoof feet option, vestigial wing anchors, glowing eye sockets. | Contract only — no sprites yet                       |
+| FLYING    | Reduced/no leg set, paired wings with shoulder + elbow pivots, light torso, claw feet. | Contract only — no sprites yet                       |
+
+**Per-unique-boss bespoke anatomies:** each named unique boss
+(Hekate-Marked Forsaken now, the new Stage 18 final boss, future
+Act 1 unique bosses if added) gets its **own anatomy entry**, not
+a family slot. This is what lets a unique boss be larger / smaller /
+asymmetric / multi-armed / partially-disassembled — properties a
+shared family rig can't carry. The bespoke entry still uses the
+modular sprite contract (one Polygon2D per part), it just doesn't
+have to match any family's part-name set.
+
+This stage authors the bespoke entry for **Hekate-Marked Forsaken**
+(act-1 boss, currently `act_boss_sprite.tscn`). Stage 18's new
+final boss authors its own bespoke entry on creation.
+
+**Bone Servant fate:** keep as-is. Visual untouched. It becomes the
+UNDEAD skeleton-subtype anchor; future skeletal enemies inherit its
+part-name contract and tweak proportions/colors only. Stage 18 +
+Stage 20 inherit the skeleton-subtype rig for free.
+
+**Shade Wretch + Bog Caller fate:** both rebuilt against the new
+UNDEAD wraith-subtype part set (Hood / Cloak / CloakInner /
+TatteredHem / FaceVoid / Eyes / articulated arms / claws — no
+legs). Cloak palettes preserved (void-grey, bog-green). Animations
+rebuilt; behavior unchanged.
+
+**Resolved scope decisions (2026-06-05):**
+- **Articulation:** full joints inside each family (shoulder /
+  elbow / hip / knee where the family has those limbs; wing pivots
+  for FLYING; tail pivots for BEAST/DEMON).
+- **AI bitmap sidecars:** contract + verifier this stage; no real
+  generation yet. First generated sets land alongside Stage 18 / 20
+  content authoring.
+- **Visual direction (HUMAN family only — others as authored):**
+  mythic Greek archetypes. Shared HUMAN rig; class identity comes
+  from clothing + accoutrements:
+  - **Myrmidon** — bronze-age hoplite: leather cuirass, greaves,
+    crested helm, shield strap across chest.
+  - **Pythia** — oracle: stained linen robes, laurel circlet,
+    bare feet, ash-smudged hands.
+  - **Shade-Hunter** — hooded leather cloak, vambraces, quiver
+    strap, soft boots.
+  - **Ossuary Priest** — ash-grey vestments hemmed with bone
+    fragments, ritual scars (cloth-covered), hooded skull cap.
+  - **Kallias (NPC vendor)** — patched merchant cloak, belt of
+    pouches, weathered hands.
+  - **Eurynome (NPC quest-giver)** — heavier ceremonial robe,
+    veil, sigil at the throat.
+
+**Why this stage lands here, not later:** anatomy is the contract
+`EquipmentVisuals.OVERLAYS` builds against AND what every sprite's
+AnimationPlayer tracks reference. Doing the refactor after Stage 18
+(new final-boss sprite) and Stage 20 (10+ new enemy archetypes)
+means redoing every overlay + animation. Stage 17 (NPC portraits) is
+independent of in-world sprite anatomy, so the order is
+17 → 17.5 → 18 onward.
+
+* \[ ] **Family registry** at `scripts/systems/anatomy_families.gd`
+  (autoload or static): one entry per family above with the
+  canonical part-name list it exposes under `Body/`. Per-unique-
+  boss bespoke entries register separately by sprite id, not by
+  family. Single source of truth for the rest of the stage.
+* \[ ] **HUMAN family** part set (drives 4 players + 2 NPCs):
+  `Body/Head`, `Body/Neck`, `Body/Torso`, `Body/Hips`,
+  `Body/UpperArmL/R`, `Body/ForearmL/R`, `Body/HandL/R`,
+  `Body/ThighL/R`, `Body/ShinL/R`, `Body/FootL/R`. No visible
+  ribcage. Full joint pivots. Plus the existing weapon-arm node
+  per class (`SpearArm` / `StaffArm` / `BowArm` / `WandArm`)
+  where applicable.
+* \[ ] **UNDEAD family — skeleton subtype** part set: documents
+  the existing Bone Servant part set (Skull, Jaw, Spine, Pelvis,
+  Rib1/2/3, Sternum, HipCloth, LegL/R, ArmAnchor/ArmUpper/
+  ArmLower/Claw) AS the canonical skeleton-subtype contract.
+  Bone Servant sprite is NOT edited.
+* \[ ] **UNDEAD family — wraith subtype** part set authored
+  fresh: Hood, Cloak (outer), CloakInner (paler underlayer for
+  motion depth), TatteredHem (frayed bottom edge — animates
+  with motion), FaceVoid, EyeL/R, ShoulderL/R anchors,
+  ArmUpperL/R, ArmLowerL/R, ClawL/R. No legs (wraiths float —
+  bottom edge fades into the shadow). Shoulder + elbow pivots
+  on the arms; hem pivot for cloth motion.
+* \[ ] **Shade Wretch + Bog Caller** rebuilt around the new
+  wraith subtype part set. Shade Wretch keeps its current
+  aggressive lunge silhouette (claws forward); Bog Caller
+  keeps its staff (now parented under the wraith arm rather
+  than free-floating). Cloak palettes preserved (Shade Wretch =
+  void-grey, Bog Caller = bog-green). All six canonical
+  animations rebuilt against the new part set.
+* \[ ] **HUMANOID, BEAST, DEMON, FLYING** — contract + part-set
+  declarations only this stage. No sprites authored. Stage 20
+  consumes them.
+* \[ ] **Hekate-Marked Forsaken** bespoke entry registered in the
+  family registry as a per-sprite anatomy. Existing
+  `act_boss_sprite.tscn` documented as the v1 baseline; minor
+  pass allowed to lock its part names cleanly (Stage 18 demote
+  inherits whatever ships here).
+* \[ ] **HUMAN sprites** rebuilt: 4 player classes + 2 NPCs
+  rebuilt around the HUMAN part set with their respective
+  clothing/accoutrement polygons layered on top under `Body/`.
+* \[ ] `EquipmentVisuals.OVERLAYS` re-anchored to the HUMAN
+  part set (HEAD → `Body/Head`, CHEST → `Body/Torso`, LEGS →
+  `Body/Hips` + `Body/ThighL/R`). Tier ring + color logic
+  unchanged. Equipment overlays are HUMAN-only by contract;
+  enemies and NPCs never receive them.
+* \[ ] All six canonical animations (`idle`, `walk`, `attack`,
+  `cast`, `hurt`, `death` — AD-11) rebuilt on each touched
+  sprite against the new part set: 4 HUMAN players, 2 HUMAN
+  NPCs, Shade Wretch (wraith), Bog Caller (wraith). Bone
+  Servant animations preserved as-is — its sprite isn't
+  rebuilt. Verifier source-checks no AnimationPlayer track on
+  a touched sprite still references a v1 part name.
+* \[ ] **AI bitmap-swap contract for sprite parts** (sidecar
+  layer): each `Polygon2D` part may have an optional sibling
+  `Sprite2D` at `res://data/sprites/<sprite_id>/<part>.png`.
+  When present, the Sprite2D renders and the Polygon2D hides;
+  when absent, the procedural polygon ships. Mirrors the
+  item-icon sidecar pattern from Stage 16. Works for every
+  family AND every bespoke unique-boss anatomy. Hybrid art
+  policy preserved.
+* \[ ] `failure-modes.md` entries: (a) AnimationPlayer track
+  binding survives part renames only if the rename happens in
+  one editor pass — split renames orphan tracks silently;
+  (b) sidecar Sprite2D must inherit the parent Polygon2D's
+  `z_index` or the layer order goes wrong on hidden-weapon-arm
+  toggles; (c) applying a family's part set to a sprite that
+  shouldn't have it (e.g., putting a ribcage on a Pythia)
+  silently passes structural checks — verifier asserts each
+  sprite's declared family matches its part set.
+* \[ ] `--verify17_5` covers: family registry loads with the
+  expected six families + Hekate-Marked bespoke entry; every
+  HUMAN sprite (4 players + 2 NPCs) exposes the full HUMAN
+  part set under `Body/`; Bone Servant still exposes its
+  skeleton-subtype part set unchanged; Shade Wretch + Bog
+  Caller expose the new wraith-subtype part set; every overlay
+  in `EquipmentVisuals.OVERLAYS` resolves to an existing path
+  on each HUMAN class; no AnimationPlayer track on a touched
+  sprite references a v1 part name; sidecar Sprite2D path is
+  honored when a fixture PNG is dropped at the expected path;
+  family-mismatch assertion (a HUMAN sprite must not declare
+  UNDEAD parts, and vice versa).
+* \[ ] Stage close-out includes a screenshot pass: idle pose on
+  all four classes + both NPCs + both wilderness enemies +
+  Bone Servant + Hekate-Marked, before/after side-by-side
+  for the sprites that changed, attached to the commit.
 
 ## Stage 18 — Boss demote + final-boss state-machine refactor
 

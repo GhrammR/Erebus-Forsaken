@@ -1176,6 +1176,32 @@ repair migration.
 
 ---
 
+## Stage 16 — Tooltip clipped by GridContainer / ScrollContainer parent
+
+**Symptom:** A Control tooltip parented under an icon cell renders fine
+in the editor but gets clipped at the cell's bounding rect at runtime,
+or disappears entirely when the cell is at the edge of a `GridContainer`
+inside a `ScrollContainer`. The cell sees the `mouse_entered` signal,
+but the user sees a blank flicker.
+
+**Prevention:** Tooltip Controls live at the **top of the `CanvasLayer`**,
+not under the hovered cell. The cell emits a `hovered` signal carrying
+its `Rect2` (in viewport coords); the panel positions a shared tooltip
+Control as a sibling of the grid. The tooltip's `mouse_filter` stays
+`IGNORE` so it never eats clicks, and a high `z_index` keeps it above
+the dimmer. See `scenes/ui/inventory_panel.gd::_build_tooltip` /
+`_position_tooltip` — the latter flips the tooltip above the anchor
+when it would overflow the viewport bottom.
+
+**First incident:** Caught during Stage 16 implementation. The 6×6
+backpack grid lives inside the panel's `VBox/Cols` chain; a per-cell
+tooltip would be clipped by the column's expand rect. Tooltip moved
+to the `CanvasLayer` root; verifier
+`stage16_verify::_verify_tooltip_text` asserts the tooltip becomes
+visible and carries the item display name.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

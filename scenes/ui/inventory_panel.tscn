@@ -20,13 +20,11 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -360.0
-offset_top = -240.0
+offset_top = -260.0
 offset_right = 360.0
-offset_bottom = 240.0
+offset_bottom = 260.0
 grow_horizontal = 2
 grow_vertical = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
 
 [node name="Margin" type="MarginContainer" parent="Panel"]
 layout_mode = 2
@@ -52,7 +50,7 @@ text = "INVENTORY"
 mouse_filter = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
-text = "(0 / 24)"
+text = "(0 / 36)"
 
 [node name="Cols" type="HBoxContainer" parent="Panel/Margin/VBox"]
 layout_mode = 2
@@ -66,18 +64,17 @@ size_flags_vertical = 3
 
 [node name="Title" type="Label" parent="Panel/Margin/VBox/Cols/EquipCol"]
 mouse_filter = 2
+layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
 text = "EQUIPPED"
 
-[node name="EquipScroll" type="ScrollContainer" parent="Panel/Margin/VBox/Cols/EquipCol"]
+[node name="EquipGrid" type="GridContainer" parent="Panel/Margin/VBox/Cols/EquipCol"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-horizontal_scroll_mode = 0
-
-[node name="EquipList" type="VBoxContainer" parent="Panel/Margin/VBox/Cols/EquipCol/EquipScroll"]
-layout_mode = 2
-size_flags_horizontal = 3
+columns = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
 
 [node name="BackCol" type="VBoxContainer" parent="Panel/Margin/VBox/Cols"]
 layout_mode = 2
@@ -86,15 +83,13 @@ size_flags_vertical = 3
 
 [node name="Title" type="Label" parent="Panel/Margin/VBox/Cols/BackCol"]
 mouse_filter = 2
+layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
 text = "BACKPACK"
 
-[node name="BackScroll" type="ScrollContainer" parent="Panel/Margin/VBox/Cols/BackCol"]
+[node name="BackGrid" type="GridContainer" parent="Panel/Margin/VBox/Cols/BackCol"]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
-horizontal_scroll_mode = 0
-
-[node name="BackList" type="VBoxContainer" parent="Panel/Margin/VBox/Cols/BackCol/BackScroll"]
-layout_mode = 2
-size_flags_horizontal = 3
+columns = 6
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6

@@ -69,6 +69,9 @@ func _ready() -> void:
 	if "--verify15_1" in args:
 		add_child(load("res://test/stage15_1_verify.tscn").instantiate())
 		return
+	if "--verify16" in args:
+		add_child(load("res://test/stage16_verify.tscn").instantiate())
+		return
 	if "--maw_diag" in args:
 		add_child(load("res://test/maw_spawn_diag.tscn").instantiate())
 		return

@@ -291,3 +291,84 @@ removed.
   flying summons mask {walls only}. Pathfinding nav-mesh would
   carry a `ledge` polygon class flying summons ignore. Both still
   blocked by walls (no walking through a closed gate at any altitude).
+
+### wilderness-organic-shapes — Non-rectangular, D2-style zone shapes
+- Why parked: 2026-06-05. User flagged that Blighted Reach is a
+  rectangular `Rect2` and the eventual Stage 20 wilderness should
+  feel less rigid — winding outlines, lobed clearings, narrow
+  passes between open ground. Adopted as a **scope refinement of
+  Stage 20**, not a new stage; recording here so Stage 20 doesn't
+  default to "bigger rectangle." Distinct from `streaming-world-
+  architecture` (which is a much larger rewrite that this DOES NOT
+  require).
+- Earliest revisit: when Stage 20 begins.
+- Notes: implementation sketch — replace `_STALE_ZONE_REPAIR.bounds`
+  with a `Polygon2D` bounds polygon per zone (point-in-poly test
+  for clamping + procgen culling); perimeter walls follow that
+  polygon as a segmented PathFollow2D / Line2D collider; Stage 13
+  seeded procgen samples within the polygon, not the AABB. Save
+  schema unchanged — position is still `(x, y)` and the polygon
+  travels with the zone scene. Stage 11 AI ground/cliff tile prompts
+  benefit from organic shapes; rectangular zones often produce
+  flat-looking bitmap polish.
+
+### procedural-sprite-anatomy-v2 — Articulated anatomy refactor [ADOPTED → Stage 17.5, 2026-06-05]
+- Why parked: 2026-06-05. Current procedural sprites (player +
+  enemies) use a minimal Polygon2D skeleton (head circle, torso
+  rectangle, two limb stubs) chosen to ship Stage 1–10 fast. User
+  wants a coherent "bone servant" aesthetic across the cast —
+  proper skull + jaw, ribcage, articulated upper/lower limbs with
+  joint pivots — applied retroactively to all four classes plus
+  every enemy archetype.
+- Why this is bigger than it sounds: anatomy is the *contract*
+  `EquipmentVisuals.OVERLAYS` builds against (head overlay parents
+  to `Body/Head`, chest to `Body/Torso`, etc.) and what the
+  AnimationPlayer tracks reference. A new anatomy means updating
+  every overlay polygon AND the six canonical animation tracks
+  (AD-11). The modular sprite contract still holds — one Polygon2D
+  per semantic part — but the part set expands (Skull, Jaw,
+  Ribcage, UpperArmL/R, ForearmL/R, ThighL/R, ShinL/R) and the
+  pivot points shift.
+- Adopted into Stage 17.5 on 2026-06-05. Final scope: six
+  anatomy families (HUMAN, HUMANOID, UNDEAD incl. wraith subtype,
+  BEAST, DEMON, FLYING) plus per-unique-boss bespoke anatomy
+  entries. UNDEAD has two subtypes: skeleton (Bone Servant
+  anchor, kept as-is) and wraith (new anatomy authored this
+  stage; Shade Wretch + Bog Caller rebuilt against it).
+  HUMAN family covers 4 player classes + 2 NPCs with mythic
+  Greek archetype clothing. Contract-only sidecar bitmap layer
+  (no generation yet). Hekate-Marked Forsaken authored as the
+  first per-unique-boss bespoke anatomy entry.
+- Earlier framing correction (2026-06-05): the original
+  "bone-servant anatomy" name was misleading. The Bone Servant's
+  ribcage anatomy belongs to skeletons; it is NOT applied to
+  humans or other creature types. Each family has anatomy
+  appropriate to what it is.
+- Notes: keeps procedural-first (AD-11). AI bitmap polish (Stage 11)
+  inherits the new anatomy via the asset-gen prompts; sidecars
+  generated against the v1 anatomy may need re-rolling, but the
+  asset-commit policy lets us version those.
+
+### rare-monster-anatomy-mutation — Anatomy-driven affix telegraphs on rares/uniques
+- Why parked: 2026-06-05. User idea: when a wilderness/dungeon
+  monster rolls a rare/unique affix, instead of (or alongside)
+  the current skin-color shift, mutate its anatomy to telegraph
+  the affix — oversized arms for +phys-damage, glowing green
+  ichor sacs for poison-on-hit, elongated jaw for life-leech,
+  cracked skull venting smoke for fire damage, etc. Reads at
+  a glance ("that one's the big-arms — kite it") and earns more
+  table-talk than a recolor. Conceptually adjacent to D2 unique
+  monster names but pushed into the silhouette.
+- Earliest revisit: post-Steam-EA content drop, OR earlier if
+  `procedural-sprite-anatomy-v2` lands and the modular part
+  system makes mutations cheap. The part-set contract from
+  v2 is the prerequisite — without articulated limbs as
+  distinct Polygon2D nodes, you can't scale "arms" without
+  reshaping the whole body.
+- Notes: scope sketch — affix table grows a `silhouette_mod`
+  column referencing a part name + transform delta + tint;
+  enemy spawner applies the deltas after the base sprite is
+  built. Combines additively (a rare that rolls phys + poison
+  gets oversized arms AND green sacs). Avoids invalidating
+  the AnimationPlayer tracks because mutations are post-hoc
+  transforms on existing parts, not part-set changes.
