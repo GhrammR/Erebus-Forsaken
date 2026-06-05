@@ -28,6 +28,7 @@ func _ready() -> void:
 	fail = _verify_bitmap_mode(fail)
 	fail = _verify_procedural_only_wired(fail)
 	fail = _verify_governance_docs(fail)
+	fail = _verify_replicate_defaults(fail)
 
 	print("--- Stage 11 verify: %s ---" % ("ALL PASS" if fail == 0 else "%d FAIL" % fail))
 	get_tree().quit(fail)
@@ -207,6 +208,37 @@ func _verify_procedural_only_wired(fail: int) -> int:
 	var main_src := FileAccess.get_file_as_string("res://scripts/main.gd")
 	fail = _expect(main_src.contains("--verify11"),
 			"main.gd routes --verify11", fail)
+	return fail
+
+func _verify_replicate_defaults(fail: int) -> int:
+	# Stage 11 follow-up: every wrapper defaults to Replicate so cost
+	# discipline and key management live on one vendor. Deferred
+	# fallbacks (ElevenLabs / Runway / HeyGen) remain selectable via
+	# --backend but are not the defaults.
+	var root := _repo_root()
+	var sprite := FileAccess.get_file_as_string(
+			root.path_join("tools/asset_gen/gen_sprite.sh"))
+	fail = _expect(sprite.contains("black-forest-labs/flux-2-pro"),
+			"gen_sprite.sh defaults to flux-2-pro", fail)
+	var voice := FileAccess.get_file_as_string(
+			root.path_join("tools/asset_gen/gen_voice.sh"))
+	fail = _expect(voice.contains("BACKEND=\"replicate\""),
+			"gen_voice.sh defaults to replicate backend", fail)
+	fail = _expect(voice.contains("kokoro"),
+			"gen_voice.sh names a Replicate TTS default model", fail)
+	var video := FileAccess.get_file_as_string(
+			root.path_join("tools/asset_gen/gen_video.sh"))
+	fail = _expect(video.contains("BACKEND=\"replicate\""),
+			"gen_video.sh defaults to replicate backend", fail)
+	fail = _expect(video.contains("lightricks/ltx-video"),
+			"gen_video.sh names a Replicate video default model", fail)
+	# Governance reflects the consolidation.
+	var rule := FileAccess.get_file_as_string(
+			"res://.agent_governance/rules/asset-generation.md")
+	fail = _expect(rule.contains("flux-2-pro"),
+			"asset-generation.md lists flux-2-pro as default", fail)
+	fail = _expect(rule.contains("Deferred fallback"),
+			"asset-generation.md marks fallbacks as deferred", fail)
 	return fail
 
 # ---- helpers ------------------------------------------------------------

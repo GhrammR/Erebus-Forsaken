@@ -41,25 +41,30 @@ All four wrappers run in dry-run mode by default. Pass `--live` once
 keys are in place. Every successful run writes a sidecar; the sidecar
 validator runs automatically on each write.
 
+Defaults run through Replicate. Pass `--backend elevenlabs` (voice/SFX)
+or `--backend runway` (video) to drop down to the deferred fallback.
+
 ```bash
+# Image (default: black-forest-labs/flux-2-pro, ~$0.015/image)
 tools/asset_gen/gen_sprite.sh --out art/bitmap/enemies/bog_caller.png \
-    --model black-forest-labs/flux-1.1-pro \
     --prompt "isometric ARPG enemy, bog caller, swamp witch, dark mossy robes, glowing green staff, 64px tall, pixel art, transparent background" \
     --seed 1934872 \
     --purpose "Bog Caller bitmap polish (Stage 11)"
 
+# Voice (default: replicate / jaaari/kokoro-82m)
 tools/asset_gen/gen_voice.sh --out audio/voice/kallias_intro.ogg \
-    --voice-id <eleven_voice_id> \
+    --voice af_bella \
     --text "Pleased to meet you, traveler." \
     --purpose "Kallias intro (Stage 17)"
 
+# SFX (default: replicate / stable-audio)
 tools/asset_gen/gen_sfx.sh --out audio/sfx/hearth_ember_channel.ogg \
     --prompt "warm fire crackle with subtle wind, looping ambience" \
     --duration 2.0 \
     --purpose "Hearth Ember channel SFX"
 
+# Video (default: replicate / lightricks/ltx-video, ~$0.02/sec)
 tools/asset_gen/gen_video.sh --out video/intros/eurynome_intro.webm \
-    --backend runway \
     --prompt "Eurynome facing camera, slow pan, dim torchlight" \
     --duration 5 \
     --purpose "Eurynome intro scene (Stage 17)"

@@ -15,13 +15,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/common.sh"
 
-OUT="" BACKEND="runway" PROMPT="" DURATION=4 SEED=0
-PURPOSE="" DRY_RUN=1
+OUT="" BACKEND="replicate" MODEL="lightricks/ltx-video"
+PROMPT="" DURATION=4 SEED=0 PURPOSE="" DRY_RUN=1
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --out) OUT="$2"; shift 2 ;;
         --backend) BACKEND="$2"; shift 2 ;;
+        --model) MODEL="$2"; shift 2 ;;
         --prompt) PROMPT="$2"; shift 2 ;;
         --duration) DURATION="$2"; shift 2 ;;
         --seed) SEED="$2"; shift 2 ;;
@@ -38,11 +39,16 @@ done
 mkdir -p "$(dirname "$OUT")"
 
 if [[ "$DRY_RUN" == "1" ]]; then
-    echo "(dry-run) would call $BACKEND video duration=${DURATION}s"
+    echo "(dry-run) would call $BACKEND video model=$MODEL duration=${DURATION}s"
     : > "$OUT"
     COST="0.00"
 else
-    load_secret "$BACKEND"
+    case "$BACKEND" in
+        replicate) load_secret replicate ;;
+        runway)    load_secret runway ;;
+        heygen)    load_secret heygen ;;
+        *) err "unknown backend: $BACKEND" ;;
+    esac
     err "live mode not yet implemented — Stage 11 ships dry-run scaffolding"
 fi
 
@@ -50,7 +56,7 @@ SHA="$(sha256_file "$OUT")"
 
 SIDECAR_JSON="$(emit_sidecar_json \
     tool="$BACKEND" \
-    model="${BACKEND}-default" \
+    model="$MODEL" \
     prompt="$PROMPT" \
     seed="@n:$SEED" \
     params="@j:{\"duration\":$DURATION}" \

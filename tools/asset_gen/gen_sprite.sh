@@ -20,7 +20,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/common.sh"
 
-OUT="" MODEL="black-forest-labs/flux-1.1-pro" PROMPT="" NEG=""
+OUT="" MODEL="black-forest-labs/flux-2-pro" PROMPT="" NEG=""
 SEED="" WIDTH=256 HEIGHT=256 GUIDANCE=7.5 STEPS=30 PURPOSE="" DRY_RUN=1
 
 while [[ $# -gt 0 ]]; do

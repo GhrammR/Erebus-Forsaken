@@ -12,15 +12,21 @@ project's bitmap/audio directories. There is no Godot-side runtime
 dependency on any AI service — assets land at dev time, not at game
 runtime.
 
-## Locked tool choices (2026-06-04)
+## Locked tool choices (2026-06-04, revised)
 
-| Asset type | Tool | Rationale |
-|---|---|---|
-| Images (sprites, icons, portraits) | **Replicate** (FLUX, SDXL, Stable Cascade) | One API key, pay-per-gen, hosts many models. Midjourney prompting skills transfer. |
-| NPC voice | **ElevenLabs** | Best-in-class voice synth. Per-NPC cloned voices. |
-| Sound effects | **ElevenLabs SFX** or **Stable Audio** (via Replicate) | Audio-shaped prompting; fast. |
-| Music | **Stable Audio** (via Replicate) interim; revisit when Suno has a public API | Suno has no API yet; do not block on it. |
-| Video / portraits with motion | **Runway Gen-3** or **HeyGen** (talking avatars) | Video is opt-in; only for hero scenes (intros, boss reveals). |
+**Replicate is the default backend for every asset type.** One API
+key, one billing surface, one wrapper pattern, one ToS to track.
+ElevenLabs / Runway / HeyGen stay in the table as approved fallbacks
+for specific cases where Replicate quality isn't sufficient (e.g. a
+hero NPC whose voice carries the act).
+
+| Asset type | Default tool / model | Deferred fallback | Rationale |
+|---|---|---|---|
+| Images (sprites, icons, portraits) | **Replicate** — `black-forest-labs/flux-2-pro` ($0.015/run + per-MP) | FLUX 1.1-pro ($0.04/img) for the rare case 2-pro misses | Same vendor as other asset types; ~63% cheaper baseline than 1.1-pro for small outputs. |
+| NPC voice | **Replicate** — `jaaari/kokoro-82m` default; `lucataco/xtts-v2` for cloning | **ElevenLabs** for hero NPCs only | Consolidates onto one key. ElevenLabs is per-NPC opt-in. |
+| Sound effects | **Replicate** — `stackadoc/stable-audio-open-1.0` (or current Stable Audio variant) | ElevenLabs SFX | Audio-shaped prompting; same key as everything else. |
+| Music | **Replicate** — Stable Audio (interim) | Revisit when Suno has a public API | Suno has no API yet; do not block on it. |
+| Video / portraits with motion | **Replicate** — `lightricks/ltx-video` (cheap default), `kwaivgi/kling-v2.1` (quality) | Runway Gen-3 or HeyGen (talking avatars) | Video is opt-in; only for hero scenes (intros, boss reveals). |
 
 A new tool can be added with explicit user approval and a sidecar update.
 Don't silently introduce a fifth service.
@@ -126,9 +132,17 @@ Solo dev. Cost per stage ceiling: $20 default, $50 with explicit
 user approval, $100+ requires a stage-close justification. Sidecars'
 `cost_usd` sum is the audit trail. If a stage runs over, log it and stop.
 
-Replicate billing is per-second of GPU; FLUX-1.1-pro is ~$0.04/image.
-ElevenLabs Creator is $22/mo + per-char overage. Runway Gen-3 is
-~$0.05/second of video. These numbers age — verify before each batch.
+Replicate reference rates (revised 2026-06-04, verify before each
+batch — these age):
+- FLUX-2-pro: $0.015/run + $0.015/MP input + $0.015/MP output.
+  64×64 sprite is ~0.004 MP, so per-image cost is dominated by the
+  $0.015 run fee — ~67 images per $1.
+- FLUX-1.1-pro: ~$0.04/image (fallback only if 2-pro misses).
+- Kokoro TTS: a few cents per minute of speech.
+- LTX video: ~$0.02/sec at 768×512.
+- Kling 2.1: ~$0.28/sec at 720p (quality tier).
+
+ElevenLabs Creator (deferred fallback) is $22/mo + per-char overage.
 
 ## Failure modes prevented
 
