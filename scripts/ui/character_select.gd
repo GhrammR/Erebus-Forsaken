@@ -72,6 +72,10 @@ func _on_begin_pressed() -> void:
 	if _selected_id == &"":
 		return
 	GameState.pending_class_id = _selected_id
+	# Stage 13 — character select is the one place we know "this is a
+	# new game" (the save-resume branch in main.gd skips this screen).
+	# Roll the master world seed here; ZoneProcgen reads from it.
+	WorldSeed.assign_random()
 	get_tree().change_scene_to_file(_GAME_SCENE)
 
 func _unhandled_input(event: InputEvent) -> void:

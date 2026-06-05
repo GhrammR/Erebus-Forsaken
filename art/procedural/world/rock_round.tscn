@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+[node name="RockRound" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Shadow" type="Polygon2D" parent="."]
+z_index = -1
+modulate = Color(0, 0, 0, 0.5)
+position = Vector2(0, 3)
+polygon = PackedVector2Array(-12, 0, -8, -4, 8, -4, 12, 0, 10, 3, -10, 3)
+
+[node name="Body" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-12, -2, -10, -8, -4, -12, 4, -12, 10, -8, 12, -2, 10, 2, -10, 2)
+color = Color(0.20, 0.19, 0.21, 1)
+
+[node name="Highlight" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-6, -8, -2, -10, 2, -10, 4, -8, 0, -6, -4, -6)
+color = Color(0.28, 0.27, 0.30, 1)
+
+[node name="ShadeBand" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-10, -2, 10, -2, 11, 1, -11, 1)
+color = Color(0.13, 0.12, 0.14, 1)

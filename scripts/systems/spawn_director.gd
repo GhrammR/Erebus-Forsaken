@@ -61,8 +61,32 @@ var _tracked_enemies: Array[Enemy] = []
 ## reload doesn't refresh the budget.
 var _budget_remaining: int = -1
 
+## Stage 13 — palette variant the zone procgen rolled for each
+## archetype this run. _spawn_one forwards `palette_per_archetype[id]`
+## to the spawned enemy's palette_variant. Empty by default → variant
+## 0 ("default tint") for every enemy.
+var palette_per_archetype: Dictionary = {}
+
+## Stage 13 — captured at _ready time so the deferred init can honor
+## the "a load is queued, skip initial spawn" branch even after
+## game.gd consumes the pending snapshot in its own transit chain.
+## Without this, returning to a zone via cache would re-fire initial
+## spawn on top of the restored entities (visible regression: wilder
+## ness enemies "reset" on return to town).
+var _has_pending_snapshot_at_ready: bool = false
+
 func _ready() -> void:
 	_zone = get_parent()
+	# Capture pending-snapshot state synchronously — see field doc.
+	_has_pending_snapshot_at_ready = SaveSystem.has_pending_enemy_snapshot()
+	# Defer the rest so the zone's _ready can run procgen and populate
+	# SpawnAnchors before we scan it. Zone._ready fires AFTER the
+	# director's _ready under Godot's bottom-up rule; deferring pushes
+	# our anchor scan to the next idle tick, by which time the zone
+	# has had its turn to populate.
+	call_deferred("_init_after_zone_ready")
+
+func _init_after_zone_ready() -> void:
 	_collect_anchors()
 	_budget_remaining = total_spawn_budget
 	# SaveSystem may have parked a per-director budget snapshot; consume
@@ -72,9 +96,12 @@ func _ready() -> void:
 	var saved_budget: Variant = SaveSystem.consume_pending_director_budget(zone_name)
 	if saved_budget != null:
 		_budget_remaining = int(saved_budget)
-	if SaveSystem.has_pending_enemy_snapshot():
-		# A load is queued: skip initial spawn. Game will call
-		# claim_existing_enemies() after it spawns the snapshot.
+	if _has_pending_snapshot_at_ready:
+		# A load was queued at the moment we entered the zone: Game
+		# has already (or will) spawn the cached entities at their
+		# saved positions via _apply_pending_enemy_snapshot, then call
+		# claim_existing_enemies() to wire them to us. Do not fire an
+		# initial spawn.
 		return
 	for i in initial_spawn_count:
 		_spawn_one.call_deferred()
@@ -134,6 +161,10 @@ func _spawn_one() -> void:
 	var em := _maybe_pick_elite()
 	if em != null:
 		inst.elite_modifier = em
+	# Stage 13 — palette variant from the zone's procgen pick. Set
+	# before add_child so the sprite scene reads it on first tint pass.
+	if palette_per_archetype.has(id):
+		inst.palette_variant = int(palette_per_archetype[id])
 	var container: Node = _zone.get_node_or_null(^"Enemies")
 	if container == null:
 		container = _zone

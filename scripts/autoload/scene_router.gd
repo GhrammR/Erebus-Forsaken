@@ -26,6 +26,19 @@ func clear_zone_host(host: Object) -> void:
 	if _host == host:
 		_host = null
 
+## Stage 13 hotfix — SaveSystem queries this on every save_game so
+## the host's in-memory per-zone cache (game.gd::_zone_cache) is
+## included in the snapshot automatically. Avoids the need for every
+## save call site to remember a set_pending_zone_caches() push.
+## Returns {} when no host is registered or the host does not
+## implement the snapshot method (workbenches, dev scenes).
+func snapshot_zone_caches() -> Dictionary:
+	if _host == null:
+		return {}
+	if not _host.has_method(&"snapshot_zone_cache_for_save"):
+		return {}
+	return _host.snapshot_zone_cache_for_save()
+
 func zone_scene_path(zone_id: StringName) -> String:
 	return String(ZONE_PATHS.get(zone_id, ""))
 

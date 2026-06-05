@@ -4,7 +4,7 @@ extends Node
 ## migrate() step. The on-disk format is human-readable so a tester can
 ## hand-edit corruption cases (rules/failure-modes.md #7 leans on this).
 
-const SAVE_VERSION: int = 14
+const SAVE_VERSION: int = 16
 const SAVE_PATH: String = "user://save_slot_1.dat"
 
 signal save_completed(success: bool)
@@ -20,6 +20,12 @@ var _pending_loot_snapshot: Array = []
 ## name). SpawnDirector._ready consumes once via the
 ## consume_pending_director_budget() pop.
 var _pending_director_budgets: Dictionary = {}
+## Stage 13 hotfix — per-zone enemy/loot/budget cache pulled off the
+## save during _apply. game.gd consumes it during _resume_saved_zone
+## and pours into its in-memory _zone_cache so a saved-in-town reload
+## still remembers the wilderness's last-visited state. Keyed by
+## zone_id string.
+var _pending_zone_caches: Dictionary = {}
 ## Stage 9.7 polish — endless milestones the player has already
 ## claimed. Persisted across runs (they're permanent). Read by
 ## EndlessDirector on _advance_wave_to.
@@ -39,6 +45,11 @@ func save_game() -> bool:
 		push_warning("SaveSystem.save_game: no player in GameState")
 		save_completed.emit(false)
 		return false
+	# Stage 13 hotfix — pull the host's in-memory per-zone cache so
+	# the snapshot includes every visited zone, not just the active
+	# one. SceneRouter forwards to game.gd; workbenches without the
+	# method get {}.
+	_pending_zone_caches = SceneRouter.snapshot_zone_caches()
 	var data := _snapshot(player)
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
@@ -123,6 +134,10 @@ func migrate(old: Dictionary) -> Dictionary:
 		old = _migrate_v12_to_v13(old)
 	if v < 14:
 		old = _migrate_v13_to_v14(old)
+	if v < 15:
+		old = _migrate_v14_to_v15(old)
+	if v < 16:
+		old = _migrate_v15_to_v16(old)
 	return old
 
 func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
@@ -223,6 +238,30 @@ func _migrate_v13_to_v14(old: Dictionary) -> Dictionary:
 		old["consumable_cooldowns"] = { "cooldowns": {} }
 	return old
 
+func _migrate_v14_to_v15(old: Dictionary) -> Dictionary:
+	# Stage 13 — master world seed persists so deterministic procgen
+	# replays the same zones on every load. Legacy v14 saves get
+	# `world_seed = 0`, which makes their wilderness layout reproducible
+	# (the same deterministic v0-seed roll every time) — different from
+	# a new-game roll but still consistent for that save slot.
+	old["version"] = 15
+	if not old.has("world_seed"):
+		old["world_seed"] = 0
+	return old
+
+func _migrate_v15_to_v16(old: Dictionary) -> Dictionary:
+	# Stage 13 hotfix — per-zone enemy / loot / director-budget cache
+	# now persists across save/load. Previously the in-memory cache
+	# survived in-session zone transits only; saving in town would
+	# silently drop the wilderness's "last visited" state, and a load
+	# would refresh the zone with initial spawns. Legacy v15 saves
+	# default to empty — first re-entry post-load will roll initial
+	# spawns once, then persist on the next save.
+	old["version"] = 16
+	if not old.has("zone_caches"):
+		old["zone_caches"] = {}
+	return old
+
 func _migrate_v12_to_v13(old: Dictionary) -> Dictionary:
 	# v12 had no per-zone spawn budget or claimed-milestone state.
 	# Legacy saves default to empty dicts/lists — directors run at
@@ -304,6 +343,17 @@ func _snapshot(player: Node) -> Dictionary:
 		# dropped on save — matches the "interrupted -> lose the ember"
 		# semantics; quitting mid-channel costs you the ember.
 		"consumable_cooldowns": ConsumableUse.snapshot(),
+		# v15 (Stage 13): master world seed used to derive deterministic
+		# per-zone procgen sub-seeds. Persisted so a load replays the
+		# same wilderness layout the player remembers.
+		"world_seed": WorldSeed.snapshot(),
+		# v16 (Stage 13 hotfix): per-zone snapshot cache for every zone
+		# the player has visited this session OTHER than the currently
+		# active one. The active zone's state still rides on the
+		# top-level "enemies" / "loot" / "director_budgets" keys so the
+		# load-resume path stays unchanged. Game.gd populates this via
+		# set_pending_zone_caches() BEFORE invoking save_game.
+		"zone_caches": _pending_zone_caches.duplicate(true),
 	}
 	return snap
 
@@ -405,6 +455,22 @@ func consume_pending_director_budget(zone_name: StringName) -> Variant:
 	_pending_director_budgets.erase(key)
 	return v
 
+## Stage 13 hotfix — game.gd writes its in-memory _zone_cache here
+## BEFORE invoking save_game so the upcoming snapshot includes every
+## visited zone's state. SaveSystem only stages the dict; it owns no
+## logic about which zones belong in it.
+func set_pending_zone_caches(caches: Dictionary) -> void:
+	_pending_zone_caches = caches.duplicate(true)
+
+## Pop the per-zone caches restored during _apply. game.gd reads
+## this in its load handler to repopulate _zone_cache. Consumes so
+## a subsequent save can rebuild the cache without leaking stale
+## entries from a previous load.
+func consume_pending_zone_caches() -> Dictionary:
+	var c := _pending_zone_caches
+	_pending_zone_caches = {}
+	return c
+
 func _apply(player: Node, data: Dictionary) -> void:
 	var class_id := StringName(data.get("class_id", ""))
 	var cd: ClassData = Database.get_class_data(class_id) as ClassData
@@ -440,6 +506,14 @@ func _apply(player: Node, data: Dictionary) -> void:
 	GameState.titles = (data.get("titles", []) as Array).duplicate()
 	# v14 (Stage 9.8): restore potion-type cooldown remainders.
 	ConsumableUse.restore(data.get("consumable_cooldowns", {}))
+	# v15 (Stage 13): restore master seed before any zone procgen
+	# system queries it. Loaded BEFORE _resume_saved_zone fires.
+	WorldSeed.restore(int(data.get("world_seed", 0)))
+	# v16 (Stage 13 hotfix): park per-zone caches for game.gd to
+	# pour into _zone_cache during _resume_saved_zone. Without this,
+	# saving in town and reloading silently wipes the wilderness's
+	# last-visited enemy + loot state.
+	_pending_zone_caches = (data.get("zone_caches", {}) as Dictionary).duplicate(true)
 	_pending_enemy_snapshot = data.get("enemies", []) as Array
 	_pending_loot_snapshot = data.get("loot", []) as Array
 	_pending_director_budgets = (data.get("director_budgets", {}) as Dictionary).duplicate()

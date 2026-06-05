@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[node name="RockAngular" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Shadow" type="Polygon2D" parent="."]
+z_index = -1
+modulate = Color(0, 0, 0, 0.5)
+position = Vector2(0, 3)
+polygon = PackedVector2Array(-16, 0, -10, -4, 12, -4, 16, 0, 14, 3, -14, 3)
+
+[node name="BodyA" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-14, 0, -8, -10, 2, -14, 8, -8, 6, -2, -10, 2)
+color = Color(0.18, 0.17, 0.20, 1)
+
+[node name="BodyB" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-2, -12, 8, -16, 14, -10, 16, 0, 8, 2, 2, -6)
+color = Color(0.22, 0.21, 0.24, 1)
+
+[node name="FaceA" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-8, -10, 2, -12, 0, -6, -6, -4)
+color = Color(0.26, 0.25, 0.28, 1)
+
+[node name="FaceB" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(2, -12, 10, -14, 12, -8, 4, -8)
+color = Color(0.30, 0.29, 0.32, 1)

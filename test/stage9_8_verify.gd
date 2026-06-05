@@ -233,14 +233,16 @@ func _verify_cooldown_save_roundtrip(fail: int) -> int:
 # ---- save version --------------------------------------------------------
 
 func _verify_save_version(fail: int) -> int:
-	fail = _expect(SaveSystem.SAVE_VERSION == 14, "SAVE_VERSION == 14", fail)
+	# Stage 9.8 introduced v14; later stages append. Relax to >= 14
+	# so future schema bumps don't false-fail this verifier.
+	fail = _expect(SaveSystem.SAVE_VERSION >= 14, "SAVE_VERSION >= 14", fail)
 	return fail
 
 func _verify_v13_to_v14_migration(fail: int) -> int:
 	var legacy := { "version": 13 }
 	var migrated := SaveSystem.migrate(legacy)
-	fail = _expect(int(migrated.get("version", 0)) == 14,
-			"v13 migrates to v14", fail)
+	fail = _expect(int(migrated.get("version", 0)) >= 14,
+			"v13 migrates to >= 14", fail)
 	fail = _expect(migrated.has("consumable_cooldowns"),
 			"v14 migration installs consumable_cooldowns key", fail)
 	var key: Dictionary = migrated.get("consumable_cooldowns", {})

@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[node name="WitheredPine" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Shadow" type="Polygon2D" parent="."]
+z_index = -1
+modulate = Color(0, 0, 0, 0.45)
+position = Vector2(0, 4)
+polygon = PackedVector2Array(-10, -2, -6, -6, 6, -6, 10, -2, 8, 4, -8, 4)
+
+[node name="Trunk" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-3, -72, -4, -54, -5, -36, -4, -18, -3, 2, 3, 2, 4, -18, 5, -36, 4, -54, 3, -72)
+color = Color(0.11, 0.09, 0.08, 1)
+
+[node name="BoughL1" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-3, -70, -16, -64, -22, -58, -18, -62, -8, -66)
+color = Color(0.13, 0.11, 0.09, 1)
+
+[node name="BoughL2" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-3, -54, -14, -50, -20, -44, -16, -48, -8, -52)
+color = Color(0.13, 0.11, 0.09, 1)
+
+[node name="BoughL3" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-3, -38, -12, -36, -16, -30, -12, -34, -6, -36)
+color = Color(0.13, 0.11, 0.09, 1)
+
+[node name="BoughR1" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(3, -68, 16, -62, 22, -56, 18, -60, 8, -64)
+color = Color(0.13, 0.11, 0.09, 1)
+
+[node name="BoughR2" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(3, -52, 14, -48, 20, -42, 16, -46, 8, -50)
+color = Color(0.13, 0.11, 0.09, 1)
+
+[node name="BoughR3" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(3, -36, 12, -34, 16, -28, 12, -32, 6, -34)
+color = Color(0.13, 0.11, 0.09, 1)
+
+[node name="Crown" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-2, -76, 0, -82, 2, -76, 1, -72, -1, -72)
+color = Color(0.13, 0.11, 0.09, 1)

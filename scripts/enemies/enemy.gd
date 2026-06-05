@@ -22,6 +22,12 @@ class_name Enemy extends CharacterBody2D
 ## modifier overrides during _apply_elite_modifier.
 var elite_damage_mult: float = 1.0
 
+## Stage 13 — palette variant assigned by SpawnDirector when the zone
+## procgen rolled an alternate skin for this archetype. Forwarded to
+## the sprite scene's EnemySpritePalette script after instantiation.
+## 0 = default (no re-tint); 1+ = baked alternate per archetype.
+@export var palette_variant: int = 0
+
 const _WORLD_ITEM_SCENE := preload("res://scenes/items/world_item.tscn")
 const _GOLD_PICKUP_SCENE := preload("res://scenes/items/gold_pickup.tscn")
 
@@ -66,6 +72,10 @@ func _ready() -> void:
 	_health.died.connect(_on_died)
 	if sprite_scene != null:
 		var inst := sprite_scene.instantiate()
+		# Stage 13 — palette swap MUST be set before add_child so the
+		# sprite's _ready picks up the variant on its first tint pass.
+		if "palette_variant" in inst:
+			inst.palette_variant = palette_variant
 		_sprite_anchor.add_child(inst)
 		_sprite_anim = inst.get_node_or_null(^"AnimationPlayer") as AnimationPlayer
 		if _sprite_anim != null:

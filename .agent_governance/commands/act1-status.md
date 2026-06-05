@@ -258,8 +258,7 @@ stable for already-closed work; new stages are appended. Existing
 8. Stage 9.8.1 — Hotfix: Ember Maw-route bug **[CLOSED]**
 9. Stage 11 — AI asset-generation pipeline **[CLOSED]**
 10. Stage 12 — Town → wilderness walkable transition **[CLOSED]**
-11. Stage 13 — Wilderness procedural generation (seeded RNG, biome
-    templates, aesthetic variants for trees / rocks / enemy skins)
+11. Stage 13 — Wilderness procedural generation **[CLOSED]**
 12. Stage 14 — Waypoint system (themed, persistent, discoverable)
 13. Stage 15 — Equipment paper-doll rendering (bare-hands default;
     helmet/weapon/armor slots tint the procedural sprite layers)
@@ -1081,29 +1080,91 @@ is appropriate.
   → arrive in Blighted Reach near the north edge → walk north, see
   camp silhouettes through the gap → walk back through.
 
-## Stage 13 — Wilderness procedural generation
+## Stage 13 — Wilderness procedural generation  **[CLOSED 2026-06-04]**
 
-Wilderness zones are seeded per new game. Same `--new-game` (or
-character-create) seed = same world. Different seeds = different
-content, layout, and aesthetics. Loading an existing save replays the
-seed exactly (no drift).
+Pilot on Blighted Reach. Multi-zone chaining + min/max distance
+gating + path winding are deferred to Stage 20 (wilderness authorship
+at scale); Stage 13 builds the foundation that makes them trivial.
 
-* \[ ] `WorldSeed` autoload: holds the master seed assigned at
-  character create. Persists in save (schema bump).
-* \[ ] Each wilderness zone derives a deterministic sub-seed from
-  `(WorldSeed, zone_index)`.
-* \[ ] Zone layouts use seeded RNG for: terrain block placement,
-  path winding, enemy-spawn anchor positions, prop placement,
-  aesthetic variant pick.
-* \[ ] Aesthetics: at least 3 tree variants, 3 rock variants, 2
-  enemy-skin palette swaps per archetype. All procedural; bitmap
-  variants are Stage 11+15+17 polish.
-* \[ ] Each zone fires within `min_distance_from_town` to
-  `max_distance_from_town` so the chain ramps. Adjacent zones share
-  a path so the player can walk all the way through.
-* \[ ] `--verify13` covers: same seed → identical zone content;
-  different seeds → diverging content; sub-seed derivation is
-  deterministic.
+* \[x] `WorldSeed` autoload (`scripts/systems/world_seed.gd`,
+  registered after BitmapMode in `project.godot`). Public API:
+  `assign_random()`, `sub_seed(zone_id, salt=0) -> int`,
+  `make_rng(zone_id, salt=0) -> RandomNumberGenerator`,
+  `encode_seed(int) -> "EREBUS-XXXX-XXXX"`, `decode_seed(String)`,
+  `snapshot/restore/clear_runtime`. Share-string format reuses
+  EndlessRun's base-32 alphabet so users have one mental model
+  for "share this seed."
+* \[x] Sub-seed derivation: `hash("master:zone_id:salt")`. Same
+  inputs → same int, every machine, every load. Salts (`SALT_PROPS=1`,
+  `SALT_ANCHORS=2`, `SALT_PALETTE=3`) give independent RNG streams
+  per concern so reshuffling props doesn't move anchors.
+* \[x] Save schema **v14 → v15**: `world_seed` field added; migration
+  defaults legacy saves to 0 (deterministic — reroll on new-game).
+  `SaveSystem._apply` restores BEFORE `_resume_saved_zone` so the
+  zone's procgen reads the right seed.
+* \[x] Character-select hook: `_on_begin_pressed` calls
+  `WorldSeed.assign_random()` before `change_scene_to_file(game.tscn)`.
+  The save-resume branch in `main.gd` skips this screen so resumed
+  games keep their previously-rolled seed.
+* \[x] Tree variants (3, all procedural Polygon2D scenes):
+  `dead_tree.tscn` (existing), `withered_pine.tscn` (taller / narrower,
+  multi-bough silhouette), `broken_stump.tscn` (short / wide / jagged
+  top).
+* \[x] Rock variants (3, all procedural Polygon2D scenes):
+  `rock_round.tscn` (small dome), `rock_angular.tscn` (jagged
+  multi-face), `rock_flat.tscn` (wide slab with crack).
+* \[x] Enemy palette swap system — `EnemySpritePalette`
+  (`scripts/enemies/enemy_sprite_palette.gd`) attached as the script
+  on each procedural sprite root. `palette_table` is baked in the
+  scene per archetype; `apply(variant)` re-tints named Polygon2D
+  children via `get_node_or_null(NodePath)`. Variant 0 = default
+  (no-op). Variant 1 baked for both `shade_wretch_sprite.tscn`
+  (paler ashen + cool eye glow) and `bog_caller_sprite.tscn` (rust-
+  brown robe + amber orb). Zero shader cost — runs on any machine.
+* \[x] `Enemy.palette_variant: int` export; `Enemy._ready` forwards
+  it to the sprite via duck-typed `palette_variant` set BEFORE
+  `add_child` so the sprite's first tint pass picks it up.
+* \[x] `SpawnDirector.palette_per_archetype: Dictionary` (StringName
+  → int). Zone procgen sets this once at zone load; `_spawn_one`
+  forwards `palette_per_archetype[id]` to each new enemy.
+  Director's `_collect_anchors` + initial spawn loop now deferred
+  to next idle tick so the zone's `_ready` finishes populating
+  `SpawnAnchors` before the scan runs.
+* \[x] `ZoneProcgen` (`scripts/systems/zone_procgen.gd`, stateless
+  Object). `generate_for(zone_id, bounds, exclusions, prop_count,
+  anchor_count, tree_weight)` returns
+  `{ props: [{kind, variant, pos, scale, rotation}], anchors:
+  [Vector2], palette: {archetype: variant} }`. Reject-sampling
+  enforces min-distance separation between props (28px) and
+  between anchors (180px) plus exclusion-rect masking around gates
+  / portals.
+* \[x] `BlightedReach._ready` runs `ZoneProcgen.generate_for` with
+  `PROP_BOUNDS = Rect2(-880, -480, 1760, 960)`, `EXCLUSIONS` for
+  the WildernessNorthGate corridor and CryptPortal footprint,
+  `PROP_COUNT=18`, `ANCHOR_COUNT=10`, `TREE_WEIGHT=0.65`.
+  Populates `Trees` + `SpawnAnchors` containers and forwards the
+  palette pick to SpawnDirector.
+* \[x] `blighted_reach.tscn` trimmed: legacy T0–T11 + A0–A8 removed;
+  Trees + SpawnAnchors are empty containers procgen fills at runtime.
+* \[x] `--verify13` (55 / 55 PASS): WorldSeed API + autoload,
+  sub_seed determinism (same inputs → same int) + divergence (across
+  salts / zone_ids / master_seed), share-string encode round-trip,
+  SAVE_VERSION ≥ 15 + v14 → v15 migration installs `world_seed`,
+  all 3 tree + 3 rock variant scenes load, sprite scenes carry
+  EnemySpritePalette + palette_table, `apply(1)` re-tints Body/Cloak,
+  Enemy/SpawnDirector palette wiring source-asserted, ZoneProcgen
+  result shape, determinism (same seed → identical props +
+  palette), divergence (different master_seed → at least one prop
+  differs), Blighted Reach scene trim + `_run_procgen` call site.
+* \[x] Regression: all 15 verifiers PASS post-Stage-13.
+  `--verify9_8` SAVE_VERSION assertion relaxed `== 14` → `>= 14`
+  for forward compatibility.
+* \[ ] Smoke playtest (user-driven): start a new game → confirm
+  Blighted Reach loads with a fresh tree layout + at least one
+  rock visible + enemies of one of the two palette flavors.
+  Save → quit → reload → confirm the layout is byte-identical.
+  Optional: start a second new game and confirm the layout
+  differs (different master seed).
 
 ## Stage 14 — Waypoint system
 

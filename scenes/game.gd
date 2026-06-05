@@ -172,7 +172,7 @@ func _ready() -> void:
 	# the player can tell "no save" apart from "fresh Myrmidon".
 	if SaveSystem.has_save():
 		if SaveSystem.load_game():
-			_zone_cache.clear()
+			_zone_cache = SaveSystem.consume_pending_zone_caches()
 			_inventory_panel.bind_inventory(_player.get_inventory())
 			_overlay.bind_stats(_player.current_stats)
 			_resume_saved_zone()
@@ -416,7 +416,7 @@ func _on_endless_summary_return() -> void:
 	EndlessRun.rollback()
 	var ok := SaveSystem.load_game()
 	if ok:
-		_zone_cache.clear()
+		_zone_cache = SaveSystem.consume_pending_zone_caches()
 		_inventory_panel.bind_inventory(_player.get_inventory())
 		_overlay.bind_stats(_player.current_stats)
 		if not new_milestones.is_empty():
@@ -911,11 +911,21 @@ func _on_load_pressed() -> void:
 	var ok := SaveSystem.load_game()
 	if ok:
 		AudioBank.play_sfx(&"load")
-		_zone_cache.clear()
+		_zone_cache = SaveSystem.consume_pending_zone_caches()
 		_inventory_panel.bind_inventory(_player.get_inventory())
 		_overlay.bind_stats(_player.current_stats)
 		_resume_saved_zone()
 	_set_status("Loaded." if ok else "No save / load failed.", ok)
+
+## Stage 13 hotfix — SaveSystem.save_game queries this via
+## SceneRouter.snapshot_zone_caches so the upcoming snapshot
+## includes every zone the player has visited in this session,
+## not just the currently-active one. Without this, saving in town
+## silently drops the wilderness's last-visited enemy/loot state.
+## The active zone's state is NOT included here — it rides on the
+## top-level "enemies"/"loot"/"director_budgets" snapshot keys.
+func snapshot_zone_cache_for_save() -> Dictionary:
+	return _zone_cache.duplicate(true)
 
 func _on_click_target_set(world_pos: Vector2) -> void:
 	_click_marker.global_position = world_pos

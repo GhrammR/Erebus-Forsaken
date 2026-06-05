@@ -918,6 +918,109 @@ of any `[SITE:]` log narrowed it to the physics server itself.
 
 ---
 
+---
+
+## #N — Pending-snapshot check in a deferred init silently regresses zone-cache
+
+**Symptom:** Returning to a previously-visited zone re-spawns the
+zone's initial enemy roster on top of the cached entities. Player
+reports "enemies reset when I return to town" — clearing-an-area
+and corpse-recovery progress evaporate. Verifiers don't catch it
+because the bug only manifests at runtime, in the second visit.
+
+**Root cause:** SpawnDirector's _ready originally read
+`SaveSystem.has_pending_enemy_snapshot()` synchronously. Stage 13
+deferred the director's init to next idle so the zone's _ready
+could populate procgen anchors first. But game.gd's _do_transit
+consumes the pending snapshot in its own (synchronous) chain,
+which runs BEFORE the deferred init fires next frame. By the time
+the director checks "is a load queued?" the answer is always
+false → initial spawn re-fires.
+
+**Prevention:** Any pending-state query that gates "should I run
+my normal init?" must be **captured synchronously in _ready** and
+read from the captured bool in the deferred init. The general
+pattern:
+
+```gdscript
+var _has_pending_X_at_ready: bool = false
+
+func _ready() -> void:
+    _has_pending_X_at_ready = SomeAutoload.has_pending_X()
+    call_deferred("_init_after_setup")
+
+func _init_after_setup() -> void:
+    if _has_pending_X_at_ready:
+        return  # caller is handling X; do not run default init
+    ...
+```
+
+The verifier `--verify13::_verify_spawn_director_defer_safe`
+asserts the capture-before-defer order at source level so the
+pattern cannot silently regress.
+
+**Recovery:** If you find a deferred init that queries pending
+state, audit whether the answer survives the synchronous
+consumption that happens between _ready and the next idle. Move
+the query to _ready and stash it.
+
+**First incident:** Stage 13, user playtest. "Monsters reset when I
+return to town. This is not supposed to happen." Diagnosis took ~5
+minutes once the deferred-init change was identified as the
+prime suspect.
+
+---
+
+## #N — In-memory zone cache survives session but not save/load
+
+**Symptom:** Player kills enemies in the wilderness, walks back to
+town, saves, quits. On reload the wilderness's "last visited" state
+is gone — initial spawn fires fresh on next entry. Player reports
+"enemies reset when I load a save." Returning to a zone within the
+same session works correctly (cache hit); the regression only
+shows across the quit-relaunch boundary.
+
+**Root cause:** `_zone_cache` lived on `scenes/game.gd` as an
+in-memory dict only. The save snapshot captured only the *current*
+zone's enemies/loot via `_snapshot_active_zone_enemies` —
+everything else dropped on the floor at save time and never made
+it to disk.
+
+**Prevention:** Any in-memory cache that bridges per-zone state
+across transits MUST also bridge across save/load. The pattern
+(Stage 13 hotfix):
+
+1. SaveSystem owns a `_pending_zone_caches: Dictionary` field.
+2. SaveSystem.save_game queries SceneRouter.snapshot_zone_caches()
+   automatically (no per-caller boilerplate).
+3. SceneRouter forwards to host (game.gd) via
+   `snapshot_zone_cache_for_save() -> Dictionary`.
+4. SaveSystem._snapshot includes the duplicated cache under
+   `"zone_caches"`. Schema bump.
+5. SaveSystem._apply parks the loaded caches in
+   `_pending_zone_caches`; game.gd consumes via
+   `consume_pending_zone_caches()` in every load branch
+   (auto-resume on entry, F9, endless rollback).
+6. Add a schema migration that defaults legacy saves to `{}`.
+
+The verifier `--verify13::_verify_zone_caches_persisted` asserts
+the API + structural wires so this can't silently regress.
+
+**Recovery:** If you find an in-memory cache that doesn't have a
+corresponding `"<thing>_caches"` save key, audit whether the cache
+state is reproducible from the rest of the save (then no fix
+needed) or whether dropping it loses player-visible state (then
+add it to the schema).
+
+**First incident:** Stage 13, user playtest. "reloading resets the
+enemies. they should remain unless a new game is created, not when
+loading from a save." Diagnosis surfaced that `_zone_cache` had
+never been wired to the save schema since it landed in Stage 7 —
+the in-session bridge worked, but the persistence bridge was
+missing.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

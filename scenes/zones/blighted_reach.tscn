@@ -48,53 +48,7 @@ color = Color(0.018, 0.016, 0.024, 1)
 
 [node name="Trees" type="Node2D" parent="."]
 y_sort_enabled = true
-
-[node name="T0" parent="Trees" instance=ExtResource("2_tree")]
-position = Vector2(-540, -300)
-
-[node name="T1" parent="Trees" instance=ExtResource("2_tree")]
-position = Vector2(-220, -420)
-scale = Vector2(0.85, 0.85)
-
-[node name="T2" parent="Trees" instance=ExtResource("2_tree")]
-position = Vector2(280, -380)
-scale = Vector2(-1, 1)
-
-[node name="T3" parent="Trees" instance=ExtResource("2_tree")]
-position = Vector2(640, -200)
-scale = Vector2(1.1, 1.1)
-
-[node name="T4" parent="Trees" instance=ExtResource("2_tree")]
-position = Vector2(700, 160)
-scale = Vector2(-0.9, 0.9)
-
-[node name="T5" parent="Trees" instance=ExtResource("2_tree")]
-position = Vector2(360, 380)
-scale = Vector2(0.95, 0.95)
-
-[node name="T6" parent="Trees" instance=ExtResource("2_tree")]
-position = Vector2(-160, 420)
-scale = Vector2(-1, 1)
-
-[node name="T7" parent="Trees" instance=ExtResource("2_tree")]
-position = Vector2(-560, 320)
-scale = Vector2(1.05, 1.05)
-
-[node name="T8" parent="Trees" instance=ExtResource("2_tree")]
-position = Vector2(-760, 80)
-scale = Vector2(-0.9, 0.9)
-
-[node name="T9" parent="Trees" instance=ExtResource("2_tree")]
-position = Vector2(-420, 100)
-scale = Vector2(0.8, 0.8)
-
-[node name="T10" parent="Trees" instance=ExtResource("2_tree")]
-position = Vector2(440, 80)
-scale = Vector2(-1.05, 1.05)
-
-[node name="T11" parent="Trees" instance=ExtResource("2_tree")]
-position = Vector2(120, -120)
-scale = Vector2(0.9, 0.9)
+z_index = -5
 
 [node name="PerimeterWalls" type="StaticBody2D" parent="."]
 collision_layer = 1
@@ -179,33 +133,6 @@ color = Color(0.16, 0.14, 0.18, 0.32)
 position = Vector2(0, 440)
 
 [node name="SpawnAnchors" type="Node2D" parent="."]
-
-[node name="A0" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(-680, -200)
-
-[node name="A1" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(680, -200)
-
-[node name="A2" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(-520, 320)
-
-[node name="A3" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(520, 320)
-
-[node name="A4" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(0, 320)
-
-[node name="A5" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(-300, 80)
-
-[node name="A6" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(300, 80)
-
-[node name="A7" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(-820, 120)
-
-[node name="A8" type="Marker2D" parent="SpawnAnchors"]
-position = Vector2(820, 120)
 
 [node name="Enemies" type="Node2D" parent="."]
 y_sort_enabled = true
