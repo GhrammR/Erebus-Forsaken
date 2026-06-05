@@ -1021,6 +1021,52 @@ missing.
 
 ---
 
+## #N — In-zone interactable on the walls layer breaks enemy LOS
+
+**Symptom:** After teleporting next to a small in-zone interactable
+(brazier, shrine, future Maw entrance), nearby enemies stay idle
+until the player moves a step. User reports "mobs are not hostile
+until I move." The bug only surfaces post-teleport because the
+player has had no chance to shift out of the interactable's LOS
+shadow.
+
+**Root cause:** Wilderness enemy AI's `_has_line_of_sight` raycasts
+on `_WALL_MASK = 1` (the walls layer). Anything on physics layer 1
+blocks LOS. Portals and Waypoints inherit a StaticBody2D root that
+defaults to `collision_layer = 1` — meaning the interactable's own
+collider blocks the enemy's view of the player whenever the ray's
+chest-y line passes through it. Portals at zone edges don't
+trigger this because no enemies are nearby; the Waypoint is the
+first interactable that lives mid-zone surrounded by spawn rings.
+
+**Prevention:** Small in-zone interactables should NOT carry
+`collision_layer = 1`. Two viable patterns:
+
+1. **collision_layer = 0** (chosen for Stage 14 Waypoint). The
+   interactable becomes non-blocking; the player can walk through
+   it visually. Acceptable when the interactable is small and the
+   player rarely overlaps. One-line fix.
+2. **Dedicated interactables layer** (Stage 19+ pattern when more
+   in-zone interactables ship). New physics layer, e.g. layer 8,
+   for "in-zone interactables." Player's `collision_mask` includes
+   it (movement blocks); AI's `_WALL_MASK` does not (LOS ignores).
+
+When adding a new Portal subclass or in-zone Static interactable,
+explicitly decide which pattern applies and document the choice.
+
+**Recovery:** Set `collision_layer = 0` on the offender, verify
+nearby enemies aggro on the next frame. Add a structural verifier
+asserting layer != 1 for the affected scene.
+
+**First incident:** Stage 14 playtest, user-reported. The
+Waypoint's brazier sat on layer 1 because the Portal scene it
+extends from defaults to layer 1. Enemies behind the brazier
+stayed idle on waypoint arrival. Fix: brazier `collision_layer = 0`.
+Verifier `--verify14::_verify_waypoint_does_not_block_los` guards
+against regression.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

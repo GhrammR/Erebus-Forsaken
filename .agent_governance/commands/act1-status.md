@@ -259,7 +259,7 @@ stable for already-closed work; new stages are appended. Existing
 9. Stage 11 — AI asset-generation pipeline **[CLOSED]**
 10. Stage 12 — Town → wilderness walkable transition **[CLOSED]**
 11. Stage 13 — Wilderness procedural generation **[CLOSED]**
-12. Stage 14 — Waypoint system (themed, persistent, discoverable)
+12. Stage 14 — Waypoint system **[CLOSED]**
 13. Stage 15 — Equipment paper-doll rendering (bare-hands default;
     helmet/weapon/armor slots tint the procedural sprite layers)
 14. Stage 16 — Item icons (replace text rows with icon grid)
@@ -1166,26 +1166,119 @@ at scale); Stage 13 builds the foundation that makes them trivial.
   Optional: start a second new game and confirm the layout
   differs (different master seed).
 
-## Stage 14 — Waypoint system
+## Stage 14 — Waypoint system  **[CLOSED 2026-06-05]**
 
-Themed fast-travel between previously-visited wilderness zones. The
-theme: **"The Sundered Ferry"** — placeholder name; replace when art
-lands. Charon's old ferry-paths still cross the underworld; you light a
-brazier at each waypoint you find, and a spectral ferryman returns to
-take you back. (Theme is a working draft; explicit user approval to
-lock the name.)
+Theme name locked 2026-06-05: **"The Sundered Ferry"** (user explicit
+approval). Charon's old ferry-paths still cross the underworld; you
+light a brazier at each waypoint you find, and a spectral ferryman
+returns to take you back. Brazier visual is procedural (cold blue-grey
+flame; lights amber + adds soft halo on discovery via tween).
+Bitmap polish deferred to Stage 21.
 
-* \[ ] `Waypoint` interactable scene + script. Placed at a fixed
-  location in each generated wilderness zone (seeded position).
-* \[ ] Save schema entry: discovered waypoints (`Array[StringName]`
-  of zone ids).
-* \[ ] Waypoint UI: pressing E at a waypoint opens a list of
-  discovered destinations. Selecting one transitions there.
-* \[ ] First-time discovery: brief reveal anim + audio cue
-  (procedural fallback OK).
-* \[ ] `--verify14` covers: discovery persists across save/load,
-  travel between waypoints preserves player state, no cross-game
-  waypoint leakage.
+* \[x] `Waypoint` (`scripts/world/waypoint.gd` + `scenes/world/
+  waypoint.tscn`) extends Portal so it inherits click-to-interact +
+  selection ring + proximity prompt for free. Override `interact()`
+  marks the zone discovered (`GameState.discovered_waypoints.append`),
+  plays the discover SFX + tween once, and emits `menu_requested`
+  instead of running a direct zone transit.
+* \[x] Procedural brazier-on-pier visual: PierBase + PierTopEdge +
+  StonePillar + Bowl + Flame (large) + FlameInner (highlight) +
+  Glow halo. All Polygon2D — zero shader cost.
+* \[x] `GameState.discovered_waypoints: Array` (zone_id strings).
+  `reset_run` clears it.
+* \[x] Save schema **v16 → v17** — `discovered_waypoints` key added;
+  migration defaults legacy saves to empty array. New games re-roll
+  fresh; loads carry the player's discovery list forward.
+* \[x] `ZoneProcgen` extended: new `SALT_WAYPOINT = 4`; `generate_for`
+  reject-samples a `waypoint_pos: Vector2` with a 220px exclusion
+  radius against rolled anchors so the brazier never spawns inside
+  a spawn ring. Falls back to bounds-center after 96 attempts.
+* \[x] `BlightedReach._place_waypoint`: instantiates the Waypoint
+  scene at the procgen pos, adds a `FromWaypoint` Marker2D 40px
+  south for arrival placement. Idempotent against double `_ready`.
+* \[x] `threshold_camp.tscn` gains a `FromWaypoint` Marker2D at
+  (0, 140) — the hub has no brazier (it's the always-reachable
+  default), just an arrival landing pad.
+* \[x] `WaypointMenu` (`scenes/ui/waypoint_menu.tscn` +
+  `scripts/ui/waypoint_menu.gd`, CanvasLayer layer 72). Title
+  "The Sundered Ferry", subtitle "Choose a destination," list of
+  buttons (Threshold Camp + every discovered wilderness zone, sans
+  the origin), Close button. Pauses via `Engine.time_scale = 0` +
+  `PROCESS_MODE_ALWAYS` (matches MilestoneModal / EndlessSummary
+  pattern). Esc closes.
+* \[x] `game.gd` hosts the menu, wires `Waypoint.menu_requested →
+  _waypoint_menu.show_menu` in `_wire_zone_npcs`, and routes
+  `_waypoint_menu.travel_requested → _do_transit(zone, true,
+  "FromWaypoint", true)`. `[transit] waypoint_travel -> <zone>` log.
+* \[x] AudioBank entries: `waypoint_discover`, `waypoint_travel`
+  (placeholder .ogg files per asset-pipeline rule; code lands now,
+  audio drops in later).
+* \[x] `--verify14` (37 / 37 PASS): SAVE_VERSION ≥ 17 + v16 → v17
+  migration installs `discovered_waypoints` empty,
+  GameState field + reset_run clearance, Waypoint scene loads as
+  Waypoint with display_name + flame/glow children, source asserts
+  for `extends Portal` + `menu_requested` + discovery append,
+  ZoneProcgen returns `waypoint_pos` within bounds + same seed →
+  identical pos + different master_seed → different pos,
+  WaypointMenu scene + show/hide API + travel_requested signal,
+  source-level Engine.time_scale pause + resume + PROCESS_MODE_ALWAYS,
+  Blighted Reach `_place_waypoint` consumes `waypoint_pos` + adds
+  FromWaypoint, threshold_camp has FromWaypoint, AudioBank entries
+  present, game.gd holds reference + connects + routes via
+  FromWaypoint, game.tscn instances WaypointMenu, round-trip
+  preservation through migrate.
+* \[x] Regression: all 16 verifiers PASS post-Stage-14.
+* \[x] **Stage 14.3 — brazier collision_layer doesn't block LOS
+  (post-playtest fix).** User reported "mobs are not hostile until
+  I move" after waypoint arrival. Diagnosis: Waypoint inherits
+  Portal's StaticBody2D root which defaults to `collision_layer = 1`
+  (the walls layer). Wilderness enemy LOS raycasts on the same
+  layer, so the brazier's own capsule collider sat in the line of
+  sight between every nearby enemy and the player. Moving even one
+  step shifted the player out of the shadow and triggered aggro.
+  Fix: Waypoint `collision_layer = 0` (non-blocking; player can
+  walk through visually, but the brazier is small and the player
+  rarely overlaps). Failure-mode entry added so the same trap
+  catches future in-zone interactables (Stage 19 Maw-in-town +
+  Stage 20 wilderness props). Verifier
+  `--verify14::_verify_waypoint_does_not_block_los` guards regression.
+
+* \[x] **Stage 14.2 — no-pause + damage interrupt (user-locked
+  design call 2026-06-05).** First playtest of the menu used the
+  MilestoneModal pause pattern (`Engine.time_scale = 0` on open).
+  User asked whether to keep it or make waypoint use tactical —
+  picked the tactical path. The menu no longer pauses; the world
+  keeps moving. Taking damage instantly closes the menu (parallels
+  the Hearth Ember channel-interrupt pattern — use the safe tool,
+  stay safe). Backdrop alpha dropped to 0.18 and mouse_filter set
+  to IGNORE so world clicks (movement, attacks) reach the player
+  while the menu is up; only the panel + buttons catch input. The
+  menu's `_hook_damage_interrupt` subscribes to
+  `GameState.player.get_health_component().damaged` on show and
+  unsubscribes on hide. Verifier source-asserts the no-pause +
+  damage-wire contract so a future refactor can't silently revert.
+
+* \[x] **Stage 14.1 — town hub brazier (post-playtest polish).**
+  User reported that with only a Reach brazier, the system was
+  "pointless" — walking back through the gate is identical. Added:
+  - `Waypoint.starts_lit: bool` export. When true, the brazier is
+    lit at all times, the discovery flow is skipped (no SFX, no
+    array append, no tween).
+  - Hand-placed town Waypoint in `threshold_camp.tscn` at (300, 180)
+    with `starts_lit = true`. Acts as the always-available home
+    dock.
+  - `FromWaypoint` marker in town moved from camp-center (0, 140)
+    to (300, 220) — adjacent to the brazier so waypoint arrivals
+    land at the brazier, matching the wilderness behavior.
+  - Stage 20 entry carries a note: when the second wilderness zone
+    ships, the Reach brazier should relocate deeper into the chain
+    so discovery represents real fast-travel value.
+* \[ ] Smoke playtest (user-driven): start a new game → walk to
+  the lit town brazier (east of campfire) → press E → menu opens
+  with Threshold Camp suppressed (you're already there) →
+  Blighted Reach appears only after discovery. Walk to Reach →
+  discover its brazier → travel back via menu → arrive at the
+  town brazier (not camp center).
 
 ## Stage 15 — Equipment paper-doll rendering
 
@@ -1302,6 +1395,15 @@ built in 11–19; if any of those is shaky, fix it before authorship.
 * \[ ] Final boss encounter authored (designed; lands in this stage
   via Stage 18's state machine).
 * \[ ] First-playthrough time-to-final-boss = 2+ hours.
+* \[ ] **Sundered Ferry relocation (carry from Stage 14.1):** the
+  Blighted Reach brazier is currently semi-pointless — the player
+  can already walk back to town through the north gate, so its
+  fast-travel value is zero when only one wilderness zone exists.
+  Stage 14 placed it as foundation scaffolding. When zone 2+
+  ships, move the Reach brazier deeper into the chain (zone 2 or
+  later) so discovering a brazier represents real fast-travel
+  value ("I can now skip the long walk back from this point"). The
+  town brazier stays as the always-lit hub.
 * \[ ] `--verify20` covers: zone count, quest count, dungeon count,
   Eurynome's final quest references the final boss, save round-trip
   works at the new content scale.

@@ -4,7 +4,7 @@ extends Node
 ## migrate() step. The on-disk format is human-readable so a tester can
 ## hand-edit corruption cases (rules/failure-modes.md #7 leans on this).
 
-const SAVE_VERSION: int = 16
+const SAVE_VERSION: int = 17
 const SAVE_PATH: String = "user://save_slot_1.dat"
 
 signal save_completed(success: bool)
@@ -138,6 +138,8 @@ func migrate(old: Dictionary) -> Dictionary:
 		old = _migrate_v14_to_v15(old)
 	if v < 16:
 		old = _migrate_v15_to_v16(old)
+	if v < 17:
+		old = _migrate_v16_to_v17(old)
 	return old
 
 func _migrate_v1_to_v2(old: Dictionary) -> Dictionary:
@@ -262,6 +264,16 @@ func _migrate_v15_to_v16(old: Dictionary) -> Dictionary:
 		old["zone_caches"] = {}
 	return old
 
+func _migrate_v16_to_v17(old: Dictionary) -> Dictionary:
+	# Stage 14 — Sundered Ferry waypoint discovery list. Legacy v16
+	# saves default to empty — the player must re-discover any
+	# waypoints they had pre-update (acceptable since the system is
+	# brand new).
+	old["version"] = 17
+	if not old.has("discovered_waypoints"):
+		old["discovered_waypoints"] = []
+	return old
+
 func _migrate_v12_to_v13(old: Dictionary) -> Dictionary:
 	# v12 had no per-zone spawn budget or claimed-milestone state.
 	# Legacy saves default to empty dicts/lists — directors run at
@@ -354,6 +366,10 @@ func _snapshot(player: Node) -> Dictionary:
 		# load-resume path stays unchanged. Game.gd populates this via
 		# set_pending_zone_caches() BEFORE invoking save_game.
 		"zone_caches": _pending_zone_caches.duplicate(true),
+		# v17 (Stage 14): list of wilderness zone_ids the player has
+		# lit a Sundered Ferry brazier at. Threshold Camp is implicit
+		# (always reachable from the menu) so it does not appear here.
+		"discovered_waypoints": GameState.discovered_waypoints.duplicate(),
 	}
 	return snap
 
@@ -504,6 +520,7 @@ func _apply(player: Node, data: Dictionary) -> void:
 	GameState.boss_first_kill = bool(data.get("boss_first_kill", false))
 	GameState.endless_milestones = (data.get("endless_milestones", []) as Array).duplicate()
 	GameState.titles = (data.get("titles", []) as Array).duplicate()
+	GameState.discovered_waypoints = (data.get("discovered_waypoints", []) as Array).duplicate()
 	# v14 (Stage 9.8): restore potion-type cooldown remainders.
 	ConsumableUse.restore(data.get("consumable_cooldowns", {}))
 	# v15 (Stage 13): restore master seed before any zone procgen

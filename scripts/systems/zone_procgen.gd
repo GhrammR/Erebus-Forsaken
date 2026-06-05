@@ -23,6 +23,7 @@ class_name ZoneProcgen extends Object
 const SALT_PROPS: int = 1
 const SALT_ANCHORS: int = 2
 const SALT_PALETTE: int = 3
+const SALT_WAYPOINT: int = 4
 
 ## Tree variant scene paths. Variant index is the array index. Add
 ## entries here when a new tree scene lands; the procgen pick respects
@@ -62,9 +63,10 @@ const PALETTE_COUNT: Dictionary = {
 ##
 ## Returns:
 ##   {
-##     "props":   Array[Dictionary { kind, variant, pos, scale, rotation }],
-##     "anchors": Array[Vector2],
-##     "palette": Dictionary[StringName -> int],
+##     "props":        Array[Dictionary { kind, variant, pos, scale, rotation }],
+##     "anchors":      Array[Vector2],
+##     "palette":      Dictionary[StringName -> int],
+##     "waypoint_pos": Vector2  (Stage 14 — Sundered Ferry placement)
 ##   }
 static func generate_for(zone_id: StringName, bounds: Rect2,
 		exclusions: Array, prop_count: int, anchor_count: int,
@@ -72,6 +74,7 @@ static func generate_for(zone_id: StringName, bounds: Rect2,
 	var props_rng := WorldSeed.make_rng(zone_id, SALT_PROPS)
 	var anchors_rng := WorldSeed.make_rng(zone_id, SALT_ANCHORS)
 	var palette_rng := WorldSeed.make_rng(zone_id, SALT_PALETTE)
+	var waypoint_rng := WorldSeed.make_rng(zone_id, SALT_WAYPOINT)
 
 	var props: Array = []
 	for i in prop_count:
@@ -104,10 +107,26 @@ static func generate_for(zone_id: StringName, bounds: Rect2,
 		var count: int = PALETTE_COUNT[archetype]
 		palette[archetype] = palette_rng.randi_range(0, count - 1)
 
+	# Stage 14 — Sundered Ferry waypoint placement. Reject-sample with
+	# a larger exclusion radius against anchors so the brazier doesn't
+	# spawn inside an enemy spawn ring. Anchors are reused as the
+	# "existing" list; the waypoint is rolled into the same bounds +
+	# exclusions but with its own RNG stream.
+	var waypoint_pos := _roll_position(
+			waypoint_rng, bounds, exclusions, anchors, 220.0, 96)
+	if waypoint_pos == Vector2.INF:
+		# Couldn't place after 96 attempts — fall back to bounds center
+		# so the zone still gets a waypoint. Caller can detect a
+		# fallback by comparing to bounds.get_center(), but Blighted
+		# Reach's bounds are generous enough that this branch should
+		# only trigger if the caller passes pathological inputs.
+		waypoint_pos = bounds.get_center()
+
 	return {
 		"props": props,
 		"anchors": anchors,
 		"palette": palette,
+		"waypoint_pos": waypoint_pos,
 	}
 
 ## Stable resource-path lookup. variant 0..N-1 maps to the constant

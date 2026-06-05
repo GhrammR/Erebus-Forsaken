@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/zones/threshold_camp.gd" id="1_camp"]
 [ext_resource type="PackedScene" path="res://art/procedural/zones/fire_pit.tscn" id="2_pit"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/npc/eurynome.tscn" id="5_eur"]
 [ext_resource type="PackedScene" path="res://scenes/world/walk_gate.tscn" id="6_walkgate"]
 [ext_resource type="PackedScene" path="res://art/procedural/world/dead_tree.tscn" id="7_tree"]
+[ext_resource type="PackedScene" path="res://scenes/world/waypoint.tscn" id="8_waypoint"]
 
 [sub_resource type="RectangleShape2D" id="rect_n"]
 size = Vector2(1400, 40)
@@ -192,6 +193,13 @@ display_name = "Town South Gate"
 
 [node name="FromBlightedReach" type="Marker2D" parent="."]
 position = Vector2(0, 280)
+
+[node name="Waypoint" parent="." instance=ExtResource("8_waypoint")]
+position = Vector2(300, 180)
+starts_lit = true
+
+[node name="FromWaypoint" type="Marker2D" parent="."]
+position = Vector2(300, 220)
 
 [node name="BeyondWilderness" type="Node2D" parent="."]
 z_index = -50

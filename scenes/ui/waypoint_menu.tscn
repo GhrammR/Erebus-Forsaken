@@ -1,0 +1,62 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/waypoint_menu.gd" id="1_wm"]
+
+[node name="WaypointMenu" type="CanvasLayer"]
+layer = 72
+script = ExtResource("1_wm")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+mouse_filter = 2
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.18)
+
+[node name="Panel" type="Panel" parent="."]
+mouse_filter = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -200.0
+offset_right = 200.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Center" type="CenterContainer" parent="Panel"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="Panel/Center"]
+custom_minimum_size = Vector2(320, 360)
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Title" type="Label" parent="Panel/Center/VBox"]
+text = "The Sundered Ferry"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.95, 0.85, 0.65, 1)
+theme_override_font_sizes/font_size = 22
+
+[node name="Subtitle" type="Label" parent="Panel/Center/VBox"]
+text = "Choose a destination"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.75, 0.70, 0.60, 1)
+theme_override_font_sizes/font_size = 13
+
+[node name="Destinations" type="VBoxContainer" parent="Panel/Center/VBox"]
+custom_minimum_size = Vector2(280, 180)
+theme_override_constants/separation = 6
+
+[node name="CloseButton" type="Button" parent="Panel/Center/VBox"]
+custom_minimum_size = Vector2(160, 32)
+text = "Close (Esc)"

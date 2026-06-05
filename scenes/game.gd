@@ -44,6 +44,7 @@ const _TUTORIAL_SCRIPT := preload("res://scripts/ui/tutorial_prompt.gd")
 @onready var _wave_counter: Label = $HUD/WaveCounter
 @onready var _endless_summary: CanvasLayer = $EndlessSummary
 @onready var _milestone_modal: CanvasLayer = $MilestoneModal
+@onready var _waypoint_menu: CanvasLayer = $WaypointMenu
 @onready var _click_marker: Node2D = $ClickMarker
 @onready var _dn_layer: Node2D = $DamageNumberLayer
 @onready var _death_screen: CanvasLayer = $DeathScreen
@@ -900,6 +901,24 @@ func _wire_zone_npcs() -> void:
 	var eur := _zone.get_node_or_null(^"Eurynome") as Eurynome
 	if eur != null and not eur.quest_open_requested.is_connected(_on_quest_open):
 		eur.quest_open_requested.connect(_on_quest_open)
+	# Stage 14 — Sundered Ferry. Waypoints are placed by zone procgen
+	# at runtime; signal-connect lives here so it covers both the
+	# initial zone load and every transit-rebuild path.
+	var wp := _zone.get_node_or_null(^"Waypoint") as Waypoint
+	if wp != null and not wp.menu_requested.is_connected(_on_waypoint_menu_requested):
+		wp.menu_requested.connect(_on_waypoint_menu_requested)
+	if not _waypoint_menu.travel_requested.is_connected(_on_waypoint_travel_requested):
+		_waypoint_menu.travel_requested.connect(_on_waypoint_travel_requested)
+
+func _on_waypoint_menu_requested(wp: Waypoint) -> void:
+	_waypoint_menu.show_menu(wp.zone_id())
+
+func _on_waypoint_travel_requested(zone_id: StringName) -> void:
+	# Route the same way Portals do, but with the FromWaypoint marker
+	# so the player arrives next to the destination's brazier (or, in
+	# town, near the campfire).
+	DebugLog.write(&"transit", "waypoint_travel -> %s" % String(zone_id))
+	_do_transit.call_deferred(zone_id, true, StringName("FromWaypoint"), true)
 
 func _on_save_pressed() -> void:
 	var ok := SaveSystem.save_game()

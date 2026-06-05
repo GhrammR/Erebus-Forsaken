@@ -44,6 +44,7 @@ func _run_procgen() -> void:
 	_populate_anchors(result.get("anchors", []))
 	_populate_props(result.get("props", []))
 	_apply_palette_pick(result.get("palette", {}))
+	_place_waypoint(result.get("waypoint_pos", Vector2.ZERO))
 
 func _populate_anchors(anchors: Array) -> void:
 	var holder := get_node_or_null(^"SpawnAnchors") as Node2D
@@ -97,3 +98,24 @@ func _apply_palette_pick(palette: Dictionary) -> void:
 	if director == null:
 		return
 	director.palette_per_archetype = palette.duplicate()
+
+const _WAYPOINT_SCENE := preload("res://scenes/world/waypoint.tscn")
+
+func _place_waypoint(pos: Vector2) -> void:
+	# Idempotent: if the zone's _ready ever fires twice (it shouldn't,
+	# but cache restore + transit ordering can be subtle), don't
+	# double-spawn the waypoint.
+	if has_node("Waypoint"):
+		return
+	var wp := _WAYPOINT_SCENE.instantiate()
+	wp.name = "Waypoint"
+	wp.position = pos
+	add_child(wp)
+	# Arrival marker for incoming waypoint travel — sits a few px
+	# south of the waypoint so the player drops next to the brazier,
+	# not inside its footprint.
+	if not has_node("FromWaypoint"):
+		var m := Marker2D.new()
+		m.name = "FromWaypoint"
+		m.position = pos + Vector2(0, 40)
+		add_child(m)

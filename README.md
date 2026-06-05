@@ -2,16 +2,17 @@
 
 A dark-fantasy, Greek-mythology isometric ARPG. Solo development in Godot 4.
 
-> **Status:** Pre-alpha. Stages 0–13 complete (bootstrap, stats,
+> **Status:** Pre-alpha. Stages 0–14 complete (bootstrap, stats,
 > movement, combat, items, skills, town + quests, wilderness, dungeons,
 > interim act boss, feel pass, endless mode, consumables + potions,
 > Ember Maw-route hotfix, AI asset-generation pipeline, walkable
-> town↔wilderness seam, seeded wilderness procgen). Strategic Review
-> v2 (2026-06-04) reset Act 1's content target: 10+ wilderness zones,
-> 5+ dungeons, 5+ quests, paper-doll equipment, AI-generated voice +
-> portraits, waypoints, seeded procgen, all sized for 2+ hours of
-> first-run gameplay. Stages 14–21 (Strategic Review v2) are the
-> path there; Stage 14 (waypoint system) is the immediate next step. Release plan: **single dual launch on Steam + itch.io
+> town↔wilderness seam, seeded wilderness procgen, Sundered Ferry
+> waypoints). Strategic Review v2 (2026-06-04) reset Act 1's content
+> target: 10+ wilderness zones, 5+ dungeons, 5+ quests, paper-doll
+> equipment, AI-generated voice + portraits, waypoints, seeded procgen,
+> all sized for 2+ hours of first-run gameplay. Stages 15–21 (Strategic
+> Review v2) are the path there; Stage 15 (paper-doll equipment
+> rendering) is the immediate next step. Release plan: **single dual launch on Steam + itch.io
 > the same day** when content-complete — no staged demo, no EA split.
 > The project is being built in public from the first commit.
 
@@ -145,6 +146,7 @@ godot --headless --path . -- --verify10     # Character select        (Stage 10)
 godot --headless --path . -- --verify11     # AI asset-gen pipeline   (Stage 11)
 godot --headless --path . -- --verify12     # Walkable town seam      (Stage 12)
 godot --headless --path . -- --verify13     # Seeded wilderness procgen (Stage 13)
+godot --headless --path . -- --verify14     # Sundered Ferry waypoints (Stage 14)
 ```
 
 Debug instrumentation (Stage 9.7):

@@ -26,6 +26,10 @@ const _SFX_BANK: Dictionary = {
 	&"hearth_ember_break":    "res://audio/sfx/hearth_ember_break.ogg",
 	&"potion_drink":          "res://audio/sfx/potion_drink.ogg",
 	&"potion_ichor":          "res://audio/sfx/potion_ichor.ogg",
+	# Stage 14 — Sundered Ferry. Discover plays when the brazier first
+	# lights; travel plays on every destination pick from the menu.
+	&"waypoint_discover":     "res://audio/sfx/waypoint_discover.ogg",
+	&"waypoint_travel":       "res://audio/sfx/waypoint_travel.ogg",
 }
 
 const _AMBIENT_BANK: Dictionary = {

@@ -35,6 +35,13 @@ var endless_milestones: Array = []
 ## Stored as strings to keep the save JSON portable.
 var titles: Array = []
 
+## Stage 14 — wilderness zone_ids the player has lit a Sundered Ferry
+## brazier at. Persistent across save/load (see save schema v17). The
+## WaypointMenu surfaces these as travel destinations; Threshold Camp
+## is implicit (always reachable from a menu). Stored as Array of
+## string zone_ids so the save JSON stays portable.
+var discovered_waypoints: Array = []
+
 const BUILD_VERSION: String = "0.0.1"
 
 func reset_run() -> void:
@@ -45,3 +52,4 @@ func reset_run() -> void:
 	boss_first_kill = false
 	endless_milestones = []
 	titles = []
+	discovered_waypoints = []
