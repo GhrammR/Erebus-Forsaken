@@ -31,7 +31,9 @@ const WEAPON_ARMS: Dictionary = {
 ## Myrmidon, the Buckler doubles as the offhand visual. Other classes
 ## have no built-in offhand visual; an overlay is built instead.
 const BUILTIN_OFFHAND: Dictionary = {
-	&"myrmidon": ^"Body/Buckler",
+	# Stage 17.5 — Buckler moved under the left elbow pivot so it
+	# rides the arm during shield-raise.
+	&"myrmidon": ^"Body/ArmLShoulder/ElbowPivot/Buckler",
 }
 
 func weapon_arm_for(class_id: StringName) -> StringName:
@@ -62,15 +64,43 @@ func tier_color(tier: int) -> Color:
 ## Returns a Polygon2D overlay for the given (slot, class) pair, tinted
 ## by item tier. Returns null when the slot has no visual for this
 ## class (e.g. RING, AMULET — Act 1 has no jewelry visuals).
+##
+## Legacy single-node API — returns the FIRST part of
+## `build_overlay_parts`. Kept so the Stage 15 verifier and other
+## callers that only need one polygon still work.
 func build_overlay(slot: int, class_id: StringName, item: ItemData) -> Polygon2D:
-	if item == null:
+	var parts := build_overlay_parts(slot, class_id, item)
+	if parts.is_empty():
 		return null
+	return parts[0]["poly"] as Polygon2D
+
+## Multi-part overlay API. Returns Array of dictionaries:
+##   [ { "mount": NodePath, "poly": Polygon2D }, ... ]
+## Each part should be parented under sprite_root.get_node(mount). This
+## lets a single equipment slot drive multiple anatomy-following
+## polygons (e.g. greaves split across both KneePivots so each shin
+## band articulates with its leg instead of floating in body space).
+##
+## Mount paths are relative to the sprite root. Empty mount = "Body".
+func build_overlay_parts(slot: int, class_id: StringName, item: ItemData) -> Array:
+	if item == null:
+		return []
 	match slot:
-		EquipmentSlot.Slot.HEAD:    return _build_head(class_id, item)
-		EquipmentSlot.Slot.CHEST:   return _build_chest(class_id, item)
-		EquipmentSlot.Slot.LEGS:    return _build_legs(class_id, item)
-		EquipmentSlot.Slot.OFFHAND: return _build_offhand(class_id, item)
-	return null
+		EquipmentSlot.Slot.HEAD:
+			var head := _build_head(class_id, item)
+			if head == null: return []
+			return [{ "mount": NodePath("Body"), "poly": head }]
+		EquipmentSlot.Slot.CHEST:
+			var chest := _build_chest(class_id, item)
+			if chest == null: return []
+			return [{ "mount": NodePath("Body"), "poly": chest }]
+		EquipmentSlot.Slot.LEGS:
+			return _build_legs_parts(class_id, item)
+		EquipmentSlot.Slot.OFFHAND:
+			var oh := _build_offhand(class_id, item)
+			if oh == null: return []
+			return [{ "mount": NodePath("Body"), "poly": oh }]
+	return []
 
 # ---- HEAD overlays --------------------------------------------------------
 
@@ -159,40 +189,75 @@ func _build_chest(class_id: StringName, item: ItemData) -> Polygon2D:
 
 # ---- LEGS overlays --------------------------------------------------------
 
-func _build_legs(class_id: StringName, item: ItemData) -> Polygon2D:
-	var p := Polygon2D.new()
-	p.name = "EquipLegs"
-	p.color = tier_color(tier_for(item))
+# Returns leg parts that mount under each KneePivot so they
+# articulate with the actual shin polygons during walk. Previously
+# this was a single body-local shin band that floated in place while
+# the shins swung beneath it (the "non-moving blocky shape over
+# moving legs" bug). Each part is keyed in knee-local space (knee
+# pivot at (0,0), shin extending down to (0, ANKLE_DROP=10)).
+func _build_legs_parts(class_id: StringName, item: ItemData) -> Array:
+	var color := tier_color(tier_for(item))
 	match class_id:
 		&"myrmidon":
-			# Stage 17.5 — single shin-band shape (the "connector
-			# trick" for two disjoint plates doesn't render in
-			# Polygon2D — paths re-enter the fill). Reads as
-			# strapped greaves wrapping both shins as one piece.
-			# Bitmap polish can split into distinct L/R plates.
-			p.polygon = PackedVector2Array([
-				Vector2(-8, -12), Vector2(-4, -14),
-				Vector2(4, -14),  Vector2(8, -12),
-				Vector2(8, -2),   Vector2(-8, -2),
+			# Per-leg bronze greave wrapping the shin (knee → ankle).
+			# In knee-local space, the shin runs y=0..10. Greave
+			# covers the lower 3/4 of the shin with a strap notch.
+			var poly := PackedVector2Array([
+				Vector2(-3.4, 1.5),
+				Vector2(3.4, 1.5),
+				Vector2(3.6, 4.0),
+				Vector2(3.2, 9.5),
+				Vector2(-3.2, 9.5),
+				Vector2(-3.6, 4.0),
 			])
+			return [
+				{ "mount": NodePath("Body/LegLHip/KneePivot"),
+				  "poly": _make_leg_part(&"EquipLegsL", poly, color) },
+				{ "mount": NodePath("Body/LegRHip/KneePivot"),
+				  "poly": _make_leg_part(&"EquipLegsR", poly, color) },
+			]
 		&"pythia":
-			# Robe trim hem y=-2..-10
-			p.polygon = PackedVector2Array([
-				Vector2(-10, -2), Vector2(10, -2),
-				Vector2(9, -10),  Vector2(-9, -10),
+			# Robe hem — both panels follow each leg.
+			var poly2 := PackedVector2Array([
+				Vector2(-4, 0), Vector2(4, 0),
+				Vector2(4.5, 9.5), Vector2(-4.5, 9.5),
 			])
+			return [
+				{ "mount": NodePath("Body/LegLHip/KneePivot"),
+				  "poly": _make_leg_part(&"EquipLegsL", poly2, color) },
+				{ "mount": NodePath("Body/LegRHip/KneePivot"),
+				  "poly": _make_leg_part(&"EquipLegsR", poly2, color) },
+			]
 		&"shade_hunter":
-			# Wraps over the dark legs y=-2..-12
-			p.polygon = PackedVector2Array([
-				Vector2(-5, -2), Vector2(5, -2),
-				Vector2(4, -12), Vector2(-4, -12),
+			var poly3 := PackedVector2Array([
+				Vector2(-3, 2), Vector2(3, 2),
+				Vector2(3, 9.5), Vector2(-3, 9.5),
 			])
+			return [
+				{ "mount": NodePath("Body/LegLHip/KneePivot"),
+				  "poly": _make_leg_part(&"EquipLegsL", poly3, color) },
+				{ "mount": NodePath("Body/LegRHip/KneePivot"),
+				  "poly": _make_leg_part(&"EquipLegsR", poly3, color) },
+			]
 		&"ossuary_priest":
-			# Bone hem on the dark robe y=-2..-10
-			p.polygon = PackedVector2Array([
-				Vector2(-11, -2), Vector2(11, -2),
-				Vector2(9, -10),  Vector2(-9, -10),
+			var poly4 := PackedVector2Array([
+				Vector2(-4, 0), Vector2(4, 0),
+				Vector2(4.5, 9.5), Vector2(-4.5, 9.5),
 			])
+			return [
+				{ "mount": NodePath("Body/LegLHip/KneePivot"),
+				  "poly": _make_leg_part(&"EquipLegsL", poly4, color) },
+				{ "mount": NodePath("Body/LegRHip/KneePivot"),
+				  "poly": _make_leg_part(&"EquipLegsR", poly4, color) },
+			]
+	return []
+
+static func _make_leg_part(part_name: StringName, pts: PackedVector2Array,
+		color: Color) -> Polygon2D:
+	var p := Polygon2D.new()
+	p.name = String(part_name)
+	p.polygon = pts
+	p.color = color
 	return p
 
 # ---- OFFHAND overlays -----------------------------------------------------

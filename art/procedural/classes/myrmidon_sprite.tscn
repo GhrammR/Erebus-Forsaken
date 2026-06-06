@@ -28,18 +28,15 @@ position = Vector2(0, 10)
 [node name="Shin" type="Polygon2D" parent="Body/LegRHip/KneePivot"]
 [node name="Foot" type="Polygon2D" parent="Body/LegRHip/KneePivot"]
 
-; --- Core ---
+; --- Core flesh ---
 [node name="Hips"  type="Polygon2D" parent="Body"]
 [node name="Torso" type="Polygon2D" parent="Body"]
-[node name="Neck"  type="Polygon2D" parent="Body"]
-[node name="Head"  type="Polygon2D" parent="Body"]
-[node name="Face"  type="Node2D"    parent="Body"]
-[node name="EyeSocketL" type="Polygon2D" parent="Body/Face"]
-[node name="EyeSocketR" type="Polygon2D" parent="Body/Face"]
-[node name="EyeL"  type="Polygon2D" parent="Body/Face"]
-[node name="EyeR"  type="Polygon2D" parent="Body/Face"]
-[node name="Brow"  type="Polygon2D" parent="Body/Face"]
-[node name="Mouth" type="Polygon2D" parent="Body/Face"]
+
+; --- Armor layers BEFORE arms so arms render on top of the cuirass.
+;     Otherwise a forward-reaching arm sinks behind the bronze plate.
+[node name="Pteruges"    type="Polygon2D" parent="Body"]
+[node name="Cuirass"     type="Polygon2D" parent="Body"]
+[node name="ShieldStrap" type="Polygon2D" parent="Body"]
 
 ; --- LEFT ARM: shoulder + elbow pivots ---
 [node name="ArmLShoulder" type="Node2D" parent="Body"]
@@ -49,6 +46,9 @@ position = Vector2(-9, -44)
 position = Vector2(0, 10)
 [node name="Forearm" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
 [node name="Hand"    type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
+; Stage 17.5 — Buckler is strapped to the forearm, so it rides under
+; the left elbow pivot and rotates with the shield-raise animation.
+[node name="Buckler" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
 
 ; --- RIGHT ARM: shoulder + elbow pivots. SpearArm lives UNDER the
 ;     elbow pivot so the spear is physically carried by the hand and
@@ -66,11 +66,18 @@ position = Vector2(0, 10)
 [node name="Grip"  type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/SpearArm"]
 [node name="Tip"   type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/SpearArm"]
 
-; --- Hoplite identity layers (over the flesh, drawn AFTER arms so
-;     buckler / cuirass don't disappear behind the arm) ---
-[node name="Pteruges"    type="Polygon2D" parent="Body"]
-[node name="Cuirass"     type="Polygon2D" parent="Body"]
-[node name="ShieldStrap" type="Polygon2D" parent="Body"]
-[node name="Buckler"     type="Polygon2D" parent="Body"]
+; --- Head/face LAST so face details stay readable over arms ---
+[node name="Neck"  type="Polygon2D" parent="Body"]
+[node name="Head"  type="Polygon2D" parent="Body"]
+[node name="Face"  type="Node2D"    parent="Body"]
+[node name="Hair"       type="Polygon2D" parent="Body/Face"]
+[node name="EyeSocketL" type="Polygon2D" parent="Body/Face"]
+[node name="EyeSocketR" type="Polygon2D" parent="Body/Face"]
+[node name="EyeL"  type="Polygon2D" parent="Body/Face"]
+[node name="EyeR"  type="Polygon2D" parent="Body/Face"]
+[node name="Brow"  type="Polygon2D" parent="Body/Face"]
+[node name="Nose"  type="Polygon2D" parent="Body/Face"]
+[node name="Mouth" type="Polygon2D" parent="Body/Face"]
+[node name="Beard" type="Polygon2D" parent="Body/Face"]
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]

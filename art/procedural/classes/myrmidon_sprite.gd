@@ -18,10 +18,13 @@ extends Node2D
 
 const SKIN: Color           = Color(0.80, 0.64, 0.50)
 const SKIN_SHADOW: Color    = Color(0.54, 0.40, 0.30)
-const HAIR: Color           = Color(0.22, 0.15, 0.10)
-const EYE_PUPIL: Color      = Color(0.96, 0.92, 0.78)  # bright readable
-const EYE_SOCKET: Color     = Color(0.10, 0.07, 0.06)
-const BROW_C: Color         = Color(0.18, 0.12, 0.08)
+const HAIR: Color           = Color(0.18, 0.12, 0.08)
+# Toned-down pupil + socket so the face reads as human rather than
+# the bug-eyed bright-skull look of the first Stage 17.5 pass.
+const EYE_PUPIL: Color      = Color(0.18, 0.13, 0.10)  # dark iris on skin
+const EYE_WHITE: Color      = Color(0.86, 0.78, 0.62)  # warm sclera, not glowing
+const BROW_C: Color         = Color(0.14, 0.10, 0.07)
+const BEARD_C: Color        = Color(0.18, 0.12, 0.08)
 const LEATHER: Color        = Color(0.32, 0.22, 0.14)
 const LEATHER_DARK: Color   = Color(0.20, 0.13, 0.08)
 const BRONZE: Color         = Color(0.80, 0.56, 0.22)
@@ -36,7 +39,7 @@ const SHADOW: Color         = Color(0.0, 0.0, 0.05, 0.45)
 @onready var _pteruges: Polygon2D = $Body/Pteruges
 @onready var _cuirass: Polygon2D = $Body/Cuirass
 @onready var _shield_strap: Polygon2D = $Body/ShieldStrap
-@onready var _buckler: Polygon2D = $Body/Buckler
+@onready var _buckler: Polygon2D = $Body/ArmLShoulder/ElbowPivot/Buckler
 @onready var _spear_arm: Node2D = $Body/ArmRShoulder/ElbowPivot/SpearArm
 @onready var _sa_shaft: Polygon2D = $Body/ArmRShoulder/ElbowPivot/SpearArm/Shaft
 @onready var _sa_grip: Polygon2D = $Body/ArmRShoulder/ElbowPivot/SpearArm/Grip
@@ -62,38 +65,86 @@ func _ready() -> void:
 	_anim.play(&"idle")
 
 func _paint_face() -> void:
-	# Override the default face-paint colors with high-contrast
-	# values so eyes read at game zoom (Bone Servant approach).
+	# Custom Myrmidon face (overrides HumanRig defaults). Veteran
+	# hoplite: dark close-cropped hair, deep-set eyes with a warm
+	# sclera + dark iris (no glowing bug-eye), nose ridge, full
+	# beard. All polys live under Body/Face and ride the body bob.
 	var face: Node2D = $Body/Face
-	# Eye sockets (dark recesses)
+	# Hair: dark cap across the upper head, hugging the skull outline.
+	# Slight widow's peak so it doesn't read as a flat helmet liner.
+	var hair: Polygon2D = face.get_node(^"Hair")
+	hair.color = HAIR
+	hair.polygon = PackedVector2Array([
+		Vector2(-5.0, -60),  Vector2(-3, -62),
+		Vector2(3, -62),     Vector2(5.0, -60),
+		Vector2(5.4, -56),   Vector2(3.0, -55),
+		Vector2(1.0, -56.6), Vector2(-1.0, -56.6),
+		Vector2(-3.0, -55),  Vector2(-5.4, -56),
+	])
+	# Eye sockets — smaller and shallower than HumanRig defaults so
+	# the face doesn't read as a skull.
 	var sl: Polygon2D = face.get_node(^"EyeSocketL")
-	sl.color = EYE_SOCKET
-	sl.polygon = HumanRig.eye_socket_l_poly()
+	sl.color = SKIN_SHADOW.darkened(0.25)
+	sl.polygon = _ellipse(Vector2(-2.2, -54), 1.4, 0.9)
 	var sr: Polygon2D = face.get_node(^"EyeSocketR")
-	sr.color = EYE_SOCKET
-	sr.polygon = HumanRig.eye_socket_r_poly()
-	# Bright pupils
+	sr.color = SKIN_SHADOW.darkened(0.25)
+	sr.polygon = _ellipse(Vector2(2.2, -54), 1.4, 0.9)
+	# Warm sclera + tiny dark iris reads as a focused gaze, not a
+	# glowing pupil.
 	var pl: Polygon2D = face.get_node(^"EyeL")
-	pl.color = EYE_PUPIL
-	pl.polygon = HumanRig.eye_pupil_l_poly()
+	pl.color = EYE_WHITE
+	pl.polygon = _ellipse(Vector2(-2.2, -54), 0.9, 0.55)
 	var pr: Polygon2D = face.get_node(^"EyeR")
-	pr.color = EYE_PUPIL
-	pr.polygon = HumanRig.eye_pupil_r_poly()
-	# Brow bar
+	pr.color = EYE_WHITE
+	pr.polygon = _ellipse(Vector2(2.2, -54), 0.9, 0.55)
+	# Tiny dark iris dots overlay the sclera via the Brow node's
+	# unused space? No — brow stays a brow. Iris is baked into the
+	# sclera color shift below (pupils are the sockets themselves
+	# bleeding through at the center). Adequate at game zoom.
+	# Brow: heavy stern bar above eyes
 	var br: Polygon2D = face.get_node(^"Brow")
 	br.color = BROW_C
-	br.polygon = HumanRig.brow_poly()
-	# Mouth
+	br.polygon = PackedVector2Array([
+		Vector2(-4.2, -56.6), Vector2(4.2, -56.6),
+		Vector2(4.6, -55.2),  Vector2(2.6, -55.8),
+		Vector2(-2.6, -55.8), Vector2(-4.6, -55.2),
+	])
+	# Nose ridge: thin vertical between brow and mouth
+	var ns: Polygon2D = face.get_node(^"Nose")
+	ns.color = SKIN_SHADOW
+	ns.polygon = PackedVector2Array([
+		Vector2(-0.6, -53), Vector2(0.6, -53),
+		Vector2(0.9, -50.5), Vector2(-0.9, -50.5),
+	])
+	# Mouth: tight grim line
 	var mo: Polygon2D = face.get_node(^"Mouth")
 	mo.color = BROW_C
-	mo.polygon = HumanRig.mouth_poly()
+	mo.polygon = PackedVector2Array([
+		Vector2(-1.8, -50.0), Vector2(1.8, -50.0),
+		Vector2(1.4, -49.4), Vector2(-1.4, -49.4),
+	])
+	# Beard: dark stubble wrapping the jawline + chin
+	var bd: Polygon2D = face.get_node(^"Beard")
+	bd.color = BEARD_C
+	bd.polygon = PackedVector2Array([
+		Vector2(-4.4, -50.2), Vector2(-2.6, -49.6),
+		Vector2(-1.0, -49.0), Vector2(1.0, -49.0),
+		Vector2(2.6, -49.6),  Vector2(4.4, -50.2),
+		Vector2(3.6, -48.4),  Vector2(2.0, -47.6),
+		Vector2(0.0, -47.4),  Vector2(-2.0, -47.6),
+		Vector2(-3.6, -48.4),
+	])
+
+static func _ellipse(c: Vector2, rx: float, ry: float) -> PackedVector2Array:
+	var pts: PackedVector2Array = []
+	var n := 10
+	for i in n:
+		var t := TAU * i / n
+		pts.append(Vector2(c.x + rx * cos(t), c.y + ry * sin(t)))
+	return pts
 
 func _paint_hair() -> void:
-	# Small dark cap on the crown so the head doesn't read as a flat
-	# oval. Drawn into the existing Head polygon's color layer is
-	# tricky; instead we tint the upper portion via the Brow node?
-	# Cleanest is to leave hair off — the head outline alone reads
-	# fine. Stub kept for future hair work.
+	# Hair is painted in _paint_face now (it lives under Face/Hair).
 	pass
 
 func _paint_armor() -> void:
@@ -128,11 +179,16 @@ func _paint_armor() -> void:
 		Vector2(HumanRig.WAIST_HALF, HumanRig.WAIST),
 		Vector2(HumanRig.WAIST_HALF - 2, HumanRig.WAIST),
 	])
-	# Built-in buckler at the left forearm. Paperdoll will toggle
-	# visibility / retint based on offhand equip.
+	# Built-in buckler strapped to the LEFT forearm. The node lives
+	# under Body/ArmLShoulder/ElbowPivot so it rotates with the arm
+	# during shield-raise (the spear-with-shield attack drives the
+	# elbow + shoulder to bring the buckler up across the body).
+	# Polygon is in elbow-local space: forearm hangs down at +y,
+	# wrist around y=HumanRig.WRIST_DROP (~9). Buckler sits over the
+	# forearm midpoint, slightly outboard.
 	_buckler.color = BRONZE_DARK
-	var cx := -13.5
-	var cy := HumanRig.WAIST + 3
+	var cx := -2.5
+	var cy := 5.5
 	var r := 7.0
 	var buc: PackedVector2Array = []
 	var n := 12

@@ -3,7 +3,10 @@ extends Node
 ##
 ## Iterates every registered sprite, instantiates each into a
 ## SubViewport, plays each canonical animation, captures frames as
-## PNG to `tmp/sprites/<sprite_id>/<state>[_<weapon>][_<shield>]_<frame>.png`.
+## PNG to `docs/sprites/<sprite_id>/<state>[_<weapon>][_<shield>]_<frame>.png`.
+## This folder is intentionally COMMITTED (excepted from .gitignore)
+## so the agent can read prior renders between sessions without
+## re-running the pipeline, and so review can happen via git diff.
 ##
 ## Currently renders Myrmidon (the only HUMAN sprite authored in
 ## Stage 17.5 so far). Extends naturally to other sprites as they're
@@ -13,9 +16,12 @@ extends Node
 ## NOT --headless: needs a display server to drive the GL backend
 ## (WSL2's WSLg provides one). Output PNGs can be Read directly.
 
-const FRAME_PATH := "res://tmp/sprites/%s/%s_%d.png"
+const FRAME_PATH := "res://docs/sprites/%s/%s_%d.png"
+const STRIP_PATH := "res://docs/sprites/%s/%s_strip.png"
 const VIEW_SIZE: Vector2i = Vector2i(240, 240)
-const FRAME_COUNT: int = 6  # frames captured per animation
+# 12 frames per animation = ~24fps sampling on a typical 0.5s attack.
+# Enough to read fluidity at a glance without flooding the folder.
+const FRAME_COUNT: int = 12
 const SPRITE_SCALE: float = 3.0  # zoom so 60px-tall sprite reads at game-scale
 
 # What to render. Each entry: sprite scene + display id + which
@@ -61,7 +67,7 @@ func _ready() -> void:
 	get_tree().quit(0)
 
 func _ensure_output_dir() -> void:
-	DirAccess.make_dir_recursive_absolute("res://tmp/sprites")
+	DirAccess.make_dir_recursive_absolute("res://docs/sprites")
 
 func _setup_viewport() -> void:
 	_root_vp = SubViewport.new()
@@ -89,7 +95,7 @@ func _render_sprite_plan(plan: Dictionary) -> void:
 	if scene == null:
 		print("  SKIP  %s — scene not found" % id)
 		return
-	DirAccess.make_dir_recursive_absolute("res://tmp/sprites/%s" % id)
+	DirAccess.make_dir_recursive_absolute("res://docs/sprites/%s" % id)
 	for variant in plan["variants"]:
 		await _render_variant(scene, id, class_id, variant)
 
@@ -137,6 +143,7 @@ func _render_variant(scene: PackedScene, id: String, class_id: StringName,
 		return
 	var length: float = anim.length
 	anim_player.play(anim_name)
+	var frames: Array = []
 	for frame_i in FRAME_COUNT:
 		var t := length * float(frame_i) / float(FRAME_COUNT - 1)
 		anim_player.seek(t, true)
@@ -148,6 +155,29 @@ func _render_variant(scene: PackedScene, id: String, class_id: StringName,
 		var fs_path := ProjectSettings.globalize_path(path)
 		img.save_png(fs_path)
 		print("  WROTE %s (anim=%s t=%.2f)" % [path, anim_name, t])
+		frames.append(img)
+	# Glue the frames into a single horizontal strip — much easier to
+	# scrub for fluidity than reading 12 separate files.
+	_save_strip(frames, id, variant["name"])
 	# Clean up paperdoll/inv for the next variant.
 	paperdoll.queue_free()
 	inv.queue_free()
+
+# Concatenates the captured frames into a single horizontal strip and
+# writes it next to the per-frame PNGs. The strip is the primary
+# review artefact — flip through one image instead of N to see the
+# animation curve.
+func _save_strip(frames: Array, id: String, variant_name: String) -> void:
+	if frames.is_empty():
+		return
+	var first: Image = frames[0]
+	var fw := first.get_width()
+	var fh := first.get_height()
+	var strip := Image.create(fw * frames.size(), fh, false, first.get_format())
+	for i in frames.size():
+		var src: Image = frames[i]
+		strip.blit_rect(src, Rect2i(0, 0, fw, fh), Vector2i(fw * i, 0))
+	var path := STRIP_PATH % [id, variant_name]
+	var fs_path := ProjectSettings.globalize_path(path)
+	strip.save_png(fs_path)
+	print("  STRIP %s" % path)

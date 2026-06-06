@@ -194,13 +194,26 @@ static func arm_hand_poly() -> PackedVector2Array:
 ##     - ElbowPivot (Node2D at elbow)
 ##         - Forearm (Polygon2D)
 ##         - Hand (Polygon2D)
+## Upper arm is intentionally a touch darker than the torso color so
+## the arm reads as a distinct silhouette at idle (otherwise skin-on-
+## skin or skin-against-cuirass blends into a single trunk shape). A
+## dynamic "ShoulderSeam" shadow node is created at the shoulder
+## pivot for the same reason.
 static func paint_arm(shoulder_pivot: Node2D, color: Color) -> void:
-	_paint_child(shoulder_pivot, &"UpperArm", arm_upper_poly(), color)
+	_paint_child(shoulder_pivot, &"UpperArm", arm_upper_poly(), color.darkened(0.12))
+	_ensure_child(shoulder_pivot, &"ShoulderSeam",
+			_shoulder_seam_poly(), color.darkened(0.45))
 	var elbow_pivot: Node2D = shoulder_pivot.get_node_or_null(^"ElbowPivot") as Node2D
 	if elbow_pivot == null:
 		return
-	_paint_child(elbow_pivot, &"Forearm", arm_forearm_poly(), color)
+	_paint_child(elbow_pivot, &"Forearm", arm_forearm_poly(), color.darkened(0.08))
 	_paint_child(elbow_pivot, &"Hand", arm_hand_poly(), color.darkened(0.05))
+
+# Shoulder-seam shadow: a small dark ellipse at the shoulder pivot's
+# origin so the arm visibly meets the torso instead of blending into
+# it. Drawn at the pivot, scaled by the upper-arm cross section.
+static func _shoulder_seam_poly() -> PackedVector2Array:
+	return _ellipse_at(Vector2(0, 0), UPPER_ARM_HALF + 0.6, 1.5)
 
 # =========================================================================
 # FACE FEATURES (sized for readability at game zoom)
@@ -294,5 +307,18 @@ static func _paint_child(parent: Node2D, child_name: StringName,
 	var node: Polygon2D = parent.get_node_or_null(NodePath(String(child_name))) as Polygon2D
 	if node == null:
 		return
+	node.polygon = pts
+	node.color = color
+
+# Like _paint_child but creates the Polygon2D dynamically if it isn't
+# present in the scene tree. Used for parts (shoulder seam) that
+# every HUMAN sprite gets without needing each .tscn to declare them.
+static func _ensure_child(parent: Node2D, child_name: StringName,
+		pts: PackedVector2Array, color: Color) -> void:
+	var node: Polygon2D = parent.get_node_or_null(NodePath(String(child_name))) as Polygon2D
+	if node == null:
+		node = Polygon2D.new()
+		node.name = String(child_name)
+		parent.add_child(node)
 	node.polygon = pts
 	node.color = color

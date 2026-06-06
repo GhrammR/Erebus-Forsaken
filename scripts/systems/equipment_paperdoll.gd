@@ -26,7 +26,9 @@ var _inventory: Inventory = null
 var _sprite_root: Node = null
 var _class_id: StringName = &""
 
-## slot -> Polygon2D (or null when slot is unequipped / not visualized)
+## slot -> Array[Polygon2D] (empty when slot is unequipped / no visual).
+## Multiple parts per slot supports anatomy-following overlays like
+## per-leg greaves mounted under each KneePivot.
 var _armor_overlays: Dictionary = {}
 ## Cached original modulate for the built-in weapon arm and offhand
 ## node, so we can restore them when a slot is unequipped.
@@ -41,9 +43,10 @@ func bind(sprite_root: Node, inv: Inventory, class_id: StringName) -> void:
 	if _inventory != null and _inventory.equipment_changed.is_connected(_on_equipment_changed):
 		_inventory.equipment_changed.disconnect(_on_equipment_changed)
 	for slot_id in _armor_overlays.keys():
-		var node: Polygon2D = _armor_overlays[slot_id]
-		if is_instance_valid(node):
-			node.queue_free()
+		var parts: Array = _armor_overlays[slot_id]
+		for node in parts:
+			if is_instance_valid(node):
+				node.queue_free()
 	_armor_overlays.clear()
 
 	_sprite_root = sprite_root
@@ -134,31 +137,49 @@ func _apply_armor(slot: int, item: ItemData) -> void:
 				bn.visible = true
 				bn.modulate = EquipmentVisuals.tier_color(EquipmentVisuals.tier_for(item))
 		return
-	# Clear any prior overlay for this slot.
-	var prev: Polygon2D = _armor_overlays.get(slot, null)
-	if is_instance_valid(prev):
-		prev.queue_free()
+	# Clear any prior overlay parts for this slot.
+	var prev_parts: Array = _armor_overlays.get(slot, [])
+	for prev_node in prev_parts:
+		if is_instance_valid(prev_node):
+			prev_node.queue_free()
 	_armor_overlays.erase(slot)
 	if item == null or _sprite_root == null:
 		return
-	var overlay: Polygon2D = EquipmentVisuals.build_overlay(slot, _class_id, item)
-	if overlay == null:
+	# Multi-part overlay path. Each part declares its mount anatomy
+	# node so the overlay articulates with that limb instead of
+	# floating at body-fixed coords (the greaves-over-walking-legs
+	# bug).
+	var parts: Array = EquipmentVisuals.build_overlay_parts(slot, _class_id, item)
+	if parts.is_empty():
 		return
-	# Parent under Body so the overlay walks with the idle/walk bob.
-	var body: Node2D = _sprite_root.get_node_or_null(^"Body") as Node2D
-	if body == null:
-		# No Body node (defensive — every class sprite has one); fall back
-		# to sprite root.
-		_sprite_root.add_child(overlay)
-	else:
-		body.add_child(overlay)
-	_armor_overlays[slot] = overlay
+	var mounted: Array = []
+	for part in parts:
+		var mount_path: NodePath = part["mount"]
+		var poly: Polygon2D = part["poly"]
+		var mount: Node = _sprite_root.get_node_or_null(mount_path)
+		if mount == null:
+			# Mount missing (e.g. sprite hasn't been re-authored on
+			# the new anatomy yet). Fall back to sprite root so the
+			# part is at least visible somewhere.
+			_sprite_root.add_child(poly)
+		else:
+			mount.add_child(poly)
+		mounted.append(poly)
+	_armor_overlays[slot] = mounted
 
 # ---- Test introspection --------------------------------------------------
 
-## Returns the live overlay node for a slot, or null. Used by stage15_verify.
+## Returns the FIRST live overlay node for a slot, or null. Used by
+## stage15_verify (legacy single-overlay assertion path).
 func get_overlay_for(slot: int) -> Polygon2D:
-	return _armor_overlays.get(slot, null)
+	var parts: Array = _armor_overlays.get(slot, [])
+	if parts.is_empty():
+		return null
+	return parts[0] as Polygon2D
+
+## Returns all live overlay nodes for a slot (multi-part).
+func get_overlay_parts_for(slot: int) -> Array:
+	return _armor_overlays.get(slot, [])
 
 ## Returns the weapon arm node (visible state queryable by tests).
 func get_weapon_arm() -> Node2D:

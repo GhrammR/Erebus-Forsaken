@@ -32,3 +32,10 @@ secrets/
 logs/
 *.png
 Screenshot*.png
+
+# Sprite-render pipeline output is committed reference art so the
+# agent can inspect animations between sessions without re-running
+# the renderer. Anything under docs/sprites/ is an exception to the
+# blanket *.png ignore above.
+!docs/sprites/**
+!docs/sprites/**/*.png

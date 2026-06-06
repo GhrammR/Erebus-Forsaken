@@ -30,7 +30,12 @@ func install(sprite_root: Node2D, weapon_item: ItemData, offhand_item: ItemData)
 	var lib: AnimationLibrary = anim.get_animation_library(&"")
 	if lib == null:
 		return
-	var has_shield := _is_shield(offhand_item)
+	# A sprite with a built-in offhand (Myrmidon's buckler is welded
+	# to the left forearm) ALWAYS attacks with shield-guard posture,
+	# even with the OFFHAND slot empty. Otherwise the no-shield
+	# two-handed thrust runs while the buckler visibly raises on its
+	# own, which reads as the shield "swinging" with the strike.
+	var has_shield := _is_shield(offhand_item) or _has_builtin_shield(sprite_root)
 	var weapon_type := ItemData.WeaponType.NONE
 	if weapon_item != null:
 		weapon_type = weapon_item.weapon_type
@@ -38,6 +43,11 @@ func install(sprite_root: Node2D, weapon_item: ItemData, offhand_item: ItemData)
 	if lib.has_animation(&"attack"):
 		lib.remove_animation(&"attack")
 	lib.add_animation(&"attack", attack)
+
+static func _has_builtin_shield(sprite_root: Node) -> bool:
+	# Mirrors EquipmentVisuals.BUILTIN_OFFHAND — kept inline so the
+	# profile registry doesn't need to depend on the visuals autoload.
+	return sprite_root.has_node(^"Body/ArmLShoulder/ElbowPivot/Buckler")
 
 ## Heuristic for now: any item in the OFFHAND slot whose name or
 ## display includes "shield"/"buckler" counts as a shield. Buckler
@@ -75,83 +85,108 @@ func _build_attack(weapon_type: int, has_shield: bool) -> Animation:
 # inward + downward), both arms thrust forward together.
 
 func _build_spear(has_shield: bool) -> Animation:
-	# Thrust, not a swing. The motion is an arm EXTENSION: shoulder
-	# rotates slightly forward and elbow straightens. Because
-	# SpearArm is parented to the hand (Body/ArmRShoulder/ElbowPivot),
-	# the spear travels with the arm — no big circular rotation arc.
-	# Spear keeps its hand-relative orientation throughout.
+	# Hoplite overhand thrust — fully sequenced, smoothly interpolated.
+	#
+	# Beats:
+	#   0.00–0.18  GUARD UP: shield rises to chest first, body settles
+	#              into stance. Spear and right arm stay quiet.
+	#   0.18–0.34  WIND UP: shoulder cocks back, spear tip rises behind
+	#              the head. Shield holds at guard.
+	#   0.34–0.46  STRIKE: spear rotates tip-forward and shoulder drives
+	#              through. Shield still at guard. This is the impact
+	#              frame (around t=0.42).
+	#   0.46–0.62  HOLD:   spear stays extended briefly so the strike
+	#              reads at game zoom.
+	#   0.62–0.85  RECOVER: spear and shield return to rest together.
+	#
+	# All rotation tracks use CUBIC interpolation so the motion eases
+	# in/out instead of snapping linearly between keys — that's the
+	# main fluidity fix.
 	var a := Animation.new()
-	a.length = 0.45
+	a.length = 0.85
 	a.loop_mode = Animation.LOOP_NONE
 
-	# --- Body lean (rotation only — feet stay planted, no hop) ---
-	var tbr := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tbr, NodePath("Body:rotation"))
+	# --- Body lean: subtle back-then-forward, no pelvic slide ---
+	var tbr := _cubic_track(a, NodePath("Body:rotation"))
 	a.track_insert_key(tbr, 0.00, 0.0)
-	a.track_insert_key(tbr, 0.12, 0.10)    # slight lean back during wind-up
-	a.track_insert_key(tbr, 0.24, -0.12)   # lean forward into the thrust
-	a.track_insert_key(tbr, 0.45, 0.0)
+	a.track_insert_key(tbr, 0.18, 0.04)     # settle into guard
+	a.track_insert_key(tbr, 0.34, 0.08)     # tiny back lean as arm winds
+	a.track_insert_key(tbr, 0.46, -0.10)    # lean forward through strike
+	a.track_insert_key(tbr, 0.62, -0.04)
+	a.track_insert_key(tbr, 0.85, 0.0)
 
-	# --- Right shoulder rotation: cock + thrust ---
-	# Shoulder-driven. NO elbow folding (folding the elbow makes the
-	# spear sweep through a circular arc, which reads as a swing
-	# not a thrust). Arm stays mostly straight; the spear stays
-	# roughly aligned with the arm's down-axis throughout.
-	var tra := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tra, NodePath("Body/ArmRShoulder:rotation"))
+	# --- Right shoulder: quiet → cock → drive → recover ---
+	# Small amplitudes — the spear tip travel comes from SpearArm
+	# rotation, NOT from the shoulder swinging the whole arm in an
+	# arc (which would lift the hand and angle the spear up-forward
+	# instead of straight forward).
+	var tra := _cubic_track(a, NodePath("Body/ArmRShoulder:rotation"))
 	a.track_insert_key(tra, 0.00, 0.0)
-	a.track_insert_key(tra, 0.12, 0.25)    # small back-cock (spear tip back-up)
-	a.track_insert_key(tra, 0.24, -1.10)   # forward thrust (spear tip forward)
-	a.track_insert_key(tra, 0.45, 0.0)
+	a.track_insert_key(tra, 0.18, 0.04)
+	a.track_insert_key(tra, 0.34, 0.18)     # gentle wind-back
+	a.track_insert_key(tra, 0.46, -0.15)    # gentle drive forward
+	a.track_insert_key(tra, 0.62, -0.08)
+	a.track_insert_key(tra, 0.85, 0.0)
 
-	# --- Right elbow: stays at 0 (no fold during thrust) ---
-	# Keyed explicitly so any prior fold doesn't bleed in from the
-	# bare-hands placeholder animation.
-	var tre := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tre, NodePath("Body/ArmRShoulder/ElbowPivot:rotation"))
+	# --- Right elbow: straight throughout (thrust, not jab) ---
+	var tre := _cubic_track(a, NodePath("Body/ArmRShoulder/ElbowPivot:rotation"))
 	a.track_insert_key(tre, 0.00, 0.0)
-	a.track_insert_key(tre, 0.24, 0.0)
-	a.track_insert_key(tre, 0.45, 0.0)
+	a.track_insert_key(tre, 0.85, 0.0)
 
-	# --- SpearArm: counter-rotates slightly so the tip "leads" ---
-	# Small magnitude — the spear's primary motion comes from the
-	# shoulder, this adds a touch of tip-first flair.
-	var tsa := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tsa, NodePath("Body/ArmRShoulder/ElbowPivot/SpearArm:rotation"))
+	# --- SpearArm: the PRIMARY motion. Tip leads forward at strike. ---
+	# Rest = 0 (tip up). Wind = -0.30 (tip back-up, behind the shoulder).
+	# Strike = +1.50 (tip near-horizontal forward). Hold then return.
+	var tsa := _cubic_track(a, NodePath("Body/ArmRShoulder/ElbowPivot/SpearArm:rotation"))
 	a.track_insert_key(tsa, 0.00, 0.0)
-	a.track_insert_key(tsa, 0.24, -0.15)
-	a.track_insert_key(tsa, 0.45, 0.0)
+	a.track_insert_key(tsa, 0.18, -0.10)
+	a.track_insert_key(tsa, 0.34, -0.30)    # wound up behind head
+	a.track_insert_key(tsa, 0.46, 1.50)     # STRIKE: tip thrusts forward
+	a.track_insert_key(tsa, 0.62, 1.20)     # held briefly extended
+	a.track_insert_key(tsa, 0.85, 0.0)      # return to vertical
 
-	# --- LEFT arm: shield-raise OR two-handed grip ---
-	var tla := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tla, NodePath("Body/ArmLShoulder:rotation"))
-	var tle := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tle, NodePath("Body/ArmLShoulder/ElbowPivot:rotation"))
+	# --- LEFT ARM ---
+	var tla := _cubic_track(a, NodePath("Body/ArmLShoulder:rotation"))
+	var tle := _cubic_track(a, NodePath("Body/ArmLShoulder/ElbowPivot:rotation"))
 	if has_shield:
-		# Shield raise: left shoulder rotates forward and elbow folds
-		# in so the shield comes up across the front of the body.
+		# Shield rises EARLY (before the strike), holds across body
+		# at chest height through the strike, lowers AFTER. This is
+		# the fix for "raises shield as he whacks" — separating the
+		# guard-up from the thrust.
 		a.track_insert_key(tla, 0.00, 0.0)
-		a.track_insert_key(tla, 0.10, -0.9)   # shoulder up + forward
-		a.track_insert_key(tla, 0.30, -0.9)   # hold raised
-		a.track_insert_key(tla, 0.45, 0.0)
+		a.track_insert_key(tla, 0.18, -0.85)    # shield raised to guard
+		a.track_insert_key(tla, 0.46, -0.95)    # slight tighten on strike
+		a.track_insert_key(tla, 0.62, -0.85)    # holds at guard
+		a.track_insert_key(tla, 0.85, 0.0)      # lowers after recovery
 		a.track_insert_key(tle, 0.00, 0.0)
-		a.track_insert_key(tle, 0.10, -1.0)   # elbow folds inward
-		a.track_insert_key(tle, 0.30, -1.0)
-		a.track_insert_key(tle, 0.45, 0.0)
+		a.track_insert_key(tle, 0.18, -1.05)    # elbow folds shield in
+		a.track_insert_key(tle, 0.46, -1.15)
+		a.track_insert_key(tle, 0.62, -1.05)
+		a.track_insert_key(tle, 0.85, 0.0)
 	else:
-		# Two-handed thrust: left arm crosses to grip mid-shaft and
-		# drives forward with the spear. Shoulder rotates toward the
-		# centerline, elbow extends.
+		# Two-handed grip — left hand reaches forward to grip shaft.
+		# (Unused for Myrmidon now that the buckler counts as built-in
+		# shield, but kept for future spear-wielders without shields.)
 		a.track_insert_key(tla, 0.00, 0.0)
-		a.track_insert_key(tla, 0.12, 0.4)    # reach across (wind-back)
-		a.track_insert_key(tla, 0.24, -1.3)   # extend forward with thrust
-		a.track_insert_key(tla, 0.45, 0.0)
+		a.track_insert_key(tla, 0.34, 0.10)
+		a.track_insert_key(tla, 0.46, -0.32)
+		a.track_insert_key(tla, 0.62, -0.20)
+		a.track_insert_key(tla, 0.85, 0.0)
 		a.track_insert_key(tle, 0.00, 0.0)
-		a.track_insert_key(tle, 0.12, 0.8)    # elbow folds to grip shaft
-		a.track_insert_key(tle, 0.24, -0.4)   # elbow extends through
-		a.track_insert_key(tle, 0.45, 0.0)
+		a.track_insert_key(tle, 0.34, 0.45)
+		a.track_insert_key(tle, 0.46, 0.60)
+		a.track_insert_key(tle, 0.62, 0.50)
+		a.track_insert_key(tle, 0.85, 0.0)
 
 	return a
+
+# Adds a TYPE_VALUE track at `path` and switches it to CUBIC
+# interpolation so motion eases instead of snapping linearly. Returns
+# the new track index.
+static func _cubic_track(a: Animation, path: NodePath) -> int:
+	var idx := a.add_track(Animation.TYPE_VALUE)
+	a.track_set_path(idx, path)
+	a.track_set_interpolation_type(idx, Animation.INTERPOLATION_CUBIC)
+	return idx
 
 # =========================================================================
 # Unarmed / fallback profile
