@@ -8,6 +8,20 @@ class_name ItemData extends Resource
 ## live in the "Consumable (Stage 9.8)" group.
 enum Kind { EQUIPMENT = 0, CONSUMABLE = 1 }
 
+## Stage 17.5 — weapon TYPE drives the attack animation profile.
+## Only meaningful when slot == WEAPON. NONE for non-weapons.
+## Act 1 uses SPEAR/STAFF/BOW/WAND only; future enum entries reserved.
+enum WeaponType {
+	NONE = 0,
+	SPEAR = 1,    ## Myrmidon — hoplite thrust, shield-aware
+	STAFF = 2,    ## Pythia — two-handed channel
+	BOW = 3,      ## Shade-Hunter — draw + release
+	WAND = 4,     ## Ossuary Priest — one-handed channel
+	SWORD = 5,    ## reserved
+	AXE = 6,      ## reserved
+	MACE = 7,     ## reserved
+}
+
 ## Stage 9.8 — describes what a consumable does when used. EQUIPMENT items
 ## ignore this. See ConsumableUse for the runtime dispatcher.
 enum UseKind {
@@ -54,6 +68,11 @@ enum UseKind {
 ## attacks still land for ATTACK_BASE_DAMAGE + STR bonus. Non-weapon
 ## slots leave this at 0 — affixes-only items don't bypass weapons.
 @export var base_weapon_damage: int = 0
+
+@export_group("Weapon profile (Stage 17.5)")
+## Drives the attack animation via WeaponProfiles. Only used when
+## slot == WEAPON; ignored otherwise.
+@export var weapon_type: WeaponType = WeaponType.NONE
 
 @export_group("Affixes (Stage 4 fixed)")
 ## StringName -> int. Supported keys (apply_equipment_totals reads these):

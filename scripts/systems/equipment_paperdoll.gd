@@ -80,6 +80,11 @@ func _on_equipment_changed(slot: int, item: ItemData) -> void:
 		return
 	if slot in _ARMOR_SLOTS:
 		_apply_armor(slot, item)
+		# Offhand changes the shield-on/off attack variant — rebuild
+		# the profile so the next attack uses the right animation.
+		if slot == EquipmentSlot.Slot.OFFHAND:
+			var weapon: ItemData = _inventory.get_equipped_item(EquipmentSlot.Slot.WEAPON)
+			_install_weapon_profile(weapon)
 
 # ---- WEAPON --------------------------------------------------------------
 
@@ -88,18 +93,31 @@ func _apply_weapon(item: ItemData) -> void:
 		return
 	var arm_name: StringName = EquipmentVisuals.weapon_arm_for(_class_id)
 	if arm_name == &"":
+		_install_weapon_profile(item)
 		return
 	var arm: Node2D = _sprite_root.get_node_or_null(NodePath(String(arm_name))) as Node2D
 	if arm == null:
+		_install_weapon_profile(item)
 		return
 	if item == null:
 		arm.visible = false
+	else:
+		arm.visible = true
+		# Light retint so weapon brightness reads at a glance. The hit-flash
+		# tween targets the sprite root's modulate, so a per-arm modulate is
+		# safe to stomp here without fighting the feel pass.
+		arm.modulate = EquipmentVisuals.tier_color(EquipmentVisuals.tier_for(item))
+	_install_weapon_profile(item)
+
+## Stage 17.5 — rebuild the sprite's "attack" animation from the
+## WeaponProfiles registry whenever weapon OR offhand changes. The
+## profile reads weapon_type from the equipped weapon and shield
+## state from the equipped offhand.
+func _install_weapon_profile(weapon_item: ItemData) -> void:
+	if _sprite_root == null or _inventory == null:
 		return
-	arm.visible = true
-	# Light retint so weapon brightness reads at a glance. The hit-flash
-	# tween targets the sprite root's modulate, so a per-arm modulate is
-	# safe to stomp here without fighting the feel pass.
-	arm.modulate = EquipmentVisuals.tier_color(EquipmentVisuals.tier_for(item))
+	var offhand: ItemData = _inventory.get_equipped_item(EquipmentSlot.Slot.OFFHAND)
+	WeaponProfiles.install(_sprite_root as Node2D, weapon_item, offhand)
 
 # ---- ARMOR ---------------------------------------------------------------
 

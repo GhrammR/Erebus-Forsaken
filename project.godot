@@ -36,6 +36,8 @@ ConsumableUse="*res://scripts/systems/consumable_use.gd"
 BitmapMode="*res://scripts/systems/bitmap_mode.gd"
 WorldSeed="*res://scripts/systems/world_seed.gd"
 EquipmentVisuals="*res://scripts/systems/equipment_visuals.gd"
+AnatomyFamilies="*res://scripts/systems/anatomy_families.gd"
+WeaponProfiles="*res://scripts/systems/weapon_profiles.gd"
 
 [application/feature_flags]
 

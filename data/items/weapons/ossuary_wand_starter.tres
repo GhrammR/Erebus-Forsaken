@@ -15,3 +15,4 @@ affixes = { &"pneuma": 3 }
 glyph_color = Color(0.85, 0.85, 0.75, 1)
 glyph_shape = 1
 base_price = 18
+weapon_type = 4

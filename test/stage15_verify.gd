@@ -43,8 +43,10 @@ func _verify_autoload_registered(fail: int) -> int:
 	return fail
 
 func _verify_visuals_weapon_arm_table(fail: int) -> int:
-	fail = _expect(EquipmentVisuals.weapon_arm_for(&"myrmidon") == &"SpearArm",
-			"Myrmidon weapon arm = SpearArm", fail)
+	# Stage 17.5 — Myrmidon's SpearArm moved under the right hand so
+	# the spear physically follows the arm during attack.
+	fail = _expect(EquipmentVisuals.weapon_arm_for(&"myrmidon") == &"Body/ArmRShoulder/ElbowPivot/SpearArm",
+			"Myrmidon weapon arm path = Body/ArmRShoulder/ElbowPivot/SpearArm", fail)
 	fail = _expect(EquipmentVisuals.weapon_arm_for(&"pythia") == &"StaffArm",
 			"Pythia weapon arm = StaffArm", fail)
 	fail = _expect(EquipmentVisuals.weapon_arm_for(&"shade_hunter") == &"BowArm",
@@ -272,7 +274,7 @@ func _verify_anim_tracks_survive_visibility_toggle(fail: int) -> int:
 	var sprite := packed.instantiate() as Node2D
 	add_child(sprite)
 	await get_tree().process_frame
-	var arm := sprite.get_node(^"SpearArm") as Node2D
+	var arm := sprite.get_node(^"Body/ArmRShoulder/ElbowPivot/SpearArm") as Node2D
 	arm.visible = false
 	var anim := sprite.get_node(^"AnimationPlayer") as AnimationPlayer
 	var r_before := arm.rotation

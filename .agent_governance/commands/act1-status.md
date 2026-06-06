@@ -263,11 +263,13 @@ stable for already-closed work; new stages are appended. Existing
 13. Stage 15 — Equipment paper-doll rendering (bare-hands default;
     helmet/weapon/armor slots tint the procedural sprite layers)
 14. Stage 16 — Item icons (replace text rows with icon grid)
-15. Stage 17 — NPC voice + portraits (each town NPC ships an intro
-    line, AI-generated voice + portrait)
-15.5. Stage 17.5 — Procedural sprite anatomy v2 (bone-servant
-    refactor across player + enemy sprites; lands BEFORE Stage 18
+15. Stage 17.5 — Procedural sprite anatomy v2 (anatomy families +
+    per-unique-boss bespoke; lands BEFORE Stage 17 so portraits can
+    reference the refreshed in-world NPC sprites, and BEFORE Stage 18
     so new-boss + Stage 20 enemy authoring don't pay v1 anatomy tax)
+15.5. Stage 17 — NPC voice + portraits (each town NPC ships an intro
+    line, AI-generated voice + portrait — portrait prompts reference
+    the Stage 17.5 in-world sprite)
 16. Stage 18 — Demote Forsaken Boss → rare; refactor `act_1_complete`
     state machine for the new final-boss model
 17. Stage 19 — The Maw entrance moves to town; gated behind first-quest

@@ -18,7 +18,10 @@ const TIER_BRIGHT: Color = Color(1.00, 0.90, 0.50)
 ## EquipmentPaperdoll toggles .visible based on whether the WEAPON slot
 ## is occupied. Empty slot = bare hands = arm hidden.
 const WEAPON_ARMS: Dictionary = {
-	&"myrmidon":       &"SpearArm",
+	# Stage 17.5 — Myrmidon's SpearArm lives under the right hand
+	# so the spear physically follows the arm during attack. Path
+	# is resolved by NodePath() at lookup time.
+	&"myrmidon":       &"Body/ArmRShoulder/ElbowPivot/SpearArm",
 	&"pythia":         &"StaffArm",
 	&"shade_hunter":   &"BowArm",
 	&"ossuary_priest": &"WandArm",
@@ -79,10 +82,22 @@ func _build_head(class_id: StringName, item: ItemData) -> Polygon2D:
 	# Helmet sits as a low cap atop the head ring.
 	match class_id:
 		&"myrmidon":
-			# Bronze legionary cap over y=-44
+			# Stage 17.5 — face-mask Corinthian helmet over the new
+			# anatomy (head ~y=-60..-48). Covers the upper face down
+			# to the cheekbones; T-slit for eye visibility. Tier
+			# color tints the bronze.
 			p.polygon = PackedVector2Array([
-				Vector2(-8, -44), Vector2(8, -44),
-				Vector2(7, -50),  Vector2(-7, -50),
+				Vector2(-7, -60),               # crown left
+				Vector2(-3, -62), Vector2(3, -62), Vector2(7, -60),  # crown
+				Vector2(7, -54),                # right temple
+				Vector2(3.5, -54), Vector2(3.5, -50),  # right eye-slit step
+				Vector2(7, -50), Vector2(7, -47),  # cheek guard right
+				Vector2(2, -47),                # nose bridge bottom-right
+				Vector2(1, -52), Vector2(-1, -52),  # nose ridge
+				Vector2(-2, -47),               # nose bridge bottom-left
+				Vector2(-7, -47), Vector2(-7, -50),
+				Vector2(-3.5, -50), Vector2(-3.5, -54),  # left eye-slit step
+				Vector2(-7, -54),
 			])
 		&"pythia":
 			# Diadem band over y=-48
@@ -113,10 +128,14 @@ func _build_chest(class_id: StringName, item: ItemData) -> Polygon2D:
 	# A trapezoid that hugs each class's torso polygon.
 	match class_id:
 		&"myrmidon":
-			# Inset cuirass over y=-14..-32
+			# Stage 17.5 — overlay sits on top of the base bronze
+			# cuirass (y=-44..-28 in the new anatomy). Slightly
+			# inset so the tier color reads as a chest decoration
+			# (pectoral plate / better-quality cuirass) over the
+			# muscled bronze.
 			p.polygon = PackedVector2Array([
-				Vector2(-9, -14), Vector2(9, -14),
-				Vector2(7, -32),  Vector2(-7, -32),
+				Vector2(-8, -42), Vector2(8, -42),
+				Vector2(7, -30),  Vector2(-7, -30),
 			])
 		&"pythia":
 			# Mantle over the violet torso y=-30..-40
@@ -146,10 +165,15 @@ func _build_legs(class_id: StringName, item: ItemData) -> Polygon2D:
 	p.color = tier_color(tier_for(item))
 	match class_id:
 		&"myrmidon":
-			# Greaves over y=-2..-12
+			# Stage 17.5 — single shin-band shape (the "connector
+			# trick" for two disjoint plates doesn't render in
+			# Polygon2D — paths re-enter the fill). Reads as
+			# strapped greaves wrapping both shins as one piece.
+			# Bitmap polish can split into distinct L/R plates.
 			p.polygon = PackedVector2Array([
-				Vector2(-6, -2), Vector2(6, -2),
-				Vector2(5, -12), Vector2(-5, -12),
+				Vector2(-8, -12), Vector2(-4, -14),
+				Vector2(4, -14),  Vector2(8, -12),
+				Vector2(8, -2),   Vector2(-8, -2),
 			])
 		&"pythia":
 			# Robe trim hem y=-2..-10

@@ -7,13 +7,13 @@ extends CanvasLayer
 
 const _BACK_COLUMNS: int = 6
 
-# Layout grid for the equipment side. Numbers are GridContainer cell
-# indices (col + row * 3). null cells = empty filler.
+# Equipment paper-doll layout (Diablo 2-style). 3 cols x 3 rows.
+# Weapon/Offhand flank the Head (where main-hand/off-hand sit in D2);
+# Amulet/Ring flank the Chest; Legs sits alone at the bottom-center.
 const _EQUIP_LAYOUT: Array = [
-	null, EquipmentSlot.Slot.HEAD, null,
+	EquipmentSlot.Slot.WEAPON, EquipmentSlot.Slot.HEAD,  EquipmentSlot.Slot.OFFHAND,
 	EquipmentSlot.Slot.AMULET, EquipmentSlot.Slot.CHEST, EquipmentSlot.Slot.RING,
-	null, EquipmentSlot.Slot.LEGS, null,
-	EquipmentSlot.Slot.WEAPON, null, EquipmentSlot.Slot.OFFHAND,
+	null,                      EquipmentSlot.Slot.LEGS,  null,
 ]
 
 @onready var _panel: PanelContainer = $Panel
@@ -126,7 +126,10 @@ func _render_equipment() -> void:
 			icon.set_disabled(true)
 		else:
 			icon.set_item(_inventory.get_equipped_id(slot), item, EquipmentVisuals.tier_for(item))
-			icon.pressed.connect(_inventory.unequip.bind(slot))
+			# Local handler — Godot's Callable.bind() appends args, so
+			# `unequip.bind(slot)` connected to `pressed(item_id)` would
+			# call `unequip(item_id, slot)` and silently fail.
+			icon.pressed.connect(_on_unequip_slot.bind(slot))
 			icon.hovered.connect(_on_icon_hover)
 			icon.unhovered.connect(_hide_tooltip)
 
@@ -159,7 +162,7 @@ func _render_backpack() -> void:
 			var can := _inventory.can_equip(item)
 			icon.set_disabled(not can)
 			if can:
-				icon.pressed.connect(_inventory.equip)
+				icon.pressed.connect(_on_equip_pressed)
 
 func _on_icon_hover(item_id: StringName, screen_rect: Rect2) -> void:
 	var item: ItemData = Database.get_item(item_id) as ItemData
@@ -184,6 +187,14 @@ func _position_tooltip(anchor: Rect2) -> void:
 func _hide_tooltip() -> void:
 	if _tooltip != null:
 		_tooltip.hide()
+
+func _on_equip_pressed(item_id: StringName) -> void:
+	if _inventory != null:
+		_inventory.equip(item_id)
+
+func _on_unequip_slot(_item_id: StringName, slot: int) -> void:
+	if _inventory != null:
+		_inventory.unequip(slot)
 
 func _on_consumable_pressed(item_id: StringName) -> void:
 	var player: Node = ConsumableUse.get_active_player()

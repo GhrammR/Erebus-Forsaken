@@ -26,6 +26,7 @@ func _ready() -> void:
 	_verify_every_backpack_id_renders()
 	await _verify_tooltip_text()
 	_verify_consumable_click_path()
+	await _verify_equip_click_path()
 	print("--- Stage 16 verify: %s ---" % ("ALL PASS" if _fail == 0 else "%d FAIL" % _fail))
 	get_tree().quit(_fail)
 
@@ -136,6 +137,28 @@ func _verify_consumable_click_path() -> void:
 			break
 	_expect(routed_to_use,
 			"Consumable cell wires pressed -> _on_consumable_pressed (not equip)")
+
+
+func _verify_equip_click_path() -> void:
+	# Regression: ensure clicking an equippable backpack icon actually
+	# equips it. Catches Callable.bind() arity misuse and any future
+	# signal-signature mismatch.
+	if _inv.get_equipped_item(EquipmentSlot.Slot.WEAPON) != null:
+		_inv.unequip(EquipmentSlot.Slot.WEAPON)
+	# Wait one frame so queue_freed icons clear from the grid.
+	await get_tree().process_frame
+	var grid: GridContainer = _panel.get_node("Panel/Margin/VBox/Cols/BackCol/BackGrid")
+	var idx := _inv.backpack.find(&"myrmidon_spear_starter")
+	_expect(idx >= 0, "spear sits in backpack pre-click")
+	if idx < 0:
+		return
+	var spear_icon: ItemIcon = grid.get_child(idx) as ItemIcon
+	_expect(spear_icon != null and not spear_icon.is_empty(),
+			"backpack icon at spear index is populated")
+	spear_icon.pressed.emit(&"myrmidon_spear_starter")
+	var equipped: ItemData = _inv.get_equipped_item(EquipmentSlot.Slot.WEAPON)
+	_expect(equipped != null and equipped.id == &"myrmidon_spear_starter",
+			"Clicking an equippable item actually equips it")
 
 func _find_label(n: Node) -> Label:
 	if n is Label:

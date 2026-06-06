@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scripts/world/walk_gate.gd" id="1_wg"]
 
 [sub_resource type="RectangleShape2D" id="rect_trigger"]
-size = Vector2(80, 40)
+size = Vector2(280, 60)
 
 [node name="WalkGate" type="Area2D"]
 collision_layer = 0

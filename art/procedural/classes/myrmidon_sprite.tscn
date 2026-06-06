@@ -10,22 +10,67 @@ z_index = -1
 
 [node name="Body" type="Node2D" parent="."]
 
-[node name="Legs" type="Polygon2D" parent="Body"]
+; --- LEFT LEG: hip + knee pivots ---
+[node name="LegLHip" type="Node2D" parent="Body"]
+position = Vector2(-3.5, -22)
+[node name="Thigh" type="Polygon2D" parent="Body/LegLHip"]
+[node name="KneePivot" type="Node2D" parent="Body/LegLHip"]
+position = Vector2(0, 10)
+[node name="Shin" type="Polygon2D" parent="Body/LegLHip/KneePivot"]
+[node name="Foot" type="Polygon2D" parent="Body/LegLHip/KneePivot"]
 
+; --- RIGHT LEG ---
+[node name="LegRHip" type="Node2D" parent="Body"]
+position = Vector2(3.5, -22)
+[node name="Thigh" type="Polygon2D" parent="Body/LegRHip"]
+[node name="KneePivot" type="Node2D" parent="Body/LegRHip"]
+position = Vector2(0, 10)
+[node name="Shin" type="Polygon2D" parent="Body/LegRHip/KneePivot"]
+[node name="Foot" type="Polygon2D" parent="Body/LegRHip/KneePivot"]
+
+; --- Core ---
+[node name="Hips"  type="Polygon2D" parent="Body"]
 [node name="Torso" type="Polygon2D" parent="Body"]
+[node name="Neck"  type="Polygon2D" parent="Body"]
+[node name="Head"  type="Polygon2D" parent="Body"]
+[node name="Face"  type="Node2D"    parent="Body"]
+[node name="EyeSocketL" type="Polygon2D" parent="Body/Face"]
+[node name="EyeSocketR" type="Polygon2D" parent="Body/Face"]
+[node name="EyeL"  type="Polygon2D" parent="Body/Face"]
+[node name="EyeR"  type="Polygon2D" parent="Body/Face"]
+[node name="Brow"  type="Polygon2D" parent="Body/Face"]
+[node name="Mouth" type="Polygon2D" parent="Body/Face"]
 
-[node name="Buckler" type="Polygon2D" parent="Body"]
+; --- LEFT ARM: shoulder + elbow pivots ---
+[node name="ArmLShoulder" type="Node2D" parent="Body"]
+position = Vector2(-9, -44)
+[node name="UpperArm" type="Polygon2D" parent="Body/ArmLShoulder"]
+[node name="ElbowPivot" type="Node2D" parent="Body/ArmLShoulder"]
+position = Vector2(0, 10)
+[node name="Forearm" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
+[node name="Hand"    type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
 
-[node name="Head" type="Polygon2D" parent="Body"]
+; --- RIGHT ARM: shoulder + elbow pivots. SpearArm lives UNDER the
+;     elbow pivot so the spear is physically carried by the hand and
+;     swings with the arm during attack. ---
+[node name="ArmRShoulder" type="Node2D" parent="Body"]
+position = Vector2(9, -44)
+[node name="UpperArm" type="Polygon2D" parent="Body/ArmRShoulder"]
+[node name="ElbowPivot" type="Node2D" parent="Body/ArmRShoulder"]
+position = Vector2(0, 10)
+[node name="Forearm" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot"]
+[node name="Hand"    type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot"]
+[node name="SpearArm" type="Node2D"    parent="Body/ArmRShoulder/ElbowPivot"]
+position = Vector2(0, 10)
+[node name="Shaft" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/SpearArm"]
+[node name="Grip"  type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/SpearArm"]
+[node name="Tip"   type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/SpearArm"]
 
-[node name="Plume" type="Polygon2D" parent="Body"]
-
-[node name="SpearArm" type="Node2D" parent="."]
-position = Vector2(12, -22)
-rotation = -0.4
-
-[node name="Shaft" type="Polygon2D" parent="SpearArm"]
-
-[node name="Tip" type="Polygon2D" parent="SpearArm"]
+; --- Hoplite identity layers (over the flesh, drawn AFTER arms so
+;     buckler / cuirass don't disappear behind the arm) ---
+[node name="Pteruges"    type="Polygon2D" parent="Body"]
+[node name="Cuirass"     type="Polygon2D" parent="Body"]
+[node name="ShieldStrap" type="Polygon2D" parent="Body"]
+[node name="Buckler"     type="Polygon2D" parent="Body"]
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
