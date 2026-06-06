@@ -18,11 +18,28 @@ extends Node
 
 const FRAME_PATH := "res://docs/sprites/%s/%s_%d.png"
 const STRIP_PATH := "res://docs/sprites/%s/%s_strip.png"
+const DEBUG_STRIP_PATH := "res://docs/sprites/%s/%s_debug_strip.png"
 const VIEW_SIZE: Vector2i = Vector2i(240, 240)
 # 12 frames per animation = ~24fps sampling on a typical 0.5s attack.
 # Enough to read fluidity at a glance without flooding the folder.
 const FRAME_COUNT: int = 12
 const SPRITE_SCALE: float = 3.0  # zoom so 60px-tall sprite reads at game-scale
+
+# Body-local Y values rendered as horizontal landmark lines on the
+# debug strip. These let the AGENT (and you) objectively verify
+# WHERE on the body each polygon and the hand sit in every frame —
+# the cure for "I thought I fixed the hip thrust but the hand is
+# still at the waist." Color-coded so the danger zone (hip/groin)
+# is unmissable when the hand-tracker dot intersects it.
+const _LANDMARKS: Array = [
+	{ "y": -60.0, "color": Color(0.55, 0.55, 0.55), "label": "head_top" },
+	{ "y": -44.0, "color": Color(0.55, 0.95, 0.55), "label": "shoulder" },
+	{ "y": -37.0, "color": Color(0.55, 0.95, 0.55), "label": "chest" },
+	{ "y": -28.0, "color": Color(0.95, 0.85, 0.30), "label": "waist" },
+	{ "y": -22.0, "color": Color(0.95, 0.20, 0.20), "label": "HIP/GROIN" },
+	{ "y": -12.0, "color": Color(0.55, 0.55, 0.95), "label": "knee" },
+	{ "y":   0.0, "color": Color(0.50, 0.50, 0.50), "label": "ground" },
+]
 
 # What to render. Each entry: sprite scene + display id + which
 # animation+equip variants to capture. `equip` is a dictionary that
@@ -144,6 +161,7 @@ func _render_variant(scene: PackedScene, id: String, class_id: StringName,
 	var length: float = anim.length
 	anim_player.play(anim_name)
 	var frames: Array = []
+	var debug_frames: Array = []
 	for frame_i in FRAME_COUNT:
 		var t := length * float(frame_i) / float(FRAME_COUNT - 1)
 		anim_player.seek(t, true)
@@ -156,9 +174,19 @@ func _render_variant(scene: PackedScene, id: String, class_id: StringName,
 		img.save_png(fs_path)
 		print("  WROTE %s (anim=%s t=%.2f)" % [path, anim_name, t])
 		frames.append(img)
+		# Debug-overlay version: anatomical landmark lines + right-
+		# hand tracker dot. Saved in a SEPARATE strip so the clean
+		# strip remains presentation-ready, and so the agent has an
+		# objective check ("hand dot vs. landmark lines") instead of
+		# vibes-based eyeballing.
+		var debug_img: Image = img.duplicate()
+		_draw_landmarks(debug_img, sprite)
+		_draw_hand_tracker(debug_img, sprite)
+		debug_frames.append(debug_img)
 	# Glue the frames into a single horizontal strip — much easier to
 	# scrub for fluidity than reading 12 separate files.
 	_save_strip(frames, id, variant["name"])
+	_save_debug_strip(debug_frames, id, variant["name"])
 	# Clean up paperdoll/inv for the next variant.
 	paperdoll.queue_free()
 	inv.queue_free()
@@ -170,6 +198,16 @@ func _render_variant(scene: PackedScene, id: String, class_id: StringName,
 func _save_strip(frames: Array, id: String, variant_name: String) -> void:
 	if frames.is_empty():
 		return
+	_blit_strip(frames, STRIP_PATH % [id, variant_name])
+	print("  STRIP %s" % (STRIP_PATH % [id, variant_name]))
+
+func _save_debug_strip(frames: Array, id: String, variant_name: String) -> void:
+	if frames.is_empty():
+		return
+	_blit_strip(frames, DEBUG_STRIP_PATH % [id, variant_name])
+	print("  DEBUG %s" % (DEBUG_STRIP_PATH % [id, variant_name]))
+
+func _blit_strip(frames: Array, path_template: String) -> void:
 	var first: Image = frames[0]
 	var fw := first.get_width()
 	var fh := first.get_height()
@@ -177,7 +215,45 @@ func _save_strip(frames: Array, id: String, variant_name: String) -> void:
 	for i in frames.size():
 		var src: Image = frames[i]
 		strip.blit_rect(src, Rect2i(0, 0, fw, fh), Vector2i(fw * i, 0))
-	var path := STRIP_PATH % [id, variant_name]
-	var fs_path := ProjectSettings.globalize_path(path)
+	var fs_path := ProjectSettings.globalize_path(path_template)
 	strip.save_png(fs_path)
-	print("  STRIP %s" % path)
+
+# Draws horizontal landmark lines on `img` at the body-local Y values
+# in _LANDMARKS, mapped through the sprite's screen position and
+# scale.
+func _draw_landmarks(img: Image, sprite: Node2D) -> void:
+	var w := img.get_width()
+	var h := img.get_height()
+	var sy: float = sprite.position.y
+	for lm in _LANDMARKS:
+		var vp_y := int(sy + float(lm["y"]) * SPRITE_SCALE)
+		if vp_y < 0 or vp_y >= h:
+			continue
+		img.fill_rect(Rect2i(0, vp_y, w, 1), lm["color"])
+		# Small color swatch on the right margin so stacked landmarks
+		# (waist + hip 6px apart) stay distinguishable.
+		img.fill_rect(Rect2i(w - 6, vp_y - 1, 6, 3), lm["color"])
+
+# Draws a small filled circle at the RIGHT hand's screen position.
+# A trail of these across the debug strip literally traces the hand
+# path so claims like "the hand isn't at the groin" can be visually
+# checked.
+func _draw_hand_tracker(img: Image, sprite: Node2D) -> void:
+	var hand := sprite.get_node_or_null(^"Body/ArmRShoulder/ElbowPivot/Hand") as Node2D
+	if hand == null:
+		return
+	var hp := hand.global_position
+	var cx := int(hp.x)
+	var cy := int(hp.y)
+	var w := img.get_width()
+	var h := img.get_height()
+	var rad := 4
+	var color := Color(1.0, 0.1, 0.1, 1.0)
+	for dy in range(-rad, rad + 1):
+		for dx in range(-rad, rad + 1):
+			if dx * dx + dy * dy > rad * rad:
+				continue
+			var px := cx + dx
+			var py := cy + dy
+			if px >= 0 and px < w and py >= 0 and py < h:
+				img.set_pixel(px, py, color)
