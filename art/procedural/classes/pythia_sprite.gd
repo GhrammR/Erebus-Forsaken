@@ -56,6 +56,82 @@ func _ready() -> void:
 	_build_animations()
 	SpriteSidecar.apply(self, &"pythia")
 	_anim.play(&"idle")
+	# Stage 17.6 — runtime IK on the right arm so its hand polygon
+	# stays pinned to the LeftGrip cosmetic on the staff THROUGHOUT
+	# animation (not just at rest keyframes). The animation tracks
+	# for the right arm still exist (mostly for cast where IK is
+	# skipped) but are overridden by IK every frame for idle/walk/
+	# attack. Hooked to tree.process_frame so the override runs AFTER
+	# AnimationPlayer's _process advances tracks.
+	get_tree().process_frame.connect(_pin_r_arm_to_staff)
+
+# ---- Runtime IK ---------------------------------------------------------
+# The 2D 2-bone IK keeps the right hand polygon centroid on the staff's
+# LeftGrip cosmetic regardless of how the staff has rotated this frame.
+# Without this, sparsely keyframed R arm tracks would drift out of sync
+# with the staff motion mid-animation and the hand would visibly fly
+# off the shaft.
+
+func _pin_r_arm_to_staff() -> void:
+	if _staff_arm == null or not _staff_arm.visible:
+		return
+	# Skip during cast: R arm intentionally extends OUT as part of the
+	# invocation gesture — pinning it would override that pose.
+	if _anim.current_animation == &"cast":
+		return
+	if _sa_left_grip == null:
+		return
+	# LeftGrip centroid → body-local target for IK.
+	var center := Vector2.ZERO
+	if _sa_left_grip.polygon.size() == 0:
+		return
+	for v in _sa_left_grip.polygon:
+		center += v
+	center /= float(_sa_left_grip.polygon.size())
+	var target_world: Vector2 = _sa_left_grip.to_global(center)
+	var target_body_local: Vector2 = _body.to_local(target_world)
+	var r_shoulder: Node2D = _body.get_node(^"ArmRShoulder") as Node2D
+	if r_shoulder == null:
+		return
+	var elbow: Node2D = r_shoulder.get_node(^"ElbowPivot") as Node2D
+	if elbow == null:
+		return
+	# Shoulder body-local pos = ArmRShoulder.position (static).
+	var ik := _solve_2bone_ik(r_shoulder.position, target_body_local,
+			HumanRig.ELBOW_DROP, HumanRig.WRIST_DROP + 1.0, +1)
+	r_shoulder.rotation = ik.x
+	elbow.rotation = ik.y
+
+# 2-bone IK solver in screen-space (Godot y-down). Returns
+# (shoulder_rotation, elbow_rotation_local) so that the hand polygon
+# centroid (at chain end, offset l2 from elbow) lands on `target`.
+#
+# `elbow_dir` ±1 selects which side of the shoulder→target line the
+# elbow bends toward. +1 = elbow on the +x side of the shoulder
+# direction (outward for a right arm, inward for a left arm).
+#
+# If target is out of reach (distance > l1+l2), the arm extends fully
+# toward the target with elbow straight.
+static func _solve_2bone_ik(shoulder: Vector2, target: Vector2,
+		l1: float, l2: float, elbow_dir: int) -> Vector2:
+	var diff := target - shoulder
+	var d := diff.length()
+	if d < 0.0001:
+		return Vector2.ZERO
+	if d > l1 + l2 - 0.01:
+		var r_extend := atan2(-diff.x, diff.y)
+		return Vector2(r_extend, 0.0)
+	var cos_psi: float = (l1 * l1 + d * d - l2 * l2) / (2.0 * l1 * d)
+	cos_psi = clampf(cos_psi, -1.0, 1.0)
+	var psi: float = acos(cos_psi)
+	var r_st: float = atan2(-diff.x, diff.y)
+	var r_shoulder_local: float = r_st - float(elbow_dir) * psi
+	var elbow_pos: Vector2 = shoulder + l1 * Vector2(
+			-sin(r_shoulder_local), cos(r_shoulder_local))
+	var dir_et: Vector2 = target - elbow_pos
+	var r_chain: float = atan2(-dir_et.x, dir_et.y)
+	var r_elbow_local: float = r_chain - r_shoulder_local
+	return Vector2(r_shoulder_local, r_elbow_local)
 
 func _paint_face() -> void:
 	HumanRig.paint_face(_body, EYE_PUPIL, EYE_SOCKET)
