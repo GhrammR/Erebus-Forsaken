@@ -182,6 +182,7 @@ func _render_variant(scene: PackedScene, id: String, class_id: StringName,
 		var debug_img: Image = img.duplicate()
 		_draw_landmarks(debug_img, sprite)
 		_draw_hand_tracker(debug_img, sprite)
+		_draw_tip_tracker(debug_img, sprite)
 		debug_frames.append(debug_img)
 	# Glue the frames into a single horizontal strip — much easier to
 	# scrub for fluidity than reading 12 separate files.
@@ -239,16 +240,45 @@ func _draw_landmarks(img: Image, sprite: Node2D) -> void:
 # path so claims like "the hand isn't at the groin" can be visually
 # checked.
 func _draw_hand_tracker(img: Image, sprite: Node2D) -> void:
-	var hand := sprite.get_node_or_null(^"Body/ArmRShoulder/ElbowPivot/Hand") as Node2D
-	if hand == null:
+	_draw_node_dot(img, sprite,
+			^"Body/ArmRShoulder/ElbowPivot/Hand",
+			Color(1.0, 0.1, 0.1, 1.0), 4)
+
+# Spear-tip tracker — orange dot at the front of the spearhead so we
+# can see where the actual reach is, independent of where the hand
+# grips. Useful when the spear is held at the back of the shaft
+# (hand at grip = back end) so "hand position" and "spear tip"
+# differ by the shaft length.
+func _draw_tip_tracker(img: Image, sprite: Node2D) -> void:
+	# Query the Tip polygon's actual pointiest vertex (max x) so the
+	# tracker stays correct regardless of where the grip sits on the
+	# shaft (back / middle / front-grip). Falls back to no draw if
+	# the SpearArm/Tip node isn't present.
+	var tip: Polygon2D = sprite.get_node_or_null(
+			^"Body/ArmRShoulder/ElbowPivot/SpearArm/Tip") as Polygon2D
+	if tip == null:
+		tip = sprite.get_node_or_null(^"Body/SpearArm/Tip") as Polygon2D
+	if tip == null:
 		return
-	var hp := hand.global_position
-	var cx := int(hp.x)
-	var cy := int(hp.y)
+	var spear: Node2D = tip.get_parent() as Node2D
+	if spear == null:
+		return
+	# Find the polygon vertex with the maximum x — that's the
+	# pointiest tip of the spearhead.
+	var best := Vector2(-INF, 0.0)
+	for v in tip.polygon:
+		if v.x > best.x:
+			best = v
+	if best.x == -INF:
+		return
+	var world_tip: Vector2 = spear.to_global(best)
+	_draw_pixel_circle(img, int(world_tip.x), int(world_tip.y),
+			3, Color(1.0, 0.55, 0.1, 1.0))
+
+# Helper: draw a filled circle at world (cx, cy) on `img`.
+func _draw_pixel_circle(img: Image, cx: int, cy: int, rad: int, color: Color) -> void:
 	var w := img.get_width()
 	var h := img.get_height()
-	var rad := 4
-	var color := Color(1.0, 0.1, 0.1, 1.0)
 	for dy in range(-rad, rad + 1):
 		for dx in range(-rad, rad + 1):
 			if dx * dx + dy * dy > rad * rad:
@@ -257,3 +287,12 @@ func _draw_hand_tracker(img: Image, sprite: Node2D) -> void:
 			var py := cy + dy
 			if px >= 0 and px < w and py >= 0 and py < h:
 				img.set_pixel(px, py, color)
+
+# Helper: draw a tracker dot at the given node's global position.
+func _draw_node_dot(img: Image, sprite: Node2D, node_path: NodePath,
+		color: Color, rad: int) -> void:
+	var node: Node2D = sprite.get_node_or_null(node_path) as Node2D
+	if node == null:
+		return
+	var p := node.global_position
+	_draw_pixel_circle(img, int(p.x), int(p.y), rad, color)

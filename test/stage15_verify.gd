@@ -43,8 +43,6 @@ func _verify_autoload_registered(fail: int) -> int:
 	return fail
 
 func _verify_visuals_weapon_arm_table(fail: int) -> int:
-	# Stage 17.5 — Myrmidon's SpearArm moved under the right hand so
-	# the spear physically follows the arm during attack.
 	fail = _expect(EquipmentVisuals.weapon_arm_for(&"myrmidon") == &"Body/ArmRShoulder/ElbowPivot/SpearArm",
 			"Myrmidon weapon arm path = Body/ArmRShoulder/ElbowPivot/SpearArm", fail)
 	fail = _expect(EquipmentVisuals.weapon_arm_for(&"pythia") == &"StaffArm",

@@ -48,11 +48,19 @@ position = Vector2(0, 10)
 [node name="Hand"    type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
 ; Stage 17.5 — Buckler is strapped to the forearm, so it rides under
 ; the left elbow pivot and rotates with the shield-raise animation.
+; z_index=1 forces the buckler on top of body-level armor polygons
+; (Cuirass/ShieldStrap) during shield-raise; without this, the
+; rotated forearm carries the buckler INTO the cuirass tree-order
+; range and the bronze plate paints over it.
 [node name="Buckler" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
+z_index = 1
 
-; --- RIGHT ARM: shoulder + elbow pivots. SpearArm lives UNDER the
-;     elbow pivot so the spear is physically carried by the hand and
-;     swings with the arm during attack. ---
+; --- RIGHT ARM: shoulder + elbow pivots. SpearArm is back under the
+;     hand so the hand actually GRIPS the spear. Shaft is HORIZONTAL
+;     (grip at the back of the shaft, tip at the front) so rotating
+;     the arm forward translates the whole spear forward without
+;     swinging the grip through space. Hand stays at hip level; the
+;     arm swings forward in +x driven by shoulder rotation.
 [node name="ArmRShoulder" type="Node2D" parent="Body"]
 position = Vector2(9, -44)
 [node name="UpperArm" type="Polygon2D" parent="Body/ArmRShoulder"]

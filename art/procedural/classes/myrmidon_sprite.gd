@@ -197,34 +197,39 @@ func _paint_armor() -> void:
 		buc.append(Vector2(cx + r * cos(t), cy + r * sin(t)))
 	_buckler.polygon = buc
 
-# ---- SpearArm (just the spear; lives under the right hand) --------------
-# SpearArm is a child of Body/ArmRShoulder/ElbowPivot at position
-# (0, 10) — coincident with the right hand. All polygons local to
-# that pivot; +y points down. At rest with all arm pivots at 0,
-# SpearArm is at body y=-24 (the wrist).
-#
-# Reach: shaft butt at +25 (body y=+1, ground line); tip at -36
-# (body y=-60, top of head). True hoplite spear length.
+# ---- SpearArm — MID-SHAFT GRIP -----------------------------------------
+# SpearArm is parented under the right hand (Body/ArmRShoulder/
+# ElbowPivot/SpearArm). The hand grips the MIDDLE of the shaft —
+# spear-local origin (0,0) is at the hand. The BUTT extends behind
+# the hand (-x direction); the TIP extends forward (+x direction).
+# Total length ≈ 60px (butt 25 back, tip 35 forward), tip leaf
+# extending another 10 forward.
+const SPEAR_BUTT_X: float       = -25.0
+const SPEAR_TIP_BASE_X: float   =  35.0
+const SPEAR_TIP_POINT_X: float  =  45.0
 
 func _paint_spear() -> void:
-	# Shaft: thin vertical strip reaching from above the head down
-	# past the foot to the ground.
+	# Shaft: horizontal strip running through the grip origin, from
+	# butt (-25) to base of tip (+35).
 	_sa_shaft.color = LEATHER_DARK
 	_sa_shaft.polygon = PackedVector2Array([
-		Vector2(-1, 25), Vector2(1, 25),
-		Vector2(1, -36), Vector2(-1, -36),
+		Vector2(SPEAR_BUTT_X, -1),     Vector2(SPEAR_TIP_BASE_X, -1),
+		Vector2(SPEAR_TIP_BASE_X, 1),  Vector2(SPEAR_BUTT_X, 1),
 	])
-	# Bronze grip wrap at the hand position (around y=0 in spear-local).
+	# Bronze grip wrap at the spear-local origin (= hand position).
 	_sa_grip.color = BRONZE
 	_sa_grip.polygon = PackedVector2Array([
-		Vector2(-1.5, -4), Vector2(1.5, -4),
-		Vector2(1.5, 4),  Vector2(-1.5, 4),
+		Vector2(-3.0, -1.6), Vector2(3.0, -1.6),
+		Vector2(3.0, 1.6),   Vector2(-3.0, 1.6),
 	])
-	# Bronze leaf-shaped spearhead at the top.
+	# Bronze leaf-shaped spearhead at the far end (+x).
 	_sa_tip.color = BRONZE
 	_sa_tip.polygon = PackedVector2Array([
-		Vector2(-2.8, -36), Vector2(2.8, -36),
-		Vector2(2.0, -42), Vector2(0, -46), Vector2(-2.0, -42),
+		Vector2(SPEAR_TIP_BASE_X,     -2.8),
+		Vector2(SPEAR_TIP_BASE_X,      2.8),
+		Vector2(SPEAR_TIP_BASE_X + 6,  1.8),
+		Vector2(SPEAR_TIP_POINT_X,     0),
+		Vector2(SPEAR_TIP_BASE_X + 6, -1.8),
 	])
 
 # ---- Animations (idle, walk owned here; attack installed by profile) ----

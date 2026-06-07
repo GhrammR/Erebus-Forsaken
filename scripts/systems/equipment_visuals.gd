@@ -18,9 +18,10 @@ const TIER_BRIGHT: Color = Color(1.00, 0.90, 0.50)
 ## EquipmentPaperdoll toggles .visible based on whether the WEAPON slot
 ## is occupied. Empty slot = bare hands = arm hidden.
 const WEAPON_ARMS: Dictionary = {
-	# Stage 17.5 — Myrmidon's SpearArm lives under the right hand
-	# so the spear physically follows the arm during attack. Path
-	# is resolved by NodePath() at lookup time.
+	# Stage 17.5 — SpearArm lives under the right hand. Shaft polygon
+	# is HORIZONTAL with grip at the back (spear-local origin = hand),
+	# so the strike rotates the arm forward and the spear translates
+	# with the hand instead of arcing around it.
 	&"myrmidon":       &"Body/ArmRShoulder/ElbowPivot/SpearArm",
 	&"pythia":         &"StaffArm",
 	&"shade_hunter":   &"BowArm",

@@ -85,64 +85,49 @@ func _build_attack(weapon_type: int, has_shield: bool) -> Animation:
 # inward + downward), both arms thrust forward together.
 
 func _build_spear(has_shield: bool) -> Animation:
-	# Hoplite overhand thrust — fully sequenced, smoothly interpolated.
+	# HIP-LEVEL ARM-THRUST (Stage 17.5 follow-up).
 	#
-	# Beats:
-	#   0.00–0.18  GUARD UP: shield rises to chest first, body settles
-	#              into stance. Spear and right arm stay quiet.
-	#   0.18–0.34  WIND UP: shoulder cocks back, spear tip rises behind
-	#              the head. Shield holds at guard.
-	#   0.34–0.46  STRIKE: spear rotates tip-forward and shoulder drives
-	#              through. Shield still at guard. This is the impact
-	#              frame (around t=0.42).
-	#   0.46–0.62  HOLD:   spear stays extended briefly so the strike
-	#              reads at game zoom.
-	#   0.62–0.85  RECOVER: spear and shield return to rest together.
-	#
-	# All rotation tracks use CUBIC interpolation so the motion eases
-	# in/out instead of snapping linearly between keys — that's the
-	# main fluidity fix.
+	# The spear is gripped at the back of the shaft by the right hand
+	# (Body/ArmRShoulder/ElbowPivot/SpearArm, hand-local origin). At
+	# rest the arm hangs straight down with the hand at hip level
+	# (body y≈-24); the spear extends horizontally forward from that
+	# grip, tip at hip height. The strike rotates the right shoulder
+	# forward by a small angle — the entire arm + spear translates
+	# along an arc that's nearly horizontal at this magnitude. The
+	# spear itself does NOT rotate; only the arm does. Hand stays at
+	# hip level (small upward drift during the peak ~2px) so the
+	# motion does not read as a pelvic thrust.
 	var a := Animation.new()
 	a.length = 0.85
 	a.loop_mode = Animation.LOOP_NONE
 
-	# --- Body lean: subtle back-then-forward, no pelvic slide ---
+	# --- Body holds steady — no lean, no pelvic slide ---
 	var tbr := _cubic_track(a, NodePath("Body:rotation"))
 	a.track_insert_key(tbr, 0.00, 0.0)
-	a.track_insert_key(tbr, 0.18, 0.04)     # settle into guard
-	a.track_insert_key(tbr, 0.34, 0.08)     # tiny back lean as arm winds
-	a.track_insert_key(tbr, 0.46, -0.10)    # lean forward through strike
-	a.track_insert_key(tbr, 0.62, -0.04)
 	a.track_insert_key(tbr, 0.85, 0.0)
 
-	# --- Right shoulder: quiet → cock → drive → recover ---
-	# Small amplitudes — the spear tip travel comes from SpearArm
-	# rotation, NOT from the shoulder swinging the whole arm in an
-	# arc (which would lift the hand and angle the spear up-forward
-	# instead of straight forward).
+	# --- Right shoulder: cock back → drive forward → recover ---
+	# Small magnitudes keep the arc nearly horizontal at the strike
+	# magnitude (-0.50 rad), so the hand moves ~+9 in x and only ~+2
+	# in y from its rest position.
 	var tra := _cubic_track(a, NodePath("Body/ArmRShoulder:rotation"))
 	a.track_insert_key(tra, 0.00, 0.0)
-	a.track_insert_key(tra, 0.18, 0.04)
-	a.track_insert_key(tra, 0.34, 0.18)     # gentle wind-back
-	a.track_insert_key(tra, 0.46, -0.15)    # gentle drive forward
-	a.track_insert_key(tra, 0.62, -0.08)
+	a.track_insert_key(tra, 0.18, 0.10)      # tiny back-load
+	a.track_insert_key(tra, 0.46, -0.50)     # strike: arm swings forward
+	a.track_insert_key(tra, 0.62, -0.25)
 	a.track_insert_key(tra, 0.85, 0.0)
 
-	# --- Right elbow: straight throughout (thrust, not jab) ---
+	# --- Right elbow: stays straight throughout ---
 	var tre := _cubic_track(a, NodePath("Body/ArmRShoulder/ElbowPivot:rotation"))
 	a.track_insert_key(tre, 0.00, 0.0)
 	a.track_insert_key(tre, 0.85, 0.0)
 
-	# --- SpearArm: the PRIMARY motion. Tip leads forward at strike. ---
-	# Rest = 0 (tip up). Wind = -0.30 (tip back-up, behind the shoulder).
-	# Strike = +1.50 (tip near-horizontal forward). Hold then return.
+	# --- SpearArm: held at 0 (horizontal forward, gripped at back). ---
+	# The shaft doesn't rotate around the grip. It just translates
+	# with the hand as the arm swings.
 	var tsa := _cubic_track(a, NodePath("Body/ArmRShoulder/ElbowPivot/SpearArm:rotation"))
 	a.track_insert_key(tsa, 0.00, 0.0)
-	a.track_insert_key(tsa, 0.18, -0.10)
-	a.track_insert_key(tsa, 0.34, -0.30)    # wound up behind head
-	a.track_insert_key(tsa, 0.46, 1.50)     # STRIKE: tip thrusts forward
-	a.track_insert_key(tsa, 0.62, 1.20)     # held briefly extended
-	a.track_insert_key(tsa, 0.85, 0.0)      # return to vertical
+	a.track_insert_key(tsa, 0.85, 0.0)
 
 	# --- LEFT ARM ---
 	var tla := _cubic_track(a, NodePath("Body/ArmLShoulder:rotation"))
