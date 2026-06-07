@@ -8,17 +8,24 @@ extends Node
 ## so the agent can read prior renders between sessions without
 ## re-running the pipeline, and so review can happen via git diff.
 ##
-## Currently renders Myrmidon (the only HUMAN sprite authored in
-## Stage 17.5 so far). Extends naturally to other sprites as they're
-## added by adding entries to RENDER_PLAN.
+## Stage 17.6 — adds Pythia (HUMAN, staff). Extends naturally to other
+## sprites as they're added by adding entries to RENDER_PLAN.
 ##
 ## Invocation: godot --path . -- --render-sprites
 ## NOT --headless: needs a display server to drive the GL backend
 ## (WSL2's WSLg provides one). Output PNGs can be Read directly.
 
+const SpriteSpecs = preload("res://test/sprite_specs.gd")
+
 const FRAME_PATH := "res://docs/sprites/%s/%s_%d.png"
 const STRIP_PATH := "res://docs/sprites/%s/%s_strip.png"
 const DEBUG_STRIP_PATH := "res://docs/sprites/%s/%s_debug_strip.png"
+# Stage 17.6 — per-variant text trace + pose-spec verifier report.
+# The trace.txt holds per-frame numeric pose data (positions of both
+# hands, both elbows, weapon angle, tip, butt) PLUS the verifier's
+# PASS/FAIL diff against SpriteSpecs.SPECS for this variant. Reading
+# numbers replaces squinting at 240×240 pixel strips.
+const TRACE_PATH := "res://docs/sprites/%s/%s_trace.txt"
 const VIEW_SIZE: Vector2i = Vector2i(240, 240)
 # 12 frames per animation = ~24fps sampling on a typical 0.5s attack.
 # Enough to read fluidity at a glance without flooding the folder.
@@ -64,7 +71,29 @@ const RENDER_PLAN := [
 			# uses the no-shield two-handed thrust profile.
 		],
 	},
+	{
+		"id": "pythia",
+		"class_id": &"pythia",
+		"scene": "res://art/procedural/classes/pythia_sprite.tscn",
+		"variants": [
+			{ "name": "idle_bare",    "anim": &"idle",   "equip": {} },
+			{ "name": "walk_bare",    "anim": &"walk",   "equip": {} },
+			{ "name": "attack_bare",  "anim": &"attack", "equip": {} },
+			{ "name": "idle_staff",   "anim": &"idle",   "equip": { "weapon": &"pythia_staff_starter" } },
+			{ "name": "walk_staff",   "anim": &"walk",   "equip": { "weapon": &"pythia_staff_starter" } },
+			{ "name": "attack_staff", "anim": &"attack", "equip": { "weapon": &"pythia_staff_starter" } },
+			{ "name": "cast_staff",   "anim": &"cast",   "equip": { "weapon": &"pythia_staff_starter" } },
+		],
+	},
 ]
+
+# Per-class business-end polygon name (the pointiest forward-extending
+# part of the weapon, queried via polygon.max_x for the tip tracker).
+# Falls back to no-draw when a class isn't listed yet.
+const _TIP_POLY: Dictionary = {
+	&"myrmidon": &"Tip",
+	&"pythia":   &"Orb",
+}
 
 var _root_vp: SubViewport = null
 var _current_sprite: Node2D = null
@@ -181,13 +210,19 @@ func _render_variant(scene: PackedScene, id: String, class_id: StringName,
 		# vibes-based eyeballing.
 		var debug_img: Image = img.duplicate()
 		_draw_landmarks(debug_img, sprite)
-		_draw_hand_tracker(debug_img, sprite)
-		_draw_tip_tracker(debug_img, sprite)
+		_draw_arm_trackers(debug_img, sprite)
+		_draw_tip_tracker(debug_img, sprite, class_id)
 		debug_frames.append(debug_img)
 	# Glue the frames into a single horizontal strip — much easier to
 	# scrub for fluidity than reading 12 separate files.
 	_save_strip(frames, id, variant["name"])
 	_save_debug_strip(debug_frames, id, variant["name"])
+	# Stage 17.6 — write per-frame numeric trace + pose-spec verifier.
+	# Numbers replace squinting at the strip. Runs sequentially after
+	# the strip is saved so the trace and the PNGs land in the same
+	# folder atomically per variant.
+	await _write_trace_and_verify(sprite, class_id, anim_player, anim_name,
+			length, id, variant["name"])
 	# Clean up paperdoll/inv for the next variant.
 	paperdoll.queue_free()
 	inv.queue_free()
@@ -235,43 +270,75 @@ func _draw_landmarks(img: Image, sprite: Node2D) -> void:
 		# (waist + hip 6px apart) stay distinguishable.
 		img.fill_rect(Rect2i(w - 6, vp_y - 1, 6, 3), lm["color"])
 
-# Draws a small filled circle at the RIGHT hand's screen position.
-# A trail of these across the debug strip literally traces the hand
-# path so claims like "the hand isn't at the groin" can be visually
-# checked.
-func _draw_hand_tracker(img: Image, sprite: Node2D) -> void:
-	_draw_node_dot(img, sprite,
-			^"Body/ArmRShoulder/ElbowPivot/Hand",
-			Color(1.0, 0.1, 0.1, 1.0), 4)
+# Draws tracker dots for both elbows, both hands, and any cosmetic
+# LeftGrip on the weapon. Colors chosen so each tracker is
+# distinguishable on the dark background.
+const _ARM_TRACKERS: Array = [
+	# (path,                                                  color,                   radius)
+	[^"Body/ArmRShoulder/ElbowPivot",                         Color(0.30, 0.90, 0.90), 3],  # R elbow — cyan
+	[^"Body/ArmLShoulder/ElbowPivot",                         Color(0.30, 0.55, 0.95), 3],  # L elbow — blue
+	[^"Body/ArmRShoulder/ElbowPivot/Hand",                    Color(1.00, 0.10, 0.10), 4],  # R hand  — red
+	[^"Body/ArmLShoulder/ElbowPivot/Hand",                    Color(1.00, 0.55, 0.75), 4],  # L hand  — pink
+]
+func _draw_arm_trackers(img: Image, sprite: Node2D) -> void:
+	for tr in _ARM_TRACKERS:
+		_draw_node_dot(img, sprite, tr[0], tr[1], tr[2])
+	# Cosmetic LeftGrip on the weapon — magenta marker so we can see
+	# whether the L-hand pink dot ACTUALLY lands on the staff grip
+	# the spec calls for.
+	_draw_left_grip_marker(img, sprite)
 
-# Spear-tip tracker — orange dot at the front of the spearhead so we
-# can see where the actual reach is, independent of where the hand
-# grips. Useful when the spear is held at the back of the shaft
-# (hand at grip = back end) so "hand position" and "spear tip"
-# differ by the shaft length.
-func _draw_tip_tracker(img: Image, sprite: Node2D) -> void:
-	# Query the Tip polygon's actual pointiest vertex (max x) so the
-	# tracker stays correct regardless of where the grip sits on the
-	# shaft (back / middle / front-grip). Falls back to no draw if
-	# the SpearArm/Tip node isn't present.
-	var tip: Polygon2D = sprite.get_node_or_null(
-			^"Body/ArmRShoulder/ElbowPivot/SpearArm/Tip") as Polygon2D
-	if tip == null:
-		tip = sprite.get_node_or_null(^"Body/SpearArm/Tip") as Polygon2D
+# If the weapon arm has a "LeftGrip" child, dot its polygon center.
+func _draw_left_grip_marker(img: Image, sprite: Node2D) -> void:
+	# Conventionally LeftGrip lives under StaffArm; generalize via
+	# weapon-arm registry in case other weapons add their own.
+	for class_id in [&"pythia", &"myrmidon", &"shade_hunter", &"ossuary_priest"]:
+		var arm_path: StringName = EquipmentVisuals.weapon_arm_for(class_id)
+		if arm_path == &"":
+			continue
+		var arm: Node2D = sprite.get_node_or_null(NodePath(String(arm_path))) as Node2D
+		if arm == null:
+			continue
+		var lg: Polygon2D = arm.get_node_or_null(^"LeftGrip") as Polygon2D
+		if lg == null:
+			continue
+		# Polygon center = average of vertices.
+		var center := Vector2.ZERO
+		for v in lg.polygon:
+			center += v
+		if lg.polygon.size() > 0:
+			center /= float(lg.polygon.size())
+		var world := arm.to_global(center)
+		_draw_pixel_circle(img, int(world.x), int(world.y), 3,
+				Color(0.95, 0.30, 0.95))
+		return
+
+# Weapon business-end tracker — orange dot at the +x extreme of the
+# class's weapon tip polygon (spear tip / staff orb / etc.). Looks up
+# the weapon arm path via EquipmentVisuals.weapon_arm_for(class_id)
+# and the tip polygon child via _TIP_POLY. Falls back to no draw when
+# the weapon arm isn't present (bare-hands variant) or the class
+# isn't registered yet.
+func _draw_tip_tracker(img: Image, sprite: Node2D, class_id: StringName) -> void:
+	var arm_path: StringName = EquipmentVisuals.weapon_arm_for(class_id)
+	if arm_path == &"":
+		return
+	var weapon_arm: Node2D = sprite.get_node_or_null(NodePath(String(arm_path))) as Node2D
+	if weapon_arm == null:
+		return
+	var tip_name: StringName = _TIP_POLY.get(class_id, &"")
+	if tip_name == &"":
+		return
+	var tip: Polygon2D = weapon_arm.get_node_or_null(NodePath(String(tip_name))) as Polygon2D
 	if tip == null:
 		return
-	var spear: Node2D = tip.get_parent() as Node2D
-	if spear == null:
-		return
-	# Find the polygon vertex with the maximum x — that's the
-	# pointiest tip of the spearhead.
 	var best := Vector2(-INF, 0.0)
 	for v in tip.polygon:
 		if v.x > best.x:
 			best = v
 	if best.x == -INF:
 		return
-	var world_tip: Vector2 = spear.to_global(best)
+	var world_tip: Vector2 = weapon_arm.to_global(best)
 	_draw_pixel_circle(img, int(world_tip.x), int(world_tip.y),
 			3, Color(1.0, 0.55, 0.1, 1.0))
 
@@ -296,3 +363,208 @@ func _draw_node_dot(img: Image, sprite: Node2D, node_path: NodePath,
 		return
 	var p := node.global_position
 	_draw_pixel_circle(img, int(p.x), int(p.y), rad, color)
+
+# =========================================================================
+# Stage 17.6 — pose sampling, trace.txt, spec verifier
+# =========================================================================
+# These functions read the ACTUAL positions of the standard tracked
+# nodes at the AnimationPlayer's current time, write a per-frame
+# numeric report next to the strip PNGs, and run a PASS/FAIL pose-spec
+# comparison via SpriteSpecs. Numbers replace squinting.
+
+# Standard tracked nodes (per HUMAN-rig sprite). Path -> dictionary key
+# in the sample dict. All positions returned in SPRITE-LOCAL coords
+# (feet at (0,0), +x right, -y up — the authoring frame).
+# Each entry: node path, sample-key, sample mode.
+#   "origin"  — use node.global_position (correct for joints)
+#   "centroid"— average the polygon vertices, then to_global (correct
+#               for Hand polys whose visual is offset from origin)
+const _TRACKED_NODES: Array = [
+	[^"Body/ArmRShoulder",                     "right_shoulder", "origin"],
+	[^"Body/ArmLShoulder",                     "left_shoulder",  "origin"],
+	[^"Body/ArmRShoulder/ElbowPivot",          "right_elbow",    "origin"],
+	[^"Body/ArmLShoulder/ElbowPivot",          "left_elbow",     "origin"],
+	[^"Body/ArmRShoulder/ElbowPivot/Hand",     "right_hand",     "centroid"],
+	[^"Body/ArmLShoulder/ElbowPivot/Hand",     "left_hand",      "centroid"],
+]
+
+# Sample the current pose. Returns a Dictionary with:
+#   right_shoulder/left_shoulder: Vector2 sprite-local
+#   right_elbow/left_elbow:       Vector2 sprite-local
+#   right_hand/left_hand:         Vector2 sprite-local
+#   weapon_angle_deg:             float (global rotation of weapon arm)
+#   weapon_grip / weapon_tip / weapon_butt: Vector2 sprite-local
+#   weapon_left_grip:             Vector2 sprite-local (if cosmetic LeftGrip exists)
+func _sample_pose(sprite: Node2D, class_id: StringName) -> Dictionary:
+	var sample: Dictionary = {}
+	for entry in _TRACKED_NODES:
+		var path: NodePath = entry[0]
+		var key: String = entry[1]
+		var mode: String = entry[2]
+		var n: Node2D = sprite.get_node_or_null(path) as Node2D
+		if n == null:
+			continue
+		if mode == "centroid" and n is Polygon2D:
+			var poly: Polygon2D = n
+			var center := Vector2.ZERO
+			if poly.polygon.size() > 0:
+				for v in poly.polygon:
+					center += v
+				center /= float(poly.polygon.size())
+			sample[key] = sprite.to_local(n.to_global(center))
+		else:
+			sample[key] = sprite.to_local(n.global_position)
+	# Weapon arm (per class).
+	var arm_path: StringName = EquipmentVisuals.weapon_arm_for(class_id)
+	if arm_path != &"":
+		var arm: Node2D = sprite.get_node_or_null(NodePath(String(arm_path))) as Node2D
+		if arm != null and arm.visible:
+			sample["weapon_grip"] = sprite.to_local(arm.global_position)
+			sample["weapon_angle_deg"] = rad_to_deg(arm.global_rotation)
+			# Tip: max-x vertex of the tip polygon (Tip for spear, Orb
+			# for staff, etc.).
+			var tip_name: StringName = _TIP_POLY.get(class_id, &"")
+			if tip_name != &"":
+				var tip_poly: Polygon2D = arm.get_node_or_null(NodePath(String(tip_name))) as Polygon2D
+				if tip_poly != null:
+					var best := Vector2(-INF, 0.0)
+					for v in tip_poly.polygon:
+						if v.x > best.x:
+							best = v
+					if best.x != -INF:
+						sample["weapon_tip"] = sprite.to_local(arm.to_global(best))
+			# Butt: min-x vertex of the shaft polygon.
+			var shaft: Polygon2D = arm.get_node_or_null(^"Shaft") as Polygon2D
+			if shaft != null:
+				var worst := Vector2(INF, 0.0)
+				for v in shaft.polygon:
+					if v.x < worst.x:
+						worst = v
+				if worst.x != INF:
+					sample["weapon_butt"] = sprite.to_local(arm.to_global(worst))
+			# Cosmetic LeftGrip (Pythia staff has this).
+			var lg: Polygon2D = arm.get_node_or_null(^"LeftGrip") as Polygon2D
+			if lg != null:
+				var center := Vector2.ZERO
+				for v in lg.polygon:
+					center += v
+				if lg.polygon.size() > 0:
+					center /= float(lg.polygon.size())
+				sample["weapon_left_grip"] = sprite.to_local(arm.to_global(center))
+	return sample
+
+# Writes the per-variant trace.txt + runs the pose-spec verifier.
+func _write_trace_and_verify(sprite: Node2D, class_id: StringName,
+		anim_player: AnimationPlayer, anim_name: StringName,
+		length: float, id: String, variant_name: String) -> void:
+	var spec: Dictionary = SpriteSpecs.spec_for(class_id, StringName(variant_name))
+	var lines: PackedStringArray = []
+	lines.append("# Pose trace — %s / %s" % [id, variant_name])
+	lines.append("# anim=%s  length=%.3fs" % [anim_name, length])
+	if not spec.is_empty():
+		lines.append("# archetype=%s — %s" % [
+			String(spec.get("archetype", "")),
+			SpriteSpecs.archetype_description(spec.get("archetype", &"")),
+		])
+	lines.append("")
+	lines.append("## Per-frame numeric pose (sprite-local coords; feet at (0,0), +x right, -y up)")
+	lines.append("frame | t     | wpn° | R_hand        | L_hand        | R_elbow       | L_elbow       | tip           | butt")
+	lines.append("------+-------+------+---------------+---------------+---------------+---------------+---------------+--------------")
+	for frame_i in FRAME_COUNT:
+		var t := length * float(frame_i) / float(FRAME_COUNT - 1)
+		anim_player.seek(t, true)
+		await RenderingServer.frame_post_draw
+		await RenderingServer.frame_post_draw
+		var s := _sample_pose(sprite, class_id)
+		lines.append("%5d | %5.3f | %s | %s | %s | %s | %s | %s | %s" % [
+			frame_i, t,
+			_fmt_deg(s.get("weapon_angle_deg")),
+			_fmt_vec(s.get("right_hand")),
+			_fmt_vec(s.get("left_hand")),
+			_fmt_vec(s.get("right_elbow")),
+			_fmt_vec(s.get("left_elbow")),
+			_fmt_vec(s.get("weapon_tip")),
+			_fmt_vec(s.get("weapon_butt")),
+		])
+	# Verifier section.
+	lines.append("")
+	if spec.is_empty():
+		lines.append("## Spec verifier: (no spec registered for this variant)")
+	else:
+		lines.append("## Spec verifier — PASS/FAIL per keyframe")
+		var keyframes: Array = spec.get("keyframes", [])
+		var total_fails := 0
+		for kf in keyframes:
+			var t: float = kf["t"]
+			anim_player.seek(t, true)
+			await RenderingServer.frame_post_draw
+			await RenderingServer.frame_post_draw
+			var s := _sample_pose(sprite, class_id)
+			var fails: Array = _diff_pose(s, kf)
+			lines.append("")
+			lines.append("  keyframe t=%.3fs  phase=%s" % [t, String(kf.get("phase", &""))])
+			if fails.is_empty():
+				lines.append("    PASS")
+			else:
+				total_fails += fails.size()
+				for f in fails:
+					lines.append("    FAIL %s" % f)
+		lines.append("")
+		lines.append("Total failures: %d" % total_fails)
+	var trace := "\n".join(lines)
+	var path := TRACE_PATH % [id, variant_name]
+	var fs_path := ProjectSettings.globalize_path(path)
+	var f := FileAccess.open(fs_path, FileAccess.WRITE)
+	if f != null:
+		f.store_string(trace)
+		f.close()
+		print("  TRACE %s" % path)
+
+# Compares a sampled pose against one spec keyframe. Returns an array
+# of failure descriptions; empty means PASS. Only checks keys present
+# in the spec.
+func _diff_pose(sample: Dictionary, kf: Dictionary) -> Array:
+	var fails: Array = []
+	var tol_px: float = float(kf.get("tolerance_px", 4.0))
+	var tol_deg: float = float(kf.get("tolerance_deg", 6.0))
+	var vec_keys := ["right_hand", "left_hand", "right_elbow", "left_elbow",
+			"weapon_tip", "weapon_butt", "weapon_grip", "weapon_left_grip"]
+	for k in vec_keys:
+		if not kf.has(k):
+			continue
+		var want: Vector2 = kf[k]
+		if not sample.has(k):
+			fails.append("%s: expected %s, got <missing>" % [k, _fmt_vec(want)])
+			continue
+		var got: Vector2 = sample[k]
+		var d := got.distance_to(want)
+		if d > tol_px:
+			fails.append("%s: want %s, got %s, off by %.1f px (tol %.1f)" % [
+				k, _fmt_vec(want), _fmt_vec(got), d, tol_px])
+	if kf.has("weapon_angle_deg"):
+		var want_a: float = kf["weapon_angle_deg"]
+		if not sample.has("weapon_angle_deg"):
+			fails.append("weapon_angle_deg: expected %.1f°, got <missing>" % want_a)
+		else:
+			var got_a: float = sample["weapon_angle_deg"]
+			var diff: float = absf(_wrap_deg(got_a - want_a))
+			if diff > tol_deg:
+				fails.append("weapon_angle_deg: want %.1f°, got %.1f°, off by %.1f° (tol %.1f)" % [
+					want_a, got_a, diff, tol_deg])
+	return fails
+
+static func _wrap_deg(d: float) -> float:
+	while d > 180.0: d -= 360.0
+	while d < -180.0: d += 360.0
+	return d
+
+static func _fmt_vec(v) -> String:
+	if v == null:
+		return "     <none>    "
+	var vec: Vector2 = v
+	return "(%+5.1f,%+5.1f)" % [vec.x, vec.y]
+
+static func _fmt_deg(d) -> String:
+	if d == null:
+		return " <no>"
+	return "%+4.0f" % float(d)

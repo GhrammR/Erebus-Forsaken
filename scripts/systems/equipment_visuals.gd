@@ -23,7 +23,9 @@ const WEAPON_ARMS: Dictionary = {
 	# so the strike rotates the arm forward and the spear translates
 	# with the hand instead of arcing around it.
 	&"myrmidon":       &"Body/ArmRShoulder/ElbowPivot/SpearArm",
-	&"pythia":         &"StaffArm",
+	# Stage 17.6 — StaffArm now lives under the right hand on the
+	# HumanRig anatomy (mid-grip pattern from the Myrmidon work).
+	&"pythia":         &"Body/ArmRShoulder/ElbowPivot/StaffArm",
 	&"shade_hunter":   &"BowArm",
 	&"ossuary_priest": &"WandArm",
 }

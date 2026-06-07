@@ -113,6 +113,13 @@ Highlights worth a look:
   a code rewrite.
 - DebugLog autoload (Stage 9.7): flag-gated logging with file mirror,
   12 categories, `--debug=flag1,flag2` CLI for targeted instrumentation.
+- Sprite render pipeline (Stage 17.5/17.6): `--render-sprites` flag
+  drives a SubViewport pass that captures every (sprite, equip,
+  animation) variant to `docs/sprites/<id>/`, including a debug-strip
+  overlay (anatomical landmark lines + per-joint tracker dots) and a
+  per-variant `_trace.txt` with numeric pose data + PASS/FAIL diff
+  against `test/sprite_specs.gd` keyframes. Numbers replace
+  pixel-squinting when iterating procedural animations.
 
 ## Running it
 

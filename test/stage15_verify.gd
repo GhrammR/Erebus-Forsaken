@@ -45,8 +45,8 @@ func _verify_autoload_registered(fail: int) -> int:
 func _verify_visuals_weapon_arm_table(fail: int) -> int:
 	fail = _expect(EquipmentVisuals.weapon_arm_for(&"myrmidon") == &"Body/ArmRShoulder/ElbowPivot/SpearArm",
 			"Myrmidon weapon arm path = Body/ArmRShoulder/ElbowPivot/SpearArm", fail)
-	fail = _expect(EquipmentVisuals.weapon_arm_for(&"pythia") == &"StaffArm",
-			"Pythia weapon arm = StaffArm", fail)
+	fail = _expect(EquipmentVisuals.weapon_arm_for(&"pythia") == &"Body/ArmRShoulder/ElbowPivot/StaffArm",
+			"Pythia weapon arm path = Body/ArmRShoulder/ElbowPivot/StaffArm", fail)
 	fail = _expect(EquipmentVisuals.weapon_arm_for(&"shade_hunter") == &"BowArm",
 			"ShadeHunter weapon arm = BowArm", fail)
 	fail = _expect(EquipmentVisuals.weapon_arm_for(&"ossuary_priest") == &"WandArm",
