@@ -39,11 +39,11 @@ const SHADOW: Color         = Color(0.0, 0.0, 0.05, 0.45)
 @onready var _robe: Polygon2D = $Body/Robe
 @onready var _mantle: Polygon2D = $Body/Mantle
 @onready var _hood: Polygon2D = $Body/Hood
-@onready var _staff_arm: Node2D = $Body/ArmLShoulder/ElbowPivot/StaffArm
-@onready var _sa_shaft: Polygon2D = $Body/ArmLShoulder/ElbowPivot/StaffArm/Shaft
-@onready var _sa_grip: Polygon2D = $Body/ArmLShoulder/ElbowPivot/StaffArm/Grip
-@onready var _sa_left_grip: Polygon2D = $Body/ArmLShoulder/ElbowPivot/StaffArm/LeftGrip
-@onready var _sa_orb: Polygon2D = $Body/ArmLShoulder/ElbowPivot/StaffArm/Orb
+@onready var _staff_arm: Node2D = $Body/ArmRShoulder/ElbowPivot/StaffArm
+@onready var _sa_shaft: Polygon2D = $Body/ArmRShoulder/ElbowPivot/StaffArm/Shaft
+@onready var _sa_grip: Polygon2D = $Body/ArmRShoulder/ElbowPivot/StaffArm/Grip
+@onready var _sa_left_grip: Polygon2D = $Body/ArmRShoulder/ElbowPivot/StaffArm/LeftGrip
+@onready var _sa_orb: Polygon2D = $Body/ArmRShoulder/ElbowPivot/StaffArm/Orb
 @onready var _anim: AnimationPlayer = $AnimationPlayer
 
 func _ready() -> void:
@@ -56,32 +56,31 @@ func _ready() -> void:
 	_build_animations()
 	SpriteSidecar.apply(self, &"pythia")
 	_anim.play(&"idle")
-	# Stage 17.6 — runtime IK on the right arm so its hand polygon
-	# stays pinned to the LeftGrip cosmetic on the staff THROUGHOUT
-	# animation (not just at rest keyframes). The animation tracks
-	# for the right arm still exist (mostly for cast where IK is
-	# skipped) but are overridden by IK every frame for idle/walk/
-	# attack. Hooked to tree.process_frame so the override runs AFTER
-	# AnimationPlayer's _process advances tracks.
-	get_tree().process_frame.connect(_pin_r_arm_to_staff)
+	# Stage 17.6 — runtime IK on the LEFT arm so its hand polygon stays
+	# pinned to the LeftGrip cosmetic on the staff every frame. R arm
+	# is the staff anchor (StaffArm parented under R) and follows the
+	# animation tracks directly; L arm is the "off-hand" that grips
+	# the upper shaft. Without IK, the L hand would drift out of sync
+	# with the staff during motion. Hooked to tree.process_frame so the
+	# override runs AFTER AnimationPlayer advances tracks.
+	get_tree().process_frame.connect(_pin_l_arm_to_staff)
 
 # ---- Runtime IK ---------------------------------------------------------
-# The 2D 2-bone IK keeps the right hand polygon centroid on the staff's
-# LeftGrip cosmetic regardless of how the staff has rotated this frame.
-# Without this, sparsely keyframed R arm tracks would drift out of sync
-# with the staff motion mid-animation and the hand would visibly fly
-# off the shaft.
+# The 2D 2-bone IK keeps the LEFT hand polygon centroid on the staff's
+# LeftGrip cosmetic regardless of how the staff has rotated. Without
+# this, sparsely keyframed L arm tracks would drift out of sync with the
+# staff motion mid-animation and the hand would visibly fly off the
+# shaft.
 
-func _pin_r_arm_to_staff() -> void:
+func _pin_l_arm_to_staff() -> void:
 	if _staff_arm == null or not _staff_arm.visible:
 		return
-	# Skip during cast: R arm intentionally extends OUT as part of the
+	# Skip during cast: L arm intentionally extends OUT as the
 	# invocation gesture — pinning it would override that pose.
 	if _anim.current_animation == &"cast":
 		return
 	if _sa_left_grip == null:
 		return
-	# LeftGrip centroid → body-local target for IK.
 	var center := Vector2.ZERO
 	if _sa_left_grip.polygon.size() == 0:
 		return
@@ -90,16 +89,19 @@ func _pin_r_arm_to_staff() -> void:
 	center /= float(_sa_left_grip.polygon.size())
 	var target_world: Vector2 = _sa_left_grip.to_global(center)
 	var target_body_local: Vector2 = _body.to_local(target_world)
-	var r_shoulder: Node2D = _body.get_node(^"ArmRShoulder") as Node2D
-	if r_shoulder == null:
+	var l_shoulder: Node2D = _body.get_node(^"ArmLShoulder") as Node2D
+	if l_shoulder == null:
 		return
-	var elbow: Node2D = r_shoulder.get_node(^"ElbowPivot") as Node2D
+	var elbow: Node2D = l_shoulder.get_node(^"ElbowPivot") as Node2D
 	if elbow == null:
 		return
-	# Shoulder body-local pos = ArmRShoulder.position (static).
-	var ik := _solve_2bone_ik(r_shoulder.position, target_body_local,
-			HumanRig.ELBOW_DROP, HumanRig.WRIST_DROP + 1.0, +1)
-	r_shoulder.rotation = ik.x
+	# elbow_dir = -1: for the left arm, "outward" (away from body
+	# centerline) is the -x direction, so we want the elbow on that
+	# side of the shoulder→target line. Empirically -1 produces the
+	# natural pose; +1 puts the elbow folded across the chest.
+	var ik := _solve_2bone_ik(l_shoulder.position, target_body_local,
+			HumanRig.ELBOW_DROP, HumanRig.WRIST_DROP + 1.0, -1)
+	l_shoulder.rotation = ik.x
 	elbow.rotation = ik.y
 
 # 2-bone IK solver in screen-space (Godot y-down). Returns
@@ -252,7 +254,7 @@ const _RESET_PATHS: Array = [
 	NodePath("Body/ArmLShoulder/ElbowPivot:rotation"),
 	NodePath("Body/ArmRShoulder:rotation"),
 	NodePath("Body/ArmRShoulder/ElbowPivot:rotation"),
-	NodePath("Body/ArmLShoulder/ElbowPivot/StaffArm:rotation"),
+	NodePath("Body/ArmRShoulder/ElbowPivot/StaffArm:rotation"),
 ]
 
 func _anim_idle() -> Animation:
@@ -321,7 +323,7 @@ func _anim_attack_placeholder() -> Animation:
 	a.track_insert_key(tra, 0.20, -0.9)
 	a.track_insert_key(tra, 0.35, 0.0)
 	var tsa := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tsa, NodePath("Body/ArmLShoulder/ElbowPivot/StaffArm:rotation"))
+	a.track_set_path(tsa, NodePath("Body/ArmRShoulder/ElbowPivot/StaffArm:rotation"))
 	a.track_insert_key(tsa, 0.00, 0.0)
 	a.track_insert_key(tsa, 0.35, 0.0)
 	return a
@@ -333,7 +335,7 @@ func _anim_cast() -> Animation:
 	a.length = 0.5
 	a.loop_mode = Animation.LOOP_NONE
 	var to := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(to, NodePath("Body/ArmLShoulder/ElbowPivot/StaffArm/Orb:modulate"))
+	a.track_set_path(to, NodePath("Body/ArmRShoulder/ElbowPivot/StaffArm/Orb:modulate"))
 	a.track_insert_key(to, 0.0, Color(1, 1, 1, 1))
 	a.track_insert_key(to, 0.2, Color(2.0, 1.6, 0.7, 1))
 	a.track_insert_key(to, 0.5, Color(1, 1, 1, 1))

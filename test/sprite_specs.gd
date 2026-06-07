@@ -115,31 +115,34 @@ const SPECS: Dictionary = {
 		#   - Orb up near head height
 		#   - LeftGrip (cosmetic on staff at staff-local +11) sits on
 		#     the upper shaft; left hand should LAND on/near it
-		# LEFT arm anchor at hip, RIGHT arm IK-pinned to LeftGrip.
-		#   L hand polygon centroid (anchor at hip):  ≈ (-9, -24)
-		#   StaffArm origin (= L hand):                ≈ (-9, -24)
-		#   At staff world angle -85° (near-vertical, slight forward tilt):
-		#     LeftGrip cosmetic (staff-local +11, 0)  ≈ (-8.04, -34.96)
-		#     Orb        (staff-local +29.5, 0)       ≈ (-6.43, -53.39)
-		#     Butt       (staff-local -22, 0)         ≈ (-10.92, -2.08)
-		#   R arm IK lands hand near LeftGrip ≈ (-8, -35).
+		# Post-photo swap: RIGHT arm anchors the staff at hip-forward
+		# (lower grip), LEFT arm IK-pinned to LeftGrip cosmetic at the
+		# upper grip. Staff at world -135° (diagonal, orb upper-back-
+		# left, butt lower-forward-right).
+		#   R hand polygon centroid (anchor at hip):  ≈ (9, -24)
+		#   StaffArm origin (= R hand position):       ≈ (9, -24)
+		#   At staff world angle -135°:
+		#     LeftGrip cosmetic (staff-local +11, 0)  ≈ (1.22, -31.78)
+		#     Orb        (staff-local +29.5, 0)       ≈ (-11.86, -44.86)
+		#     Butt       (staff-local -22, 0)         ≈ (24.55, -8.45)
+		#   L arm IK lands hand near LeftGrip ≈ (1, -32).
 		&"idle_staff": {
 			"archetype": &"REST_TWO_HANDED",
 			"duration": 2.0,
 			"keyframes": [
 				{ "t": 0.00, "phase": &"REST",
-				  "weapon_angle_deg": -85.0,
-				  "left_hand":   Vector2(-9, -24),
-				  "right_hand":  Vector2(-8, -35),
-				  "weapon_tip":  Vector2(-6, -53),
-				  "weapon_butt": Vector2(-11, -2),
+				  "weapon_angle_deg": -135.0,
+				  "right_hand":  Vector2(9, -24),
+				  "left_hand":   Vector2(1, -32),
+				  "weapon_tip":  Vector2(-12, -45),
+				  "weapon_butt": Vector2(24, -8),
 				  "tolerance_px": 4.0,
 				},
 				{ "t": 2.00, "phase": &"REST",
-				  "weapon_angle_deg": -85.0,
-				  "left_hand":   Vector2(-9, -24),
-				  "right_hand":  Vector2(-8, -35),
-				  "weapon_tip":  Vector2(-6, -53),
+				  "weapon_angle_deg": -135.0,
+				  "right_hand":  Vector2(9, -24),
+				  "left_hand":   Vector2(1, -32),
+				  "weapon_tip":  Vector2(-12, -45),
 				},
 			],
 		},
@@ -148,45 +151,43 @@ const SPECS: Dictionary = {
 			"duration": 0.6,
 			"keyframes": [
 				{ "t": 0.00, "phase": &"REST",
-				  "weapon_angle_deg": -85.0,
-				  "left_hand":   Vector2(-9, -24),
-				  "right_hand":  Vector2(-8, -35),
-				  "weapon_tip":  Vector2(-6, -53),
+				  "weapon_angle_deg": -135.0,
+				  "right_hand":  Vector2(9, -24),
+				  "left_hand":   Vector2(1, -32),
+				  "weapon_tip":  Vector2(-12, -45),
 				  "tolerance_px": 6.0,
 				},
 				{ "t": 0.30, "phase": &"REST",
-				  "weapon_angle_deg": -85.0,
-				  "left_hand":   Vector2(-9, -24),
-				  "right_hand":  Vector2(-8, -35),
-				  "weapon_tip":  Vector2(-6, -53),
+				  "weapon_angle_deg": -135.0,
+				  "right_hand":  Vector2(9, -24),
+				  "left_hand":   Vector2(1, -32),
+				  "weapon_tip":  Vector2(-12, -45),
 				  "tolerance_px": 6.0,
 				},
 			],
 		},
-		# BOP attack: no windup, rest → strike → rest. Staff swings from
-		# world -85° (vertical) down to world -5° (horizontal forward,
-		# slight down-tilt) and back. Orb travels from above-head to
-		# upper-body height in front, like a downward club strike.
+		# BOP attack: small overhead lift. Staff goes from rest -135°
+		# (orb upper-back-left) to apex -90° (orb directly above head)
+		# and back. Conservative range keeps the L hand within IK reach.
 		&"attack_staff": {
 			"archetype": &"ARC_OVERHEAD",
 			"duration": 0.55,
 			"keyframes": [
 				{ "t": 0.00, "phase": &"REST",
-				  "weapon_angle_deg": -85.0,
-				  "left_hand":   Vector2(-9, -24),
-				  "weapon_tip":  Vector2(-6, -53),
+				  "weapon_angle_deg": -135.0,
+				  "right_hand":  Vector2(9, -24),
+				  "weapon_tip":  Vector2(-12, -45),
 				},
 				{ "t": 0.25, "phase": &"STRIKE",
-				  # World -5° → orb at (-9 + 29.5*0.996, -24 + 29.5*-0.087)
-				  #            ≈ (20.4, -26.6)
-				  "weapon_angle_deg": -5.0,
-				  "weapon_tip":  Vector2(20, -27),
+				  # World -90° → orb at (9 + 29.5*0, -24 + 29.5*-1) ≈ (9, -54)
+				  "weapon_angle_deg": -90.0,
+				  "weapon_tip":  Vector2(9, -54),
 				  "tolerance_px": 5.0,
 				},
 				{ "t": 0.55, "phase": &"REST",
-				  "weapon_angle_deg": -85.0,
-				  "left_hand":   Vector2(-9, -24),
-				  "weapon_tip":  Vector2(-6, -53),
+				  "weapon_angle_deg": -135.0,
+				  "right_hand":  Vector2(9, -24),
+				  "weapon_tip":  Vector2(-12, -45),
 				},
 			],
 		},
@@ -195,15 +196,15 @@ const SPECS: Dictionary = {
 			"duration": 0.85,
 			"keyframes": [
 				{ "t": 0.00, "phase": &"REST",
-				  "weapon_angle_deg": -85.0,
-				  "weapon_tip":  Vector2(-6, -53),
+				  "weapon_angle_deg": -135.0,
+				  "weapon_tip":  Vector2(-12, -45),
 				},
 				{ "t": 0.30, "phase": &"HOLD",
 				  "weapon_angle_deg": -90.0,
 				},
 				{ "t": 0.85, "phase": &"REST",
-				  "weapon_angle_deg": -85.0,
-				  "weapon_tip":  Vector2(-6, -53),
+				  "weapon_angle_deg": -135.0,
+				  "weapon_tip":  Vector2(-12, -45),
 				},
 			],
 		},

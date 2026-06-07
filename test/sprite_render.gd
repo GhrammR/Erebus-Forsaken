@@ -83,6 +83,22 @@ const RENDER_PLAN := [
 			{ "name": "walk_staff",   "anim": &"walk",   "equip": { "weapon": &"pythia_staff_starter" } },
 			{ "name": "attack_staff", "anim": &"attack", "equip": { "weapon": &"pythia_staff_starter" } },
 			{ "name": "cast_staff",   "anim": &"cast",   "equip": { "weapon": &"pythia_staff_starter" } },
+			# Equipped-armor variant. The z_index = 2 on StaffArm is
+			# the only reason the staff doesn't disappear behind the
+			# silken_robe chest overlay during the bop apex — this
+			# variant exists to catch that regression visually.
+			{ "name": "idle_geared",   "anim": &"idle",   "equip": {
+				"weapon": &"pythia_staff_starter",
+				"chest": &"silken_robe",
+				"head": &"worn_helm",
+				"legs": &"linen_wrap",
+			} },
+			{ "name": "attack_geared", "anim": &"attack", "equip": {
+				"weapon": &"pythia_staff_starter",
+				"chest": &"silken_robe",
+				"head": &"worn_helm",
+				"legs": &"linen_wrap",
+			} },
 		],
 	},
 ]
@@ -173,12 +189,10 @@ func _render_variant(scene: PackedScene, id: String, class_id: StringName,
 	paperdoll.bind(sprite, inv, class_id)
 	# Equip the variant's items.
 	var equip: Dictionary = variant.get("equip", {})
-	if equip.has("weapon"):
-		inv.add_item(equip["weapon"])
-		inv.equip(equip["weapon"])
-	if equip.has("offhand"):
-		inv.add_item(equip["offhand"])
-		inv.equip(equip["offhand"])
+	for slot in ["weapon", "offhand", "head", "chest", "legs"]:
+		if equip.has(slot):
+			inv.add_item(equip[slot])
+			inv.equip(equip[slot])
 	await get_tree().process_frame
 	# Play the animation, capture frames evenly across its length.
 	var anim_name: StringName = variant["anim"]
