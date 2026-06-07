@@ -115,31 +115,32 @@ const SPECS: Dictionary = {
 		#   - Orb up near head height
 		#   - LeftGrip (cosmetic on staff at staff-local +11) sits on
 		#     the upper shaft; left hand should LAND on/near it
-		# With ARM_R_SHOULDER_REST = +0.30, the right hand rests at
-		# body-local ~(3, -24) (centerline-ish, hip-height). Staff
-		# origin is colocated with right hand. At world angle -60°:
-		#   LeftGrip (staff-local +11, 0) → body-local ≈ (8.6, -34.4)
-		#   Orb (staff-local +29.5, 0)    → body-local ≈ (17.8, -50.4)
-		#   Butt (staff-local -22, 0)     → body-local ≈ (-8.0, -5.9)
-		# Left arm at shoulder -1.07, elbow 0 → hand at ≈ (9.0, -34.2)
-		# — about 0.5 units from LeftGrip. PASS within tolerance.
+		# Post-swap: LEFT arm is the staff anchor at hip; RIGHT arm
+		# reaches across to upper grip.
+		#   L hand polygon centroid (anchor at hip):  ≈ (-9, -24)
+		#   StaffArm origin (= L hand position):       ≈ (-9, -24)
+		#   At staff world angle -60°:
+		#     LeftGrip cosmetic (staff-local +11, 0)  ≈ (-3.5, -33.5)
+		#     Orb        (staff-local +29.5, 0)       ≈ (5.75, -49.55)
+		#     Butt       (staff-local -22, 0)         ≈ (-20, -5)
+		#   R arm (shoulder +0.211, elbow +1.291) → R hand ≈ (-3.5, -33.5)
 		&"idle_staff": {
 			"archetype": &"REST_TWO_HANDED",
 			"duration": 2.0,
 			"keyframes": [
 				{ "t": 0.00, "phase": &"REST",
 				  "weapon_angle_deg": -60.0,
-				  "right_hand":  Vector2(3, -24),
-				  "left_hand":   Vector2(9, -34),
-				  "weapon_tip":  Vector2(18, -50),
-				  "weapon_butt": Vector2(-8, -6),
+				  "left_hand":   Vector2(-9, -24),
+				  "right_hand":  Vector2(-3, -33),
+				  "weapon_tip":  Vector2(6, -50),
+				  "weapon_butt": Vector2(-20, -5),
 				  "tolerance_px": 4.0,
 				},
 				{ "t": 2.00, "phase": &"REST",
 				  "weapon_angle_deg": -60.0,
-				  "right_hand":  Vector2(3, -24),
-				  "left_hand":   Vector2(9, -34),
-				  "weapon_tip":  Vector2(18, -50),
+				  "left_hand":   Vector2(-9, -24),
+				  "right_hand":  Vector2(-3, -33),
+				  "weapon_tip":  Vector2(6, -50),
 				},
 			],
 		},
@@ -147,21 +148,18 @@ const SPECS: Dictionary = {
 			"archetype": &"WALK_TWO_HANDED",
 			"duration": 0.6,
 			"keyframes": [
-				# Tip tolerance is wider here than at idle because the
-				# body bob shifts the tip ~1.5 units each cycle — that's
-				# the WALK signature, not a pose failure.
 				{ "t": 0.00, "phase": &"REST",
 				  "weapon_angle_deg": -60.0,
-				  "right_hand":  Vector2(3, -24),
-				  "left_hand":   Vector2(9, -34),
-				  "weapon_tip":  Vector2(19, -52),
+				  "left_hand":   Vector2(-9, -24),
+				  "right_hand":  Vector2(-3, -33),
+				  "weapon_tip":  Vector2(6, -50),
 				  "tolerance_px": 6.0,
 				},
 				{ "t": 0.30, "phase": &"REST",
 				  "weapon_angle_deg": -60.0,
-				  "right_hand":  Vector2(3, -24),
-				  "left_hand":   Vector2(9, -34),
-				  "weapon_tip":  Vector2(19, -52),
+				  "left_hand":   Vector2(-9, -24),
+				  "right_hand":  Vector2(-3, -33),
+				  "weapon_tip":  Vector2(6, -50),
 				  "tolerance_px": 6.0,
 				},
 			],
@@ -172,21 +170,19 @@ const SPECS: Dictionary = {
 			"keyframes": [
 				{ "t": 0.00, "phase": &"REST",
 				  "weapon_angle_deg": -60.0,
-				  "right_hand":  Vector2(3, -24),
-				  "weapon_tip":  Vector2(18, -50),
+				  "left_hand":   Vector2(-9, -24),
+				  "weapon_tip":  Vector2(6, -50),
 				},
 				{ "t": 0.30, "phase": &"WINDUP",
-				  # World staff angle -137.5° (overhead + back)
 				  "weapon_angle_deg": -137.5,
 				},
 				{ "t": 0.55, "phase": &"STRIKE",
-				  # World staff angle +20° (down-to-hip-front)
 				  "weapon_angle_deg": 20.0,
 				},
 				{ "t": 0.95, "phase": &"REST",
 				  "weapon_angle_deg": -60.0,
-				  "right_hand":  Vector2(3, -24),
-				  "weapon_tip":  Vector2(18, -50),
+				  "left_hand":   Vector2(-9, -24),
+				  "weapon_tip":  Vector2(6, -50),
 				},
 			],
 		},
@@ -196,14 +192,14 @@ const SPECS: Dictionary = {
 			"keyframes": [
 				{ "t": 0.00, "phase": &"REST",
 				  "weapon_angle_deg": -60.0,
-				  "weapon_tip":  Vector2(18, -50),
+				  "weapon_tip":  Vector2(6, -50),
 				},
 				{ "t": 0.30, "phase": &"HOLD",
 				  "weapon_angle_deg": -90.0,
 				},
 				{ "t": 0.85, "phase": &"REST",
 				  "weapon_angle_deg": -60.0,
-				  "weapon_tip":  Vector2(18, -50),
+				  "weapon_tip":  Vector2(6, -50),
 				},
 			],
 		},

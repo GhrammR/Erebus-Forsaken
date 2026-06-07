@@ -235,59 +235,72 @@ static func _cubic_track(a: Animation, path: NodePath) -> int:
 #     rotate (large angle); arms drive it but the visible arc comes
 #     from the StaffArm rotation track.
 
-# Staff is gripped at hip (right hand) and chest (left hand). The
-# right shoulder rotates slightly inward at rest so the shaft is
-# carried near body centerline — that's the only way the left hand
-# can geometrically reach a point on the shaft (arm length ~22; if
-# the staff stays at the body's right edge, the closest shaft point
-# is ~26 away — unreachable). With the shoulder rotated +0.30, the
-# shaft passes ~20 away from the left shoulder, within arm reach.
+# Stage 17.6 (post-swap) — LEFT arm is the ANCHOR (StaffArm is parented
+# under it; left hand grips the lower shaft at the hip). RIGHT arm is
+# the REACH (free hand, crosses the body to grip the upper shaft via
+# the LeftGrip cosmetic).
 #
-# World staff angle at rest is -60° (mostly vertical, slight forward
-# tilt). Because the staff inherits the right shoulder's rotation,
-# its LOCAL rotation = -60° - shoulder_rest = -1.047 - 0.30 = -1.347
-# rad so the rendered global angle still comes out to -60°.
-const ARM_R_SHOULDER_REST: float    = 0.30
-const STAFF_ANGLE_REST: float       = -1.347         # local; world = -60°
-# Left arm reach. Target landing point ≈ LeftGrip cosmetic on the
-# upper shaft at body-local ≈ (8.6, -34.4). Vector from left shoulder
-# (-9, -44) is (17.6, 9.6), distance ≈ 20 — fully extended arm just
-# reaches with a small margin. Shoulder rotation -1.07 points the
-# upper arm along that vector; elbow straight (0) leaves the forearm
-# in the same direction.
-const ARM_L_SHOULDER_REST: float    = -1.07
-const ARM_L_ELBOW_REST: float       =  0.0
+# Geometry at rest:
+#   Left shoulder (anchor) at body-local (-9, -44); rotation 0 →
+#     L hand polygon centroid at (-9, -24) ≈ left hip.
+#   StaffArm origin = L hand position; staff at world -60° (= local
+#     -1.047 since parent rotation = 0).
+#   LeftGrip cosmetic on staff at staff-local (+11, 0) lands at
+#     body-local ≈ (-3.5, -33.5) — chest height, slightly left of
+#     center.
+#   Right shoulder (reach) at (9, -44). Needs to reach (-3.5, -33.5)
+#     — distance 16.33, just inside arm chain length 20.5. 2-bone IK
+#     with elbow OUT (preferred natural pose): shoulder = +0.211,
+#     elbow = +1.291 → predicted R hand at ≈ (-3.56, -33.50). Off
+#     by ~0.06 px from the cosmetic — visually overlaps cleanly.
+#   Orb (staff-local +29.5, 0) lands at ≈ (5.75, -49.55) — chest
+#     height, slightly right of center / centerline.
 
-# Keys the two-handed rest pose at one timestamp. Used by every staff
-# animation to lock the start/end frame to the same anchor pose so the
-# AnimationPlayer can transition cleanly between states. Right
-# shoulder is keyed at ARM_R_SHOULDER_REST (not zero) — see comments
-# on that constant for why the staff is carried inward.
-static func _key_staff_rest(a: Animation, tsa: int, tls: int, tle: int,
-		t_ra: int, t: float) -> void:
-	a.track_insert_key(tsa, t, STAFF_ANGLE_REST)
-	a.track_insert_key(tls, t, ARM_L_SHOULDER_REST)
-	a.track_insert_key(tle, t, ARM_L_ELBOW_REST)
-	a.track_insert_key(t_ra, t, ARM_R_SHOULDER_REST)
+# Role-named so future swaps stay legible.
+const STAFF_ANCHOR_SHOULDER_REST: float = 0.0
+const STAFF_ANCHOR_ELBOW_REST: float    = 0.0
+const STAFF_REACH_SHOULDER_REST: float  = 0.211
+const STAFF_REACH_ELBOW_REST: float     = 1.291
+const STAFF_ANGLE_REST: float           = -1.047  # local; world = -60°
+
+# Node paths the staff animations drive. Anchor paths are the chain
+# that owns StaffArm (L arm post-swap); reach paths are the free arm
+# (R post-swap).
+const _PATH_ANCHOR_SHOULDER := ^"Body/ArmLShoulder:rotation"
+const _PATH_ANCHOR_ELBOW    := ^"Body/ArmLShoulder/ElbowPivot:rotation"
+const _PATH_REACH_SHOULDER  := ^"Body/ArmRShoulder:rotation"
+const _PATH_REACH_ELBOW     := ^"Body/ArmRShoulder/ElbowPivot:rotation"
+const _PATH_STAFF_ROT       := ^"Body/ArmLShoulder/ElbowPivot/StaffArm:rotation"
+const _PATH_STAFF_ORB_MOD   := ^"Body/ArmLShoulder/ElbowPivot/StaffArm/Orb:modulate"
+
+# Keys the two-handed rest pose at one timestamp. Drives BOTH arms
+# (anchor + reach) plus the staff local rotation so transitions
+# between animations stay continuous.
+static func _key_staff_rest(a: Animation, tsa: int, t_anchor_s: int,
+		t_anchor_e: int, t_reach_s: int, t_reach_e: int, t: float) -> void:
+	a.track_insert_key(tsa,         t, STAFF_ANGLE_REST)
+	a.track_insert_key(t_anchor_s,  t, STAFF_ANCHOR_SHOULDER_REST)
+	a.track_insert_key(t_anchor_e,  t, STAFF_ANCHOR_ELBOW_REST)
+	a.track_insert_key(t_reach_s,   t, STAFF_REACH_SHOULDER_REST)
+	a.track_insert_key(t_reach_e,   t, STAFF_REACH_ELBOW_REST)
 
 # ---- IDLE: two-handed grip held steady, faint breath bob ----
 func _build_staff_idle() -> Animation:
 	var a := Animation.new()
 	a.length = 2.0
 	a.loop_mode = Animation.LOOP_LINEAR
-	# Body breath
 	var tb := a.add_track(Animation.TYPE_VALUE)
 	a.track_set_path(tb, NodePath("Body:position"))
 	a.track_insert_key(tb, 0.0, Vector2.ZERO)
 	a.track_insert_key(tb, 1.0, Vector2(0, -1))
 	a.track_insert_key(tb, 2.0, Vector2.ZERO)
-	# Locked-pose tracks for the two-handed grip.
-	var tsa := _cubic_track(a, NodePath("Body/ArmRShoulder/ElbowPivot/StaffArm:rotation"))
-	var tls := _cubic_track(a, NodePath("Body/ArmLShoulder:rotation"))
-	var tle := _cubic_track(a, NodePath("Body/ArmLShoulder/ElbowPivot:rotation"))
-	var tra := _cubic_track(a, NodePath("Body/ArmRShoulder:rotation"))
-	_key_staff_rest(a, tsa, tls, tle, tra, 0.0)
-	_key_staff_rest(a, tsa, tls, tle, tra, 2.0)
+	var tsa := _cubic_track(a, _PATH_STAFF_ROT)
+	var t_as := _cubic_track(a, _PATH_ANCHOR_SHOULDER)
+	var t_ae := _cubic_track(a, _PATH_ANCHOR_ELBOW)
+	var t_rs := _cubic_track(a, _PATH_REACH_SHOULDER)
+	var t_re := _cubic_track(a, _PATH_REACH_ELBOW)
+	_key_staff_rest(a, tsa, t_as, t_ae, t_rs, t_re, 0.0)
+	_key_staff_rest(a, tsa, t_as, t_ae, t_rs, t_re, 2.0)
 	return a
 
 # ---- WALK: legs swing under a body bob, staff held two-handed ----
@@ -295,7 +308,6 @@ func _build_staff_walk() -> Animation:
 	var a := Animation.new()
 	a.length = 0.6
 	a.loop_mode = Animation.LOOP_LINEAR
-	# Body bob
 	var tb := a.add_track(Animation.TYPE_VALUE)
 	a.track_set_path(tb, NodePath("Body:position"))
 	a.track_insert_key(tb, 0.0, Vector2.ZERO)
@@ -303,7 +315,6 @@ func _build_staff_walk() -> Animation:
 	a.track_insert_key(tb, 0.3, Vector2.ZERO)
 	a.track_insert_key(tb, 0.45, Vector2(0, -1.5))
 	a.track_insert_key(tb, 0.6, Vector2.ZERO)
-	# Hip swings (mirror Pythia bare walk)
 	var tlh := _cubic_track(a, NodePath("Body/LegLHip:rotation"))
 	a.track_insert_key(tlh, 0.0, 0.0)
 	a.track_insert_key(tlh, 0.15, -0.18)
@@ -316,13 +327,13 @@ func _build_staff_walk() -> Animation:
 	a.track_insert_key(trh, 0.3, 0.0)
 	a.track_insert_key(trh, 0.45, -0.18)
 	a.track_insert_key(trh, 0.6, 0.0)
-	# Arms locked on the staff: pose holds across the loop.
-	var tsa := _cubic_track(a, NodePath("Body/ArmRShoulder/ElbowPivot/StaffArm:rotation"))
-	var tls := _cubic_track(a, NodePath("Body/ArmLShoulder:rotation"))
-	var tle := _cubic_track(a, NodePath("Body/ArmLShoulder/ElbowPivot:rotation"))
-	var tra := _cubic_track(a, NodePath("Body/ArmRShoulder:rotation"))
-	_key_staff_rest(a, tsa, tls, tle, tra, 0.0)
-	_key_staff_rest(a, tsa, tls, tle, tra, 0.6)
+	var tsa := _cubic_track(a, _PATH_STAFF_ROT)
+	var t_as := _cubic_track(a, _PATH_ANCHOR_SHOULDER)
+	var t_ae := _cubic_track(a, _PATH_ANCHOR_ELBOW)
+	var t_rs := _cubic_track(a, _PATH_REACH_SHOULDER)
+	var t_re := _cubic_track(a, _PATH_REACH_ELBOW)
+	_key_staff_rest(a, tsa, t_as, t_ae, t_rs, t_re, 0.0)
+	_key_staff_rest(a, tsa, t_as, t_ae, t_rs, t_re, 0.6)
 	return a
 
 # ---- ATTACK: overhead arc → ends at hip-front. No forward thrust. ----
@@ -338,53 +349,50 @@ func _build_staff_attack() -> Animation:
 	a.length = 0.95
 	a.loop_mode = Animation.LOOP_NONE
 
-	# Body holds steady — no hip thrust.
 	var tbr := _cubic_track(a, NodePath("Body:rotation"))
 	a.track_insert_key(tbr, 0.00, 0.0)
 	a.track_insert_key(tbr, 0.95, 0.0)
 
-	# Staff rotation — the defining track. World angle = parent + local.
-	# Parent (right shoulder) goes from REST → REST+0.30 windup →
-	# REST-0.40 strike → REST recovery. Staff local is computed so the
-	# global world angle hits the intended targets:
+	# ANCHOR (left shoulder): cocks back during windup, drives forward
+	# through the strike, returns to rest. Mirror of the original
+	# right-side anchor pattern.
+	var t_as := _cubic_track(a, _PATH_ANCHOR_SHOULDER)
+	a.track_insert_key(t_as, 0.00, STAFF_ANCHOR_SHOULDER_REST)
+	a.track_insert_key(t_as, 0.30, STAFF_ANCHOR_SHOULDER_REST - 0.30)
+	a.track_insert_key(t_as, 0.55, STAFF_ANCHOR_SHOULDER_REST + 0.40)
+	a.track_insert_key(t_as, 0.95, STAFF_ANCHOR_SHOULDER_REST)
+	# Anchor elbow stays straight throughout.
+	var t_ae := _cubic_track(a, _PATH_ANCHOR_ELBOW)
+	a.track_insert_key(t_ae, 0.00, STAFF_ANCHOR_ELBOW_REST)
+	a.track_insert_key(t_ae, 0.95, STAFF_ANCHOR_ELBOW_REST)
+
+	# Staff local rotation. World target = local + parent_anchor.
 	#   t=0.00 → world -60° (rest)
-	#   t=0.30 → world -137° (overhead + back) — local = -137° in rad
-	#            minus (REST+0.30) = -2.39 - 0.60 = -2.99 rad
-	#   t=0.55 → world +20° (down-to-hip-front) — local = 0.35 rad
-	#            minus (REST-0.40) = 0.35 - (-0.10) = +0.45 rad
-	# To keep this readable I author DIRECT world targets and add
-	# parent compensation here.
-	var tsa := _cubic_track(a, NodePath("Body/ArmRShoulder/ElbowPivot/StaffArm:rotation"))
+	#   t=0.30 → world -2.40 rad. Parent = -0.30. Local = -2.10.
+	#   t=0.55 → world +0.35 rad. Parent = +0.40. Local = -0.05.
+	#   t=0.95 → world -60° (rest)
+	var tsa := _cubic_track(a, _PATH_STAFF_ROT)
 	a.track_insert_key(tsa, 0.00, STAFF_ANGLE_REST)
-	a.track_insert_key(tsa, 0.30, -2.40 - 0.60)       # world -2.40 with parent +0.60
-	a.track_insert_key(tsa, 0.55,  0.35 + 0.10)       # world +0.35 with parent -0.10
+	a.track_insert_key(tsa, 0.30, -2.10)
+	a.track_insert_key(tsa, 0.55, -0.05)
 	a.track_insert_key(tsa, 0.95, STAFF_ANGLE_REST)
 
-	# Right shoulder: cocks back from REST during windup, eases through
-	# the strike, returns to REST.
-	var tra := _cubic_track(a, NodePath("Body/ArmRShoulder:rotation"))
-	a.track_insert_key(tra, 0.00, ARM_R_SHOULDER_REST)
-	a.track_insert_key(tra, 0.30, ARM_R_SHOULDER_REST + 0.30)
-	a.track_insert_key(tra, 0.55, ARM_R_SHOULDER_REST - 0.40)
-	a.track_insert_key(tra, 0.95, ARM_R_SHOULDER_REST)
-
-	# Right elbow: stays straight.
-	var tre := _cubic_track(a, NodePath("Body/ArmRShoulder/ElbowPivot:rotation"))
-	a.track_insert_key(tre, 0.00, 0.0)
-	a.track_insert_key(tre, 0.95, 0.0)
-
-	# Left arm follows the shaft up during windup and down through
-	# strike, returning to the two-handed grip rest values.
-	var tls := _cubic_track(a, NodePath("Body/ArmLShoulder:rotation"))
-	a.track_insert_key(tls, 0.00, ARM_L_SHOULDER_REST)
-	a.track_insert_key(tls, 0.30, -2.10)               # arm raised high
-	a.track_insert_key(tls, 0.55, -0.20)               # extends down with strike
-	a.track_insert_key(tls, 0.95, ARM_L_SHOULDER_REST)
-	var tle := _cubic_track(a, NodePath("Body/ArmLShoulder/ElbowPivot:rotation"))
-	a.track_insert_key(tle, 0.00, ARM_L_ELBOW_REST)
-	a.track_insert_key(tle, 0.30, -1.30)
-	a.track_insert_key(tle, 0.55, 0.40)
-	a.track_insert_key(tle, 0.95, ARM_L_ELBOW_REST)
+	# REACH (right shoulder + elbow): follows the staff up during
+	# windup, down through the strike. Mirror of the original left-side
+	# reach motion: shoulder raises high then drops through; elbow
+	# folds in and extends out. Magnitudes mirror-flipped because the
+	# right arm rotates the opposite direction to point the same way
+	# in body-local.
+	var t_rs := _cubic_track(a, _PATH_REACH_SHOULDER)
+	a.track_insert_key(t_rs, 0.00, STAFF_REACH_SHOULDER_REST)
+	a.track_insert_key(t_rs, 0.30, 2.10)
+	a.track_insert_key(t_rs, 0.55, 0.20)
+	a.track_insert_key(t_rs, 0.95, STAFF_REACH_SHOULDER_REST)
+	var t_re := _cubic_track(a, _PATH_REACH_ELBOW)
+	a.track_insert_key(t_re, 0.00, STAFF_REACH_ELBOW_REST)
+	a.track_insert_key(t_re, 0.30, 1.30)
+	a.track_insert_key(t_re, 0.55, -0.40)
+	a.track_insert_key(t_re, 0.95, STAFF_REACH_ELBOW_REST)
 	return a
 
 # ---- CAST: lift staff vertical, orb pulses, no strike ----
@@ -397,37 +405,41 @@ func _build_staff_cast() -> Animation:
 	a.length = 0.85
 	a.loop_mode = Animation.LOOP_NONE
 
-	# Cast: lift staff to vertical world-angle -90°, hold, return to
-	# rest. Right shoulder also lifts to raise the orb higher.
-	var tsa := _cubic_track(a, NodePath("Body/ArmRShoulder/ElbowPivot/StaffArm:rotation"))
+	# Anchor (left shoulder) lifts to raise the staff up; staff local
+	# is set so world ends at -90° (vertical) at the apex.
+	#   t=0.30 → world -90°, anchor lifted to -0.30 → local = -1.27
+	var t_as := _cubic_track(a, _PATH_ANCHOR_SHOULDER)
+	a.track_insert_key(t_as, 0.00, STAFF_ANCHOR_SHOULDER_REST)
+	a.track_insert_key(t_as, 0.30, STAFF_ANCHOR_SHOULDER_REST - 0.30)
+	a.track_insert_key(t_as, 0.55, STAFF_ANCHOR_SHOULDER_REST - 0.30)
+	a.track_insert_key(t_as, 0.85, STAFF_ANCHOR_SHOULDER_REST)
+	var t_ae := _cubic_track(a, _PATH_ANCHOR_ELBOW)
+	a.track_insert_key(t_ae, 0.00, STAFF_ANCHOR_ELBOW_REST)
+	a.track_insert_key(t_ae, 0.85, STAFF_ANCHOR_ELBOW_REST)
+
+	var tsa := _cubic_track(a, _PATH_STAFF_ROT)
 	a.track_insert_key(tsa, 0.00, STAFF_ANGLE_REST)
-	# Want world -90° with parent shoulder lifted by -0.30 → local =
-	# -PI/2 - (REST-0.30) = -1.57 - 0.0 = -1.57. Authoring as the
-	# world target minus parent.
-	a.track_insert_key(tsa, 0.30, -PI / 2.0 - (ARM_R_SHOULDER_REST - 0.30))
-	a.track_insert_key(tsa, 0.55, -PI / 2.0 - (ARM_R_SHOULDER_REST - 0.30))
+	a.track_insert_key(tsa, 0.30, -PI / 2.0 - (-0.30))   # world -PI/2, parent -0.30
+	a.track_insert_key(tsa, 0.55, -PI / 2.0 - (-0.30))
 	a.track_insert_key(tsa, 0.85, STAFF_ANGLE_REST)
 
-	var tra := _cubic_track(a, NodePath("Body/ArmRShoulder:rotation"))
-	a.track_insert_key(tra, 0.00, ARM_R_SHOULDER_REST)
-	a.track_insert_key(tra, 0.30, ARM_R_SHOULDER_REST - 0.30)
-	a.track_insert_key(tra, 0.55, ARM_R_SHOULDER_REST - 0.30)
-	a.track_insert_key(tra, 0.85, ARM_R_SHOULDER_REST)
-
-	var tls := _cubic_track(a, NodePath("Body/ArmLShoulder:rotation"))
-	a.track_insert_key(tls, 0.00, ARM_L_SHOULDER_REST)
-	a.track_insert_key(tls, 0.30, -0.10)              # left arm sweeps out as invocation
-	a.track_insert_key(tls, 0.55, -0.10)
-	a.track_insert_key(tls, 0.85, ARM_L_SHOULDER_REST)
-	var tle := _cubic_track(a, NodePath("Body/ArmLShoulder/ElbowPivot:rotation"))
-	a.track_insert_key(tle, 0.00, ARM_L_ELBOW_REST)
-	a.track_insert_key(tle, 0.30, -0.10)
-	a.track_insert_key(tle, 0.55, -0.10)
-	a.track_insert_key(tle, 0.85, ARM_L_ELBOW_REST)
+	# Reach (right) sweeps out as the invocation gesture. Open arm:
+	# shoulder rotates outward (-1.20 → upper arm points right-and-out),
+	# elbow extends straight (0).
+	var t_rs := _cubic_track(a, _PATH_REACH_SHOULDER)
+	a.track_insert_key(t_rs, 0.00, STAFF_REACH_SHOULDER_REST)
+	a.track_insert_key(t_rs, 0.30, -1.20)
+	a.track_insert_key(t_rs, 0.55, -1.20)
+	a.track_insert_key(t_rs, 0.85, STAFF_REACH_SHOULDER_REST)
+	var t_re := _cubic_track(a, _PATH_REACH_ELBOW)
+	a.track_insert_key(t_re, 0.00, STAFF_REACH_ELBOW_REST)
+	a.track_insert_key(t_re, 0.30, 0.10)
+	a.track_insert_key(t_re, 0.55, 0.10)
+	a.track_insert_key(t_re, 0.85, STAFF_REACH_ELBOW_REST)
 
 	# Orb pulse.
 	var torb := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(torb, NodePath("Body/ArmRShoulder/ElbowPivot/StaffArm/Orb:modulate"))
+	a.track_set_path(torb, _PATH_STAFF_ORB_MOD)
 	a.track_insert_key(torb, 0.00, Color(1, 1, 1, 1))
 	a.track_insert_key(torb, 0.30, Color(2.4, 1.8, 0.7, 1))
 	a.track_insert_key(torb, 0.55, Color(2.4, 1.8, 0.7, 1))

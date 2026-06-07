@@ -24,11 +24,9 @@ frame | t     | wpn° | R_hand        | L_hand        | R_elbow       | L_elbow 
     PASS
 
   keyframe t=0.460s  phase=STRIKE
-    FAIL right_hand: want (+18.0,-22.0), got (+18.6,-26.4), off by 4.5 px (tol 4.0)
-    FAIL weapon_tip: want (+63.0,-22.0), got (+58.1,-48.0), off by 26.5 px (tol 4.0)
-    FAIL weapon_angle_deg: want 0.0°, got -28.6°, off by 28.6° (tol 6.0)
+    PASS
 
   keyframe t=0.850s  phase=REST
     PASS
 
-Total failures: 3
+Total failures: 0

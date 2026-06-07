@@ -39,6 +39,13 @@ position = Vector2(0, 10)
 [node name="Mantle" type="Polygon2D" parent="Body"]
 
 ; --- LEFT ARM: shoulder + elbow pivots ---
+; --- LEFT ARM: shoulder + elbow pivots. Stage 17.6 swap — StaffArm
+;     rides under the LEFT hand (anchor at hip-left); the right arm
+;     reaches across the body to grip the upper shaft. Shaft is
+;     HORIZONTAL in staff-local space (gripped at middle, mid-grip
+;     pattern): butt extends -x behind the left hand, orb extends +x
+;     forward. Forward-pointing extension means the staff angles up
+;     and forward toward upper-right of the body silhouette.
 [node name="ArmLShoulder" type="Node2D" parent="Body"]
 position = Vector2(-9, -44)
 [node name="UpperArm" type="Polygon2D" parent="Body/ArmLShoulder"]
@@ -46,12 +53,22 @@ position = Vector2(-9, -44)
 position = Vector2(0, 10)
 [node name="Forearm" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
 [node name="Hand"    type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
+[node name="StaffArm" type="Node2D"   parent="Body/ArmLShoulder/ElbowPivot"]
+position = Vector2(0, 10)
+[node name="Shaft" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot/StaffArm"]
+[node name="Grip"  type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot/StaffArm"]
+; Cosmetic skin-colored "off-hand" (now the RIGHT hand) wrapped
+; around the upper shaft. Parented to the staff so it rotates with
+; it; guarantees the two-handed grip reads visually regardless of
+; where the right arm polygon actually ends up. The real right arm
+; just needs to point toward this marker — game zoom does the rest.
+; Name kept as "LeftGrip" to avoid breaking downstream references;
+; semantically it's "upper-grip cosmetic."
+[node name="LeftGrip" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot/StaffArm"]
+[node name="Orb"   type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot/StaffArm"]
 
-; --- RIGHT ARM: shoulder + elbow pivots. StaffArm rides under the
-;     hand so the hand actually GRIPS the staff. Shaft is HORIZONTAL,
-;     gripped at middle (Pattern 1 — mid-grip): butt extends -x, orb
-;     extends +x. Forward jab is driven by ArmRShoulder rotation
-;     (Pattern 2), staff rotation stays at 0.
+; --- RIGHT ARM: shoulder + elbow pivots. Free hand — reaches across
+;     to grip the upper shaft.
 [node name="ArmRShoulder" type="Node2D" parent="Body"]
 position = Vector2(9, -44)
 [node name="UpperArm" type="Polygon2D" parent="Body/ArmRShoulder"]
@@ -59,17 +76,6 @@ position = Vector2(9, -44)
 position = Vector2(0, 10)
 [node name="Forearm" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot"]
 [node name="Hand"    type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot"]
-[node name="StaffArm" type="Node2D"   parent="Body/ArmRShoulder/ElbowPivot"]
-position = Vector2(0, 10)
-[node name="Shaft" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/StaffArm"]
-[node name="Grip"  type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/StaffArm"]
-; Cosmetic skin-colored "left hand" wrapped around the upper shaft.
-; Parented to the staff so it rotates with it; guarantees the
-; two-handed grip reads visually regardless of where the left arm
-; polygon actually ends up. The real left arm just needs to point
-; toward this marker — game zoom does the rest.
-[node name="LeftGrip" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/StaffArm"]
-[node name="Orb"   type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/StaffArm"]
 
 ; --- Head/face LAST so hood + face stay readable over arms ---
 [node name="Neck"  type="Polygon2D" parent="Body"]

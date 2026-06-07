@@ -39,11 +39,11 @@ const SHADOW: Color         = Color(0.0, 0.0, 0.05, 0.45)
 @onready var _robe: Polygon2D = $Body/Robe
 @onready var _mantle: Polygon2D = $Body/Mantle
 @onready var _hood: Polygon2D = $Body/Hood
-@onready var _staff_arm: Node2D = $Body/ArmRShoulder/ElbowPivot/StaffArm
-@onready var _sa_shaft: Polygon2D = $Body/ArmRShoulder/ElbowPivot/StaffArm/Shaft
-@onready var _sa_grip: Polygon2D = $Body/ArmRShoulder/ElbowPivot/StaffArm/Grip
-@onready var _sa_left_grip: Polygon2D = $Body/ArmRShoulder/ElbowPivot/StaffArm/LeftGrip
-@onready var _sa_orb: Polygon2D = $Body/ArmRShoulder/ElbowPivot/StaffArm/Orb
+@onready var _staff_arm: Node2D = $Body/ArmLShoulder/ElbowPivot/StaffArm
+@onready var _sa_shaft: Polygon2D = $Body/ArmLShoulder/ElbowPivot/StaffArm/Shaft
+@onready var _sa_grip: Polygon2D = $Body/ArmLShoulder/ElbowPivot/StaffArm/Grip
+@onready var _sa_left_grip: Polygon2D = $Body/ArmLShoulder/ElbowPivot/StaffArm/LeftGrip
+@onready var _sa_orb: Polygon2D = $Body/ArmLShoulder/ElbowPivot/StaffArm/Orb
 @onready var _anim: AnimationPlayer = $AnimationPlayer
 
 func _ready() -> void:
@@ -176,7 +176,7 @@ const _RESET_PATHS: Array = [
 	NodePath("Body/ArmLShoulder/ElbowPivot:rotation"),
 	NodePath("Body/ArmRShoulder:rotation"),
 	NodePath("Body/ArmRShoulder/ElbowPivot:rotation"),
-	NodePath("Body/ArmRShoulder/ElbowPivot/StaffArm:rotation"),
+	NodePath("Body/ArmLShoulder/ElbowPivot/StaffArm:rotation"),
 ]
 
 func _anim_idle() -> Animation:
@@ -245,7 +245,7 @@ func _anim_attack_placeholder() -> Animation:
 	a.track_insert_key(tra, 0.20, -0.9)
 	a.track_insert_key(tra, 0.35, 0.0)
 	var tsa := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tsa, NodePath("Body/ArmRShoulder/ElbowPivot/StaffArm:rotation"))
+	a.track_set_path(tsa, NodePath("Body/ArmLShoulder/ElbowPivot/StaffArm:rotation"))
 	a.track_insert_key(tsa, 0.00, 0.0)
 	a.track_insert_key(tsa, 0.35, 0.0)
 	return a
@@ -257,7 +257,7 @@ func _anim_cast() -> Animation:
 	a.length = 0.5
 	a.loop_mode = Animation.LOOP_NONE
 	var to := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(to, NodePath("Body/ArmRShoulder/ElbowPivot/StaffArm/Orb:modulate"))
+	a.track_set_path(to, NodePath("Body/ArmLShoulder/ElbowPivot/StaffArm/Orb:modulate"))
 	a.track_insert_key(to, 0.0, Color(1, 1, 1, 1))
 	a.track_insert_key(to, 0.2, Color(2.0, 1.6, 0.7, 1))
 	a.track_insert_key(to, 0.5, Color(1, 1, 1, 1))
