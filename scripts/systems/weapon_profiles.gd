@@ -259,9 +259,13 @@ static func _cubic_track(a: Animation, path: NodePath) -> int:
 # Role-named so future swaps stay legible.
 const STAFF_ANCHOR_SHOULDER_REST: float = 0.0
 const STAFF_ANCHOR_ELBOW_REST: float    = 0.0
-const STAFF_REACH_SHOULDER_REST: float  = 0.211
-const STAFF_REACH_ELBOW_REST: float     = 1.291
-const STAFF_ANGLE_REST: float           = -1.047  # local; world = -60°
+# R reach rest values are overridden by runtime IK every frame; these
+# are just initial fallbacks so the pose looks reasonable before the
+# first IK pass and so the cast animation (IK-exempt) has a sensible
+# starting point. The numeric values aren't load-bearing.
+const STAFF_REACH_SHOULDER_REST: float  = 0.7
+const STAFF_REACH_ELBOW_REST: float     = 0.8
+const STAFF_ANGLE_REST: float           = -1.484  # local; world = -85° (near-vertical)
 
 # Node paths the staff animations drive. Anchor paths are the chain
 # that owns StaffArm (L arm post-swap); reach paths are the free arm
@@ -345,54 +349,44 @@ func _build_staff_walk() -> Animation:
 #   horizontal). Both arms drive the swing.
 # Recovery (0.55 → 0.95): pose eases back to the two-handed rest.
 func _build_staff_attack() -> Animation:
+	# BOP. Simple downward swing — no windup, no body lean.
+	#   Rest: staff vertical (world -85°), orb high above the head.
+	#   Strike: orb swings down-and-forward to upper-body / face
+	#     height (world -5°, slightly above horizontal). Quick bop.
+	#   Recovery: back to rest.
+	# The runtime IK in pythia_sprite.gd keeps the right hand pinned
+	# to the LeftGrip cosmetic throughout. R arm tracks below are
+	# placeholder values (overridden by IK every frame) so the
+	# AnimationPlayer still has tracks to interpolate.
 	var a := Animation.new()
-	a.length = 0.95
+	a.length = 0.55
 	a.loop_mode = Animation.LOOP_NONE
 
 	var tbr := _cubic_track(a, NodePath("Body:rotation"))
 	a.track_insert_key(tbr, 0.00, 0.0)
-	a.track_insert_key(tbr, 0.95, 0.0)
+	a.track_insert_key(tbr, 0.55, 0.0)
 
-	# ANCHOR (left shoulder): cocks back during windup, drives forward
-	# through the strike, returns to rest. Mirror of the original
-	# right-side anchor pattern.
+	# Anchor stays at rest — no body drive.
 	var t_as := _cubic_track(a, _PATH_ANCHOR_SHOULDER)
 	a.track_insert_key(t_as, 0.00, STAFF_ANCHOR_SHOULDER_REST)
-	a.track_insert_key(t_as, 0.30, STAFF_ANCHOR_SHOULDER_REST - 0.30)
-	a.track_insert_key(t_as, 0.55, STAFF_ANCHOR_SHOULDER_REST + 0.40)
-	a.track_insert_key(t_as, 0.95, STAFF_ANCHOR_SHOULDER_REST)
-	# Anchor elbow stays straight throughout.
+	a.track_insert_key(t_as, 0.55, STAFF_ANCHOR_SHOULDER_REST)
 	var t_ae := _cubic_track(a, _PATH_ANCHOR_ELBOW)
 	a.track_insert_key(t_ae, 0.00, STAFF_ANCHOR_ELBOW_REST)
-	a.track_insert_key(t_ae, 0.95, STAFF_ANCHOR_ELBOW_REST)
+	a.track_insert_key(t_ae, 0.55, STAFF_ANCHOR_ELBOW_REST)
 
-	# Staff local rotation. World target = local + parent_anchor.
-	#   t=0.00 → world -60° (rest)
-	#   t=0.30 → world -2.40 rad. Parent = -0.30. Local = -2.10.
-	#   t=0.55 → world +0.35 rad. Parent = +0.40. Local = -0.05.
-	#   t=0.95 → world -60° (rest)
+	# Staff: world -85° → world -5° → world -85°.
 	var tsa := _cubic_track(a, _PATH_STAFF_ROT)
 	a.track_insert_key(tsa, 0.00, STAFF_ANGLE_REST)
-	a.track_insert_key(tsa, 0.30, -2.10)
-	a.track_insert_key(tsa, 0.55, -0.05)
-	a.track_insert_key(tsa, 0.95, STAFF_ANGLE_REST)
+	a.track_insert_key(tsa, 0.25, -0.087)             # world -5° = -0.087 rad
+	a.track_insert_key(tsa, 0.55, STAFF_ANGLE_REST)
 
-	# REACH (right shoulder + elbow): follows the staff up during
-	# windup, down through the strike. Mirror of the original left-side
-	# reach motion: shoulder raises high then drops through; elbow
-	# folds in and extends out. Magnitudes mirror-flipped because the
-	# right arm rotates the opposite direction to point the same way
-	# in body-local.
+	# R arm placeholder tracks; IK overrides every frame.
 	var t_rs := _cubic_track(a, _PATH_REACH_SHOULDER)
 	a.track_insert_key(t_rs, 0.00, STAFF_REACH_SHOULDER_REST)
-	a.track_insert_key(t_rs, 0.30, 2.10)
-	a.track_insert_key(t_rs, 0.55, 0.20)
-	a.track_insert_key(t_rs, 0.95, STAFF_REACH_SHOULDER_REST)
+	a.track_insert_key(t_rs, 0.55, STAFF_REACH_SHOULDER_REST)
 	var t_re := _cubic_track(a, _PATH_REACH_ELBOW)
 	a.track_insert_key(t_re, 0.00, STAFF_REACH_ELBOW_REST)
-	a.track_insert_key(t_re, 0.30, 1.30)
-	a.track_insert_key(t_re, 0.55, -0.40)
-	a.track_insert_key(t_re, 0.95, STAFF_REACH_ELBOW_REST)
+	a.track_insert_key(t_re, 0.55, STAFF_REACH_ELBOW_REST)
 	return a
 
 # ---- CAST: lift staff vertical, orb pulses, no strike ----
