@@ -99,6 +99,7 @@ var _vp: SubViewport
 var _vp_container: SubViewportContainer
 var _drag_node: Node2D = null
 var _drag_last_mouse: Vector2 = Vector2.ZERO
+var _drag_last_mouse_prev: Vector2 = Vector2.ZERO
 var _sprite: Node2D
 var _anim: AnimationPlayer
 var _inv: Inventory
@@ -585,20 +586,35 @@ func _on_viewport_input(event: InputEvent) -> void:
 		if mb.pressed:
 			_drag_node = _find_draggable_under(mb.position)
 			_drag_last_mouse = mb.position
+			_drag_last_mouse_prev = mb.position
 		else:
 			_drag_node = null
 	elif event is InputEventMouseMotion and _drag_node != null:
 		var mm: InputEventMouseMotion = event
-		var delta_screen: Vector2 = mm.position - _drag_last_mouse
 		_drag_last_mouse = mm.position
-		# Convert screen delta → parent-local delta. SubViewport is at
-		# 1:1 with container, so screen delta divided by sprite scale
-		# gives sprite-local delta. We're modifying position in PARENT
-		# local space — if BowArm rotation = 0 and Body rotation = 0,
-		# parent-local == sprite-local. Rotation handling deferred.
-		var local_delta: Vector2 = delta_screen / SPRITE_SCALE
-		_drag_node.position += local_delta
-		_sync_sliders_for(_drag_node)
+		var drag_node_name: String = String(_drag_node.name)
+		if drag_node_name.ends_with("ElbowPivot") or drag_node_name.ends_with("KneePivot"):
+			# Dragging a joint pivot rotates the PARENT so the joint
+			# lands at the cursor. Math:
+			#   parent_pos = parent.global_position (viewport coords)
+			#   cursor_dir = (mouse - parent_pos) / SPRITE_SCALE  (sprite-local)
+			#   angle = atan2(-cursor_dir.x, cursor_dir.y)
+			# (Godot convention: rotation 0 points along +y in
+			# parent-local; angle is measured from that axis.)
+			var parent_node: Node2D = _drag_node.get_parent() as Node2D
+			if parent_node == null:
+				return
+			var to_cursor: Vector2 = (mm.position - parent_node.global_position) / SPRITE_SCALE
+			if to_cursor.length() > 0.01:
+				parent_node.rotation = atan2(-to_cursor.x, to_cursor.y)
+				_sync_sliders_for(parent_node)
+		else:
+			# Marker / *Arm — translate in parent-local space.
+			var delta_screen: Vector2 = mm.position - _drag_last_mouse_prev
+			var local_delta: Vector2 = delta_screen / SPRITE_SCALE
+			_drag_node.position += local_delta
+			_sync_sliders_for(_drag_node)
+		_drag_last_mouse_prev = mm.position
 		# Force a one-shot IK pass so arms visibly follow the dragged
 		# marker even when ik_enabled is false. Otherwise dragging a
 		# RiserMarker / NockMarker looks like nothing happens.
@@ -626,7 +642,14 @@ func _find_draggable_under(mouse_pos: Vector2) -> Node2D:
 			best = n
 	return best
 
-# Walk the sprite tree collecting Markers + *Arm Node2Ds.
+# Walk the sprite tree collecting Markers + *Arm Node2Ds + joint
+# pivots (ElbowPivot, KneePivot). Drag behavior diverges:
+#   - Marker2D / *Arm: drag updates the node's .position directly
+#     (parent-local translation).
+#   - ElbowPivot / KneePivot: drag updates the PARENT's .rotation so
+#     the joint visually lands at the cursor. The pivot itself has a
+#     fixed position relative to its parent (e.g. (0, 10)) so direct
+#     translation would tear the chain apart.
 func _enumerate_draggables(root: Node) -> Array:
 	var out: Array = []
 	for child in root.get_children():
@@ -636,6 +659,8 @@ func _enumerate_draggables(root: Node) -> Array:
 			var n: String = String(child.name)
 			if n.ends_with("BowArm") or n.ends_with("StaffArm") or n.ends_with("SpearArm"):
 				out.append(child)
+			elif n.ends_with("ElbowPivot") or n.ends_with("KneePivot"):
+				out.append(child)
 		out.append_array(_enumerate_draggables(child))
 	return out
 
@@ -644,17 +669,18 @@ func _enumerate_draggables(root: Node) -> Array:
 func _sync_sliders_for(n: Node2D) -> void:
 	var target_path: String = _path_for(n)
 	for entry in _slider_entries:
-		if entry["kind"] == "pos" and entry["path"] == target_path:
-			var controls: Array = entry["controls"]
-			# controls[0] is the X HSlider; we don't have the SpinBox
-			# refs here so this only updates the slider — SpinBox
-			# refresh would require expanding the entry schema. For
-			# now slider sync is enough to indicate the value changed.
+		if entry["path"] != target_path:
+			continue
+		var controls: Array = entry["controls"]
+		if entry["kind"] == "pos":
 			if controls.size() >= 1:
 				controls[0].set_value_no_signal(n.position.x)
 			if controls.size() >= 2:
 				controls[1].set_value_no_signal(n.position.y)
-			return
+		elif entry["kind"] == "rot":
+			if controls.size() >= 1:
+				controls[0].set_value_no_signal(rad_to_deg(n.rotation))
+		return
 
 func _path_for(n: Node) -> String:
 	# Build the same '/'-joined path used when sliders were created.
@@ -891,19 +917,15 @@ func _find_weapon_arm(root: Node) -> Node2D:
 			return nested
 	return null
 
-# Phase classification — three save slots: BEGIN, MIDDLE, END. For
-# the attack animation, MIDDLE is the strike apex (40-60% time). For
-# idle/walk we treat the whole timeline as BEGIN since no motion to
-# split. BEGIN/MIDDLE/END also returned as legacy aliases REST/STRIKE
-# for backward compat with existing saved data.
+# Phase classification — three save slots BEGIN/MIDDLE/END, banded
+# by scrub-time fraction. Applies to EVERY animation (idle/walk
+# included) so the user can tune start/middle/end poses across the
+# whole catalog, not just attack.
 func _current_phase() -> StringName:
 	if _anim == null:
 		return &"BEGIN"
 	var length: float = _anim.current_animation_length
 	if length <= 0.01:
-		return &"BEGIN"
-	var anim_name: StringName = _anim.current_animation
-	if anim_name != &"attack":
 		return &"BEGIN"
 	var f: float = _scrub_time / length
 	if f < 0.20:    return &"BEGIN"
