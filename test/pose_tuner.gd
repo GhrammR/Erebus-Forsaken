@@ -85,6 +85,7 @@ var _class_idx: int = 0
 var _variant_idx: int = 0
 var _stance_ids: Array = []   # candidate stance ids for current class
 var _stance_idx: int = 0
+var _ik_disabled: bool = false   # toggled by the "Disable IK" checkbox
 var _vp: SubViewport
 var _sprite: Node2D
 var _anim: AnimationPlayer
@@ -142,6 +143,13 @@ func _build_ui() -> void:
 	play.pressed.connect(_on_play_toggle); btn_row.add_child(play)
 	var reset := Button.new(); reset.text = "Reset (R)"
 	reset.pressed.connect(_on_reset_pressed); btn_row.add_child(reset)
+	# Stage 17.8 — Disable IK so shoulder/elbow rotation sliders can
+	# actually move arms. With IK on, the runtime pin pass overwrites
+	# any manual rotation every frame.
+	var ik_box := CheckBox.new()
+	ik_box.text = "Disable IK (manual arm tuning)"
+	ik_box.toggled.connect(_on_ik_toggled)
+	side.add_child(ik_box)
 	var hint := Label.new()
 	hint.text = "F1 class  ·  F2 variant  ·  F3 stance  ·  1-5 score  ·  Space play/pause  ·  D dump  ·  R reset"
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -217,6 +225,9 @@ func _load_current() -> void:
 	# picks it up. The sprite exposes stance_id as @export var.
 	if _stance_ids.size() > 0 and &"stance_id" in _sprite:
 		_sprite.stance_id = _stance_ids[_stance_idx]
+	# Preserve the IK-disabled toggle across reloads.
+	if &"ik_enabled" in _sprite:
+		_sprite.ik_enabled = not _ik_disabled
 	_sprite.position = FEET_POS
 	_sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
 	_vp.add_child(_sprite)
@@ -413,6 +424,17 @@ func _dump_centroid(lines: Array[String], body: Node2D,
 
 func _on_reset_pressed() -> void:
 	_load_current()
+
+func _on_ik_toggled(pressed: bool) -> void:
+	_ik_disabled = pressed
+	# Apply immediately to the currently-loaded sprite. Pause the
+	# animation so the user's slider edits don't get blown away by the
+	# next animation frame either.
+	if _sprite != null and &"ik_enabled" in _sprite:
+		_sprite.ik_enabled = not pressed
+	if pressed and _anim != null:
+		_anim.pause()
+		_paused = true
 
 # Stage 17.8 — score the CURRENT (stance, variant_anim, phase) on a
 # 1-5 scale. Writes/merges into tmp/stance_scores.json so future agent

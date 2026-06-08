@@ -46,6 +46,9 @@ const SHADOW: Color         = Color(0.0, 0.0, 0.05, 0.45)
 @onready var _sa_orb: Polygon2D = $Body/ArmRShoulder/ElbowPivot/StaffArm/Orb
 @onready var _anim: AnimationPlayer = $AnimationPlayer
 
+# Stage 17.8 — pose_tuner sets this false for manual arm tuning.
+@export var ik_enabled: bool = true
+
 # Stage 17.7 — marker-based IK pin table. HumanRig.apply_pins reads this
 # every frame and rotates the L arm so its hand lands on LeftGripMarker.
 # `skip_anims` excludes the cast pose (L arm intentionally extends out).
@@ -92,6 +95,8 @@ func _ready() -> void:
 
 func _apply_pins() -> void:
 	if _staff_arm == null or not _staff_arm.visible:
+		return
+	if not ik_enabled:
 		return
 	HumanRig.apply_pins(self, _body, PIN_TABLE, _anim.current_animation)
 

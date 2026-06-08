@@ -9,6 +9,12 @@ const AnatomyValidator = preload("res://scripts/systems/anatomy_validator.gd")
 # (pose_tuner sets this via set_meta(&"stance_id", ...) before _ready
 # of a freshly-instanced sprite).
 @export var stance_id: StringName = &"forward_high_ready"
+
+# Stage 17.8 — when false, runtime IK pin pass is skipped so the user
+# can manually rotate shoulders/elbows via pose_tuner sliders without
+# having the IK stomp them every frame. Production sprites leave this
+# true; pose_tuner flips it for manual tuning.
+@export var ik_enabled: bool = true
 ##
 ## Default-facing: RIGHT. Player flips $SpriteAnchor.scale.x to face left.
 ##
@@ -174,7 +180,8 @@ func _apply_recommended_overrides() -> void:
 # ---- Runtime IK + bowstring ---------------------------------------------
 
 func _apply_pins_and_string() -> void:
-	HumanRig.apply_pins(self, _body, PIN_TABLE, _anim.current_animation)
+	if ik_enabled:
+		HumanRig.apply_pins(self, _body, PIN_TABLE, _anim.current_animation)
 	# Rebuild the bowstring as [top tip → nock → bottom tip] in bow-local
 	# coords. Line2D inherits the parent's transform so we keep things
 	# in bow-local space for simplicity.
@@ -237,18 +244,6 @@ func _paint_bow() -> void:
 		pts.append(inner[i])
 	_bow.color = BOW_WOOD
 	_bow.polygon = pts
-	# Grip wrap — a darker rectangle at the riser so the L hand has a
-	# visual "thing to hold."
-	var grip := Polygon2D.new()
-	grip.name = "Grip"
-	grip.color = BOW_WOOD_DARK
-	grip.polygon = PackedVector2Array([
-		Vector2(-1.2, -BOW_GRIP_HALF),
-		Vector2( 1.6, -BOW_GRIP_HALF),
-		Vector2( 1.6,  BOW_GRIP_HALF),
-		Vector2(-1.2,  BOW_GRIP_HALF),
-	])
-	_bow.add_child(grip)
 	# Bowstring initial points so the first rendered frame isn't empty.
 	_bowstring.points = PackedVector2Array([
 		_bow_tip_top.position,

@@ -32,6 +32,13 @@ const MIN_PIN_DIST: float = 3.0      # below this the hand reads as elbow
 const REACH_SLACK: float  = 0.5      # allow ~half-pixel float error
 const SCAN_STEPS: int      = 16      # keyframe-time samples per anim
 
+# Anims to skip during validation. die/hit mutate Body:rotation +
+# modulate only; they don't affect pin geometry and leaving the
+# playhead inside them at end-of-scan poisons the sprite's pose for
+# the actual render pass (sprite stays rotated PI/2 + faded). Skip
+# them entirely.
+const SKIP_ANIMS: PackedStringArray = ["die", "hit"]
+
 ## Test-environment detector. sprite_render sets a feature flag at
 ## boot; everything else stays in soft mode.
 static func is_strict_env() -> bool:
@@ -56,6 +63,8 @@ static func validate_sprite(sprite_root: Node2D, body: Node2D,
 	var prior_anim: StringName = anim_player.current_animation
 	var prior_pos: float = anim_player.current_animation_position
 	for anim_name in anim_player.get_animation_list():
+		if SKIP_ANIMS.has(String(anim_name)):
+			continue
 		var anim: Animation = anim_player.get_animation(anim_name)
 		if anim == null:
 			continue
@@ -103,11 +112,18 @@ static func validate_sprite(sprite_root: Node2D, body: Node2D,
 					clean = _emit(strict,
 						"COLLAPSE: anim=%s t=%.2f pin=%s dist=%.2f < %.2f — hand reads as elbow" % [
 							anim_name, t, pin.target, dist, MIN_PIN_DIST]) and clean
-	# Restore prior playhead so the validator doesn't disturb the
-	# in-progress animation.
+	# Restore prior playhead. As a safety belt, also snap Body to a
+	# neutral resting transform — a corrupted residual from scanning
+	# a future-added die-style anim could otherwise poison the frame
+	# loop that comes next.
 	if prior_anim != &"":
 		anim_player.play(prior_anim)
 		anim_player.seek(prior_pos, true)
+	if body != null:
+		body.rotation = 0.0
+		body.modulate = Color(1, 1, 1, 1)
+	sprite_root.rotation = 0.0
+	sprite_root.modulate = Color(1, 1, 1, 1)
 	return clean
 
 ## Emit a violation at the configured severity. Returns false when
