@@ -46,6 +46,15 @@ const SHADOW: Color         = Color(0.0, 0.0, 0.05, 0.45)
 @onready var _sa_tip: Polygon2D = $Body/ArmRShoulder/ElbowPivot/SpearArm/Tip
 @onready var _anim: AnimationPlayer = $AnimationPlayer
 
+const SpriteOverrides = preload("res://scripts/systems/sprite_overrides.gd")
+
+# Stage 17.8 — per-anim tuned rotations (rest/strike) loaded from
+# tmp/recommended_stances.json. Stance id is hardcoded until spear-
+# stance selection moves into a real @export var.
+var _stance_id: StringName = &"hip_spear_shield_legacy"
+var _per_anim_config: Dictionary = {}
+var _tuned_anims: Dictionary = {}
+
 func _ready() -> void:
 	_shadow.color = SHADOW
 	_shadow.polygon = HumanRig.shadow_poly()
@@ -62,7 +71,24 @@ func _ready() -> void:
 	_paint_spear()
 	_build_animations()
 	SpriteSidecar.apply(self, &"myrmidon")
+	# Stage 17.8 — wire tuned-rotation overrides for tuned anims.
+	_per_anim_config = SpriteOverrides.load_for_class(&"myrmidon", _stance_id)
+	for anim_name in _per_anim_config:
+		if SpriteOverrides.is_tuned(_per_anim_config[anim_name]):
+			_tuned_anims[anim_name] = true
+	_anim.animation_started.connect(_on_anim_started)
 	_anim.play(&"idle")
+
+# Inject tuned rotation tracks whenever an anim starts (catches both
+# the initial play and WeaponProfiles-installed spear anims).
+func _on_anim_started(anim_name: StringName) -> void:
+	var cfg: Dictionary = _per_anim_config.get(String(anim_name), {})
+	if not SpriteOverrides.is_tuned(cfg):
+		return
+	var lib: AnimationLibrary = _anim.get_animation_library(&"")
+	if lib == null or not lib.has_animation(anim_name):
+		return
+	SpriteOverrides.inject_tuned_rotations(lib.get_animation(anim_name), cfg)
 
 func _paint_face() -> void:
 	# Custom Myrmidon face (overrides HumanRig defaults). Veteran

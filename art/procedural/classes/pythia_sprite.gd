@@ -49,6 +49,15 @@ const SHADOW: Color         = Color(0.0, 0.0, 0.05, 0.45)
 # Stage 17.8 — pose_tuner sets this false for manual arm tuning.
 @export var ik_enabled: bool = true
 
+const SpriteOverrides = preload("res://scripts/systems/sprite_overrides.gd")
+
+# Per-anim configs loaded from tmp/recommended_stances.json.
+# Stance id for Pythia: hard-coded "diagonal_back_legacy" until staff
+# stance selection moves into a real @export var.
+var _stance_id: StringName = &"diagonal_back_legacy"
+var _per_anim_config: Dictionary = {}
+var _tuned_anims: Dictionary = {}
+
 # Stage 17.7 — marker-based IK pin table. HumanRig.apply_pins reads this
 # every frame and rotates the L arm so its hand lands on LeftGripMarker.
 # `skip_anims` excludes the cast pose (L arm intentionally extends out).
@@ -78,6 +87,15 @@ func _ready() -> void:
 	_paint_staff()
 	_build_animations()
 	SpriteSidecar.apply(self, &"pythia")
+	# Stage 17.8 — load per-anim tuning configs and rebuild any
+	# animation whose joints the user has explicitly set. The hook
+	# fires on every play so newly-installed weapon-profile anims also
+	# pick up the user's tuned rotations.
+	_per_anim_config = SpriteOverrides.load_for_class(&"pythia", _stance_id)
+	for anim_name in _per_anim_config:
+		if SpriteOverrides.is_tuned(_per_anim_config[anim_name]):
+			_tuned_anims[anim_name] = true
+	_anim.animation_started.connect(_on_anim_started)
 	_anim.play(&"idle")
 	# Stage 17.6 — runtime IK on the LEFT arm so its hand polygon stays
 	# pinned to the LeftGrip cosmetic on the staff every frame. R arm
@@ -98,7 +116,24 @@ func _apply_pins() -> void:
 		return
 	if not ik_enabled:
 		return
+	# Skip IK for animations the user has tuned by hand — animation
+	# tracks own those joints now.
+	if _tuned_anims.has(String(_anim.current_animation)):
+		return
 	HumanRig.apply_pins(self, _body, PIN_TABLE, _anim.current_animation)
+
+# Rebuild the active anim with tuned-rotation tracks injected. Fires
+# every time play() starts a (possibly newly-installed) anim, so the
+# WeaponProfiles staff-attack anim picks up the user's rotations.
+func _on_anim_started(anim_name: StringName) -> void:
+	var cfg: Dictionary = _per_anim_config.get(String(anim_name), {})
+	if not SpriteOverrides.is_tuned(cfg):
+		return
+	var lib: AnimationLibrary = _anim.get_animation_library(&"")
+	if lib == null or not lib.has_animation(anim_name):
+		return
+	var anim: Animation = lib.get_animation(anim_name)
+	SpriteOverrides.inject_tuned_rotations(anim, cfg)
 
 func _paint_face() -> void:
 	HumanRig.paint_face(_body, EYE_PUPIL, EYE_SOCKET)
