@@ -117,9 +117,11 @@ func _apply_pins() -> void:
 		return
 	if not ik_enabled:
 		return
-	# Skip IK for animations the user has tuned by hand — animation
-	# tracks own those joints now.
-	if _tuned_anims.has(String(_anim.current_animation)):
+	# Skip IK when no anim is playing (current_animation = "") so the
+	# tail keyframes aren't overridden after a non-loop attack ends,
+	# AND when the current anim has tuned rotations.
+	var cur: String = String(_anim.current_animation)
+	if cur == "" or _tuned_anims.has(cur):
 		return
 	HumanRig.apply_pins(self, _body, PIN_TABLE, _anim.current_animation)
 

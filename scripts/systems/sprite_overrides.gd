@@ -22,7 +22,13 @@ class_name SpriteOverrides extends Object
 ##     "tuned" set (SpriteOverrides.is_tuned(cfg)).
 
 const STANCE_FILE: String = "res://tmp/recommended_stances.json"
-const PHASE_KEYS: PackedStringArray = ["REST", "STRIKE", "CHARGE", "RECOVERY"]
+# Phase keys we treat as legacy "flat snapshot in the stance dict"
+# markers — covers both the original REST/STRIKE pair AND the new
+# BEGIN/MIDDLE/END trio so mixed files don't confuse the loader.
+const PHASE_KEYS: PackedStringArray = [
+	"REST", "STRIKE", "CHARGE", "RECOVERY",
+	"BEGIN", "MIDDLE", "END",
+]
 
 ## Resolve { presets: {...}, active: <key> } indirection. Flat dicts
 ## pass through unchanged so legacy data still applies.
@@ -75,15 +81,19 @@ static func load_for_class(class_id: StringName, stance_id: StringName) -> Dicti
 
 static func _build_cfg(phases: Dictionary) -> Dictionary:
 	var cfg: Dictionary = {}
-	var rest: Dictionary = resolve_phase(phases.get("REST", {}))
-	var strike: Dictionary = resolve_phase(phases.get("STRIKE", {}))
+	# Accept both BEGIN/MIDDLE/END (new) and REST/STRIKE (legacy) at
+	# the same time. BEGIN supersedes REST; MIDDLE supersedes STRIKE;
+	# END falls back to BEGIN (so animations end where they started).
+	var rest: Dictionary = resolve_phase(phases.get("BEGIN", phases.get("REST", {})))
+	var strike: Dictionary = resolve_phase(phases.get("MIDDLE", phases.get("STRIKE", {})))
+	var ending: Dictionary = resolve_phase(phases.get("END", phases.get("REST", rest)))
 	if rest.has("rotations"):    cfg["rest_rotations"] = rest["rotations"]
 	if rest.has("positions"):    cfg["rest_positions"] = rest["positions"]
 	if rest.has("markers"):      cfg["rest_markers"] = rest["markers"]
 	if strike.has("rotations"):  cfg["strike_rotations"] = strike["rotations"]
 	if strike.has("positions"):  cfg["strike_positions"] = strike["positions"]
 	if strike.has("markers"):    cfg["strike_markers"] = strike["markers"]
-	# Class-specific flat fields — passed through verbatim.
+	if ending.has("rotations"):  cfg["end_rotations"] = ending["rotations"]
 	for k in ["weapon_arm_pos", "weapon_arm_rot", "NockMarker", "RiserMarker"]:
 		if rest.has(k):    cfg["rest_" + k] = rest[k]
 		if strike.has(k):  cfg["strike_" + k] = strike[k]
@@ -92,39 +102,46 @@ static func _build_cfg(phases: Dictionary) -> Dictionary:
 ## True if the given config has any rotation tuning that should
 ## suppress the runtime IK pin pass during this anim.
 static func is_tuned(cfg: Dictionary) -> bool:
-	return cfg.has("rest_rotations") or cfg.has("strike_rotations")
+	return cfg.has("rest_rotations") or cfg.has("strike_rotations") \
+			or cfg.has("end_rotations")
 
 ## Inject value tracks into `anim` for every tuned joint in `cfg`.
-## The REST rotation rides through the whole length; STRIKE-pose
-## rotations key at apex (draw_frac / release_frac) so the joint
-## morphs REST → STRIKE → REST. Existing tracks on the same path are
-## REMOVED first so caller-built tracks don't fight the override.
+## Three phases drive interpolation:
+##   t=0          → BEGIN pose (rest_rotations)
+##   t=mid_frac   → MIDDLE pose (strike_rotations), held to release_frac
+##   t=length     → END pose (end_rotations, fallback to BEGIN)
+## LINEAR interpolation is used so the joint doesn't overshoot past
+## the saved values between keyframes (cubic-bezier overshoot was
+## producing the visible elbow flick at the end of the swing).
+## Existing tracks on the same path are REMOVED first so caller-built
+## tracks don't fight the override.
 static func inject_tuned_rotations(anim: Animation, cfg: Dictionary,
 		draw_frac: float = 0.30, release_frac: float = 0.75) -> void:
 	if anim == null:
 		return
 	var rest_r: Dictionary = cfg.get("rest_rotations", {})
 	var strike_r: Dictionary = cfg.get("strike_rotations", {})
-	if rest_r.is_empty() and strike_r.is_empty():
+	var end_r: Dictionary = cfg.get("end_rotations", {})
+	if rest_r.is_empty() and strike_r.is_empty() and end_r.is_empty():
 		return
 	var paths: Dictionary = {}
 	for p in rest_r.keys(): paths[p] = true
 	for p in strike_r.keys(): paths[p] = true
+	for p in end_r.keys(): paths[p] = true
 	for path in paths.keys():
 		var prop_path: NodePath = NodePath(String(path) + ":rotation")
-		# Remove any existing track on this path so our override wins
-		# unambiguously instead of double-keying the same property.
 		_remove_existing_track(anim, prop_path)
 		var ti: int = anim.add_track(Animation.TYPE_VALUE)
 		anim.track_set_path(ti, prop_path)
-		anim.track_set_interpolation_type(ti, Animation.INTERPOLATION_CUBIC)
+		anim.track_set_interpolation_type(ti, Animation.INTERPOLATION_LINEAR)
 		var r0: float = float(rest_r.get(path, 0.0))
+		var rn: float = float(end_r.get(path, r0))
 		anim.track_insert_key(ti, 0.0, r0)
-		anim.track_insert_key(ti, anim.length, r0)
 		if strike_r.has(path):
 			var rs: float = float(strike_r[path])
 			anim.track_insert_key(ti, anim.length * draw_frac, rs)
 			anim.track_insert_key(ti, anim.length * release_frac, rs)
+		anim.track_insert_key(ti, anim.length, rn)
 
 static func _remove_existing_track(anim: Animation, prop_path: NodePath) -> void:
 	for ti in range(anim.get_track_count() - 1, -1, -1):

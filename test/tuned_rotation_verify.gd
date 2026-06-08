@@ -81,25 +81,30 @@ func _check_stance(scene: PackedScene, class_id: StringName,
 		if anim_str == "global": anim_str = "idle"
 		if not anim_player.has_animation(StringName(anim_str)): continue
 		anim_player.play(StringName(anim_str))
-		anim_player.seek(PROBE_T, true)
-		await get_tree().process_frame
-		# Verify each tuned rotation landed.
-		for path in expected_rots.keys():
-			var n: Node2D = sprite.get_node_or_null(NodePath(String(path))) as Node2D
-			if n == null:
-				print("  [SKIP] %s/%s/%s — path missing: %s" % [
-					class_id, stance_id, anim_str, path])
-				continue
-			var want: float = float(expected_rots[path])
-			var got: float = n.rotation
-			if abs(want - got) <= TOL:
-				print("  [PASS] %s/%s/%s/%s @ t=%.2f  want=%.4f got=%.4f" % [
-					class_id, stance_id, anim_str, path, PROBE_T, want, got])
-			else:
-				print("  [FAIL] %s/%s/%s/%s @ t=%.2f  want=%.4f got=%.4f  Δ=%.4f" % [
-					class_id, stance_id, anim_str, path, PROBE_T,
-					want, got, got - want])
-				fails += 1
+		# Probe at BEGIN (small t), END (just before length). Linear
+		# interpolation means no overshoot — both samples must match
+		# the saved values within tolerance.
+		var length: float = anim_player.current_animation_length
+		var probes: Array[float] = [PROBE_T, max(0.0, length - 0.02)]
+		for probe in probes:
+			anim_player.seek(probe, true)
+			await get_tree().process_frame
+			for path in expected_rots.keys():
+				var n: Node2D = sprite.get_node_or_null(NodePath(String(path))) as Node2D
+				if n == null:
+					print("  [SKIP] %s/%s/%s — path missing: %s" % [
+						class_id, stance_id, anim_str, path])
+					continue
+				var want: float = float(expected_rots[path])
+				var got: float = n.rotation
+				if abs(want - got) <= TOL:
+					print("  [PASS] %s/%s/%s/%s @ t=%.2f  want=%.4f got=%.4f" % [
+						class_id, stance_id, anim_str, path, probe, want, got])
+				else:
+					print("  [FAIL] %s/%s/%s/%s @ t=%.2f  want=%.4f got=%.4f  Δ=%.4f" % [
+						class_id, stance_id, anim_str, path, probe,
+						want, got, got - want])
+					fails += 1
 	cont.queue_free()
 	await get_tree().process_frame
 	return fails

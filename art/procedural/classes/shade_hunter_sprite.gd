@@ -387,11 +387,21 @@ func _apply_anim_config(anim_name: String) -> void:
 # ---- Runtime IK + bowstring ---------------------------------------------
 
 func _apply_pins_and_string() -> void:
-	# Tuned anims own their joint rotations via animation tracks — let
-	# them play out without IK overwriting every frame.
-	var cur: String = String(_anim.current_animation)
-	if not _tuned_anims.has(cur) and ik_enabled and show_bow:
-		HumanRig.apply_pins(self, _body, PIN_TABLE, _anim.current_animation)
+	# IK runs ONLY when:
+	#   - sprite has a weapon visible (show_bow)
+	#   - IK isn't manually disabled (ik_enabled)
+	#   - an anim is currently playing (current_animation != "")
+	#   - that anim isn't in _tuned_anims
+	# The previous version forgot the "anim is playing" check, so once
+	# a non-loop attack ended, current_animation cleared to "" and IK
+	# resumed dragging joints toward their marker pin targets — that's
+	# why the elbow drifted back at the tail of the animation.
+	if not show_bow or not ik_enabled:
+		pass
+	else:
+		var cur: String = String(_anim.current_animation)
+		if cur != "" and not _tuned_anims.has(cur):
+			HumanRig.apply_pins(self, _body, PIN_TABLE, _anim.current_animation)
 	# Rebuild the bowstring as [top tip → nock → bottom tip] in bow-local
 	# coords. Line2D inherits the parent's transform so we keep things
 	# in bow-local space for simplicity.

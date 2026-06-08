@@ -276,6 +276,16 @@ func _load_current() -> void:
 	_label_time.text = "Time: 0.00s / %.2fs" % length
 	_spawn_drag_dots()
 	_build_sliders()
+	# Final pass: re-assert paused + IK-disabled state on the freshly-
+	# loaded sprite. AnimationPlayer.play() above may have re-enabled
+	# tracks that would otherwise immediately stomp slider edits;
+	# explicitly pausing here + sprite.ik_enabled=false guarantees the
+	# first slider drag/spinbox edit takes effect without the user
+	# having to toggle the Disable IK checkbox.
+	_anim.pause()
+	_anim.seek(0.0, true)
+	if &"ik_enabled" in _sprite:
+		_sprite.ik_enabled = false
 
 # =========================================================================
 # Slider construction
@@ -453,7 +463,10 @@ func _on_time_changed(v: float) -> void:
 	_scrub_time = v
 	if _anim != null:
 		_anim.seek(v, true)
-	_label_time.text = "Time: %.2fs / %.2fs    Phase: %s" % [
+	# Phase guide for attack: 0-20% = BEGIN (start pose), 20-65% =
+	# MIDDLE (strike apex), 65-100% = END (recovery). Save at each
+	# point with S to capture the per-phase pose.
+	_label_time.text = "Time: %.2fs / %.2fs    Phase: %s    (S saves this phase)" % [
 			v, _anim.current_animation_length, String(_current_phase())]
 
 func _on_play_toggle() -> void:
@@ -878,23 +891,24 @@ func _find_weapon_arm(root: Node) -> Node2D:
 			return nested
 	return null
 
-# Coarse phase classification by scrub time. Animation-specific —
-# attack splits into REST/CHARGE/STRIKE/RECOVERY; idle/walk are REST.
+# Phase classification — three save slots: BEGIN, MIDDLE, END. For
+# the attack animation, MIDDLE is the strike apex (40-60% time). For
+# idle/walk we treat the whole timeline as BEGIN since no motion to
+# split. BEGIN/MIDDLE/END also returned as legacy aliases REST/STRIKE
+# for backward compat with existing saved data.
 func _current_phase() -> StringName:
 	if _anim == null:
-		return &"REST"
+		return &"BEGIN"
 	var length: float = _anim.current_animation_length
 	if length <= 0.01:
-		return &"REST"
+		return &"BEGIN"
 	var anim_name: StringName = _anim.current_animation
 	if anim_name != &"attack":
-		return &"REST"
+		return &"BEGIN"
 	var f: float = _scrub_time / length
-	if f < 0.10:    return &"REST"
-	if f < 0.45:    return &"CHARGE"
-	if f < 0.75:    return &"STRIKE"
-	if f < 0.95:    return &"RECOVERY"
-	return &"REST"
+	if f < 0.20:    return &"BEGIN"
+	if f < 0.65:    return &"MIDDLE"
+	return &"END"
 
 # =========================================================================
 # Hotkeys
