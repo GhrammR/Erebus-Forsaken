@@ -93,6 +93,7 @@ var _scrub_time: float = 0.0
 var _label_class: Label
 var _label_variant: Label
 var _label_time: Label
+var _label_score: Label
 var _time_slider: HSlider
 var _slider_box: VBoxContainer
 # Per-node slider references for the "Dump Pose" extractor.
@@ -120,6 +121,9 @@ func _build_ui() -> void:
 	_label_class = Label.new(); side.add_child(_label_class)
 	_label_variant = Label.new(); side.add_child(_label_variant)
 	_label_time = Label.new(); side.add_child(_label_time)
+	_label_score = Label.new()
+	_label_score.text = "Phase: —     Last score: —"
+	side.add_child(_label_score)
 	_time_slider = HSlider.new()
 	_time_slider.min_value = 0.0
 	_time_slider.max_value = 1.0
@@ -135,7 +139,8 @@ func _build_ui() -> void:
 	var reset := Button.new(); reset.text = "Reset (R)"
 	reset.pressed.connect(_on_reset_pressed); btn_row.add_child(reset)
 	var hint := Label.new()
-	hint.text = "F1 next class · F2 next variant"
+	hint.text = "F1 class  ·  F2 variant  ·  F3 stance  ·  1-5 score  ·  Space play/pause  ·  D dump  ·  R reset"
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	side.add_child(hint)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -294,7 +299,8 @@ func _on_time_changed(v: float) -> void:
 	_scrub_time = v
 	if _anim != null:
 		_anim.seek(v, true)
-	_label_time.text = "Time: %.2fs / %.2fs" % [v, _anim.current_animation_length]
+	_label_time.text = "Time: %.2fs / %.2fs    Phase: %s" % [
+			v, _anim.current_animation_length, String(_current_phase())]
 
 func _on_play_toggle() -> void:
 	if _anim == null:
@@ -416,6 +422,9 @@ func _score_current(score: int) -> void:
 		w.store_string(JSON.stringify(scores, "  "))
 		w.close()
 	print("[pose_tuner] scored %s = %d" % [key, score])
+	if _label_score != null:
+		_label_score.text = "Phase: %s     Last: %s = %d" % [
+				String(phase), key, score]
 
 # Coarse phase classification by scrub time. Animation-specific —
 # attack splits into REST/CHARGE/STRIKE/RECOVERY; idle/walk are REST.
