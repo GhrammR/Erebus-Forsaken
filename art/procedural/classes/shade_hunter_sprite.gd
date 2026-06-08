@@ -194,6 +194,15 @@ func _apply_recommended_overrides() -> void:
 func _load_anim_config(anim_name: String, phases: Dictionary) -> void:
 	var cfg: Dictionary = _per_anim_config.get(anim_name, {})
 	var rest: Dictionary = phases.get("REST", {})
+	# New schema (rotations/positions/markers) — load shoulder/elbow
+	# rotations the user manually tuned, plus weapon-arm placement.
+	if rest.has("rotations"):
+		cfg["rest_rotations"] = rest["rotations"]
+	if rest.has("positions"):
+		cfg["rest_positions"] = rest["positions"]
+	if rest.has("markers"):
+		cfg["rest_markers"] = rest["markers"]
+	# Legacy / flat fields — still honored.
 	if rest.has("weapon_arm_pos"):
 		var p: Array = rest["weapon_arm_pos"]
 		cfg["bow_pos"] = Vector2(float(p[0]), float(p[1]))
@@ -206,6 +215,9 @@ func _load_anim_config(anim_name: String, phases: Dictionary) -> void:
 	if strike.has("NockMarker"):
 		var nd: Array = strike["NockMarker"]
 		cfg["nock_drawn"] = Vector2(float(nd[0]), float(nd[1]))
+	# STRIKE rotations (e.g. drawn-pose shoulder/elbow angles).
+	if strike.has("rotations"):
+		cfg["strike_rotations"] = strike["rotations"]
 	_per_anim_config[anim_name] = cfg
 
 # Animation-start hook — switch to the variant's tuned bow placement
@@ -249,6 +261,25 @@ func _apply_anim_config(anim_name: String) -> void:
 		_nock_marker.position = _nock_rest
 	if cfg.has("nock_drawn"):
 		_nock_drawn = cfg["nock_drawn"]
+	# Apply tuned shoulder/elbow rotations + any non-weapon-arm
+	# positions. Path keys are sprite-root-relative.
+	if cfg.has("rest_rotations"):
+		for path in cfg["rest_rotations"]:
+			var n: Node2D = get_node_or_null(NodePath(String(path))) as Node2D
+			if n != null:
+				n.rotation = float(cfg["rest_rotations"][path])
+	if cfg.has("rest_positions"):
+		for path in cfg["rest_positions"]:
+			var n: Node2D = get_node_or_null(NodePath(String(path))) as Node2D
+			if n != null:
+				var v: Array = cfg["rest_positions"][path]
+				n.position = Vector2(float(v[0]), float(v[1]))
+	if cfg.has("rest_markers"):
+		for marker_name in cfg["rest_markers"]:
+			var m: Node2D = _bow_arm.get_node_or_null(NodePath(String(marker_name))) as Node2D
+			if m != null:
+				var v2: Array = cfg["rest_markers"][marker_name]
+				m.position = Vector2(float(v2[0]), float(v2[1]))
 
 # ---- Runtime IK + bowstring ---------------------------------------------
 

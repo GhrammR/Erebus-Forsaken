@@ -726,12 +726,35 @@ func _save_recommended() -> void:
 	var anim_name: String = "global"
 	if _anim != null and _anim.current_animation != &"":
 		anim_name = String(_anim.current_animation)
-	# Discover the weapon-arm node (BowArm/StaffArm/SpearArm) and its
-	# tunable marker children. We dump whatever is present so the file
-	# is self-describing.
-	var snap: Dictionary = {}
+	# Snapshot EVERY tunable transform — arms (shoulder + elbow rotations)
+	# and the weapon-arm subtree (position + rotation + every marker
+	# position). Schema is keyed by tree path so apply-side knows
+	# exactly which node each value targets, and so the JSON is self-
+	# describing if a future class restructures its tree.
+	var snap: Dictionary = {
+		"rotations": {},
+		"positions": {},
+		"markers": {},
+	}
+	# Both arms — shoulders + elbow pivots.
+	for arm_path in ["Body/ArmLShoulder", "Body/ArmRShoulder"]:
+		var shoulder: Node2D = _sprite.get_node_or_null(NodePath(arm_path)) as Node2D
+		if shoulder != null:
+			snap["rotations"][arm_path] = shoulder.rotation
+			var elbow_path: String = arm_path + "/ElbowPivot"
+			var elbow: Node2D = _sprite.get_node_or_null(NodePath(elbow_path)) as Node2D
+			if elbow != null:
+				snap["rotations"][elbow_path] = elbow.rotation
+	# Weapon arm + markers.
 	var weapon_arm: Node2D = _find_weapon_arm(_sprite)
 	if weapon_arm != null:
+		var w_path: String = _path_for(weapon_arm)
+		snap["positions"][w_path] = [weapon_arm.position.x, weapon_arm.position.y]
+		snap["rotations"][w_path] = weapon_arm.rotation
+		for child in weapon_arm.get_children():
+			if child is Marker2D:
+				snap["markers"][String(child.name)] = [child.position.x, child.position.y]
+		# Back-compat fields so older readers still work.
 		snap["weapon_arm_pos"] = [weapon_arm.position.x, weapon_arm.position.y]
 		snap["weapon_arm_rot"] = weapon_arm.rotation
 		for child in weapon_arm.get_children():
