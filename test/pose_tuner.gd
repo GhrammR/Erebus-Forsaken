@@ -85,7 +85,10 @@ var _class_idx: int = 0
 var _variant_idx: int = 0
 var _stance_ids: Array = []   # candidate stance ids for current class
 var _stance_idx: int = 0
-var _ik_disabled: bool = false   # toggled by the "Disable IK" checkbox
+# Default ON so loading a sprite lands in manual-tuning mode — the
+# user explicitly asked for shoulder/elbow sliders to work without an
+# extra click. Untoggle to re-enable runtime IK pinning.
+var _ik_disabled: bool = true
 var _vp: SubViewport
 var _sprite: Node2D
 var _anim: AnimationPlayer
@@ -148,6 +151,7 @@ func _build_ui() -> void:
 	# any manual rotation every frame.
 	var ik_box := CheckBox.new()
 	ik_box.text = "Disable IK (manual arm tuning)"
+	ik_box.button_pressed = _ik_disabled   # reflect default
 	ik_box.toggled.connect(_on_ik_toggled)
 	side.add_child(ik_box)
 	var hint := Label.new()
@@ -260,7 +264,35 @@ func _load_current() -> void:
 #   - position (x,y) sliders for each Marker2D
 
 func _build_sliders() -> void:
-	_walk_for_sliders(_sprite, "")
+	# Pin arm + weapon-arm sliders at the top so the user doesn't have
+	# to scroll past legs to reach them.
+	var header := Label.new()
+	header.text = "── arms + weapon ──"
+	_slider_box.add_child(header)
+	_walk_for_sliders_filtered(_sprite, "", true)
+	var sep := Label.new()
+	sep.text = "── everything else ──"
+	_slider_box.add_child(sep)
+	_walk_for_sliders_filtered(_sprite, "", false)
+
+# Two-pass walk. When `arms_only` is true, we add sliders ONLY for arm
+# chain nodes (shoulders, elbows under the arms, weapon-arm subtrees +
+# their markers). When false, we add sliders for everything ELSE.
+func _walk_for_sliders_filtered(node: Node, prefix: String,
+		arms_only: bool) -> void:
+	for child in node.get_children():
+		var path: String = (prefix + "/" + String(child.name)) if prefix != "" else String(child.name)
+		var in_arm: bool = path.contains("Shoulder") or path.contains("BowArm") \
+				or path.contains("StaffArm") or path.contains("SpearArm")
+		var should_add: bool = in_arm if arms_only else not in_arm
+		if should_add:
+			if child is Marker2D:
+				_add_marker_sliders(child, path)
+			elif child is Node2D and _wants_rotation_slider(child.name):
+				_add_rotation_slider(child, path)
+				if _wants_position_slider(child.name):
+					_add_arm_position_sliders(child, path)
+		_walk_for_sliders_filtered(child, path, arms_only)
 
 func _walk_for_sliders(node: Node, prefix: String) -> void:
 	for child in node.get_children():
@@ -288,49 +320,82 @@ func _wants_position_slider(n: StringName) -> bool:
 			or s.ends_with("BowArm")
 
 func _add_rotation_slider(n: Node2D, path: String) -> void:
+	var row := HBoxContainer.new()
 	var label := Label.new()
 	label.text = "%s.rot°" % path
+	label.custom_minimum_size = Vector2(180, 0)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_slider_box.add_child(label)
+	_slider_box.add_child(row)
 	var s := HSlider.new()
 	s.min_value = -180.0
 	s.max_value = 180.0
 	s.step = 0.5
 	s.value = rad_to_deg(n.rotation)
-	s.value_changed.connect(func(v): n.rotation = deg_to_rad(v))
-	_slider_box.add_child(s)
+	s.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(s)
+	# Editable numeric input synced with the slider — type exact values.
+	var box := SpinBox.new()
+	box.min_value = -180.0
+	box.max_value = 180.0
+	box.step = 0.5
+	box.value = rad_to_deg(n.rotation)
+	box.custom_minimum_size = Vector2(70, 0)
+	row.add_child(box)
+	s.value_changed.connect(func(v):
+		n.rotation = deg_to_rad(v)
+		box.set_value_no_signal(v))
+	box.value_changed.connect(func(v):
+		n.rotation = deg_to_rad(v)
+		s.set_value_no_signal(v))
 	_slider_entries.append({ "kind": "rot", "path": path, "controls": [s] })
 
 func _add_arm_position_sliders(n: Node2D, path: String) -> void:
+	_add_xy_pair("%s.pos" % path, n, Vector2(-50, -70), Vector2(50, 20), 0.5, path)
+
+func _add_xy_pair(label_text: String, n: Node2D,
+		mins: Vector2, maxs: Vector2, step: float, entry_path: String) -> void:
 	var label := Label.new()
-	label.text = "%s.pos" % path
+	label.text = label_text
 	_slider_box.add_child(label)
 	var sx := HSlider.new()
-	sx.min_value = -50.0; sx.max_value = 50.0; sx.step = 0.5
+	sx.min_value = mins.x; sx.max_value = maxs.x; sx.step = step
 	sx.value = n.position.x
-	sx.value_changed.connect(func(v): n.position.x = v)
-	_slider_box.add_child(sx)
+	sx.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var bx := SpinBox.new()
+	bx.min_value = mins.x; bx.max_value = maxs.x; bx.step = step
+	bx.value = n.position.x
+	bx.custom_minimum_size = Vector2(70, 0)
+	var rx := HBoxContainer.new()
+	rx.add_child(sx); rx.add_child(bx)
+	_slider_box.add_child(rx)
+	sx.value_changed.connect(func(v):
+		n.position.x = v
+		bx.set_value_no_signal(v))
+	bx.value_changed.connect(func(v):
+		n.position.x = v
+		sx.set_value_no_signal(v))
 	var sy := HSlider.new()
-	sy.min_value = -70.0; sy.max_value = 20.0; sy.step = 0.5
+	sy.min_value = mins.y; sy.max_value = maxs.y; sy.step = step
 	sy.value = n.position.y
-	sy.value_changed.connect(func(v): n.position.y = v)
-	_slider_box.add_child(sy)
-	_slider_entries.append({ "kind": "pos", "path": path, "controls": [sx, sy] })
+	sy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var by := SpinBox.new()
+	by.min_value = mins.y; by.max_value = maxs.y; by.step = step
+	by.value = n.position.y
+	by.custom_minimum_size = Vector2(70, 0)
+	var ry := HBoxContainer.new()
+	ry.add_child(sy); ry.add_child(by)
+	_slider_box.add_child(ry)
+	sy.value_changed.connect(func(v):
+		n.position.y = v
+		by.set_value_no_signal(v))
+	by.value_changed.connect(func(v):
+		n.position.y = v
+		sy.set_value_no_signal(v))
+	_slider_entries.append({ "kind": "pos", "path": entry_path, "controls": [sx, sy] })
 
 func _add_marker_sliders(m: Marker2D, path: String) -> void:
-	var label := Label.new()
-	label.text = "%s.pos" % path
-	_slider_box.add_child(label)
-	var sx := HSlider.new()
-	sx.min_value = -60.0; sx.max_value = 60.0; sx.step = 0.1
-	sx.value = m.position.x
-	sx.value_changed.connect(func(v): m.position.x = v)
-	_slider_box.add_child(sx)
-	var sy := HSlider.new()
-	sy.min_value = -60.0; sy.max_value = 60.0; sy.step = 0.1
-	sy.value = m.position.y
-	sy.value_changed.connect(func(v): m.position.y = v)
-	_slider_box.add_child(sy)
-	_slider_entries.append({ "kind": "pos", "path": path, "controls": [sx, sy] })
+	_add_xy_pair("%s.pos" % path, m, Vector2(-60, -60), Vector2(60, 60), 0.1, path)
 
 # =========================================================================
 # Time scrubbing
