@@ -238,9 +238,12 @@ func _load_current() -> void:
 	# picks it up. The sprite exposes stance_id as @export var.
 	if _stance_ids.size() > 0 and &"stance_id" in _sprite:
 		_sprite.stance_id = _stance_ids[_stance_idx]
-	# Preserve the IK-disabled toggle across reloads.
+	# IK starts OFF on a fresh load (sprite paused → tuning mode).
+	# Pressing Space flips both at once via _apply_auto_ik.
 	if &"ik_enabled" in _sprite:
-		_sprite.ik_enabled = not _ik_disabled
+		_sprite.ik_enabled = false
+	_ik_disabled = true
+	_paused = true
 	_sprite.position = FEET_POS
 	_sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
 	_vp.add_child(_sprite)
@@ -262,6 +265,7 @@ func _load_current() -> void:
 	_scrub_time = 0.0
 	_anim.seek(0.0, true)
 	_label_time.text = "Time: 0.00s / %.2fs" % length
+	_spawn_drag_dots()
 	_build_sliders()
 
 # =========================================================================
@@ -271,6 +275,32 @@ func _load_current() -> void:
 #   - rotation slider for each Node2D whose name ends in "Pivot",
 #     "Shoulder", or "StaffArm" / "SpearArm" / "BowArm"
 #   - position (x,y) sliders for each Marker2D
+
+## After the sprite is in the tree, drop a small colored disc on each
+## draggable (Marker2D + *Arm) so the user can SEE the hit-target.
+## Discs are children of the draggable so they track its motion. They
+## render in viewport coords; SPRITE_SCALE is applied via parent.
+func _spawn_drag_dots() -> void:
+	for n in _enumerate_draggables(_sprite):
+		if n.has_node(^"_DragDot"):
+			continue
+		var dot := Polygon2D.new()
+		dot.name = "_DragDot"
+		dot.color = DRAG_DOT_COLOR
+		dot.z_index = 100
+		# Dot radius is in PARENT-local units, so divide by sprite scale
+		# to render a screen-constant size regardless of zoom. With
+		# SPRITE_SCALE=3 a screen radius of DRAG_DOT_RADIUS=3.5 maps to
+		# ~1.17 local units — but the dot's parent is BowArm/Marker which
+		# is NOT scaled itself; only the sprite root is. So local units
+		# need to be tiny.
+		var r: float = DRAG_DOT_RADIUS / SPRITE_SCALE
+		var pts: PackedVector2Array = []
+		for i in 12:
+			var t: float = TAU * i / 12
+			pts.append(Vector2(r * cos(t), r * sin(t)))
+		dot.polygon = pts
+		n.add_child(dot)
 
 func _build_sliders() -> void:
 	# Pin arm + weapon-arm sliders at the top so the user doesn't have
@@ -425,6 +455,10 @@ func _on_play_toggle() -> void:
 		_anim.pause()
 	else:
 		_anim.play()
+	# IK follows play state: ON when running (so the hand sticks to the
+	# weapon during the swing), OFF when paused (so the sidebar sliders
+	# can actually move shoulders/elbows without being overwritten).
+	_apply_auto_ik()
 
 func _process(_delta: float) -> void:
 	# When playing, sync the time slider to anim time so the scrubber
@@ -515,7 +549,9 @@ func _on_reset_pressed() -> void:
 #   - BowArm / StaffArm / SpearArm itself — drag updates its position
 #     in Body-local space (so its children move with it).
 
-const DRAG_HIT_RADIUS: float = 12.0
+const DRAG_HIT_RADIUS: float = 18.0
+const DRAG_DOT_COLOR := Color(1.0, 0.7, 0.1, 0.9)
+const DRAG_DOT_RADIUS: float = 3.5
 
 func _on_viewport_input(event: InputEvent) -> void:
 	if _sprite == null:
@@ -541,6 +577,20 @@ func _on_viewport_input(event: InputEvent) -> void:
 		var local_delta: Vector2 = delta_screen / SPRITE_SCALE
 		_drag_node.position += local_delta
 		_sync_sliders_for(_drag_node)
+		# Force a one-shot IK pass so arms visibly follow the dragged
+		# marker even when ik_enabled is false. Otherwise dragging a
+		# RiserMarker / NockMarker looks like nothing happens.
+		_force_pin_pass()
+
+func _force_pin_pass() -> void:
+	if _sprite == null:
+		return
+	var pins = _sprite.get(&"PIN_TABLE") if &"PIN_TABLE" in _sprite else null
+	if pins == null:
+		return
+	var body: Node2D = _sprite.get_node_or_null(^"Body") as Node2D
+	var cur_anim: StringName = _anim.current_animation if _anim != null else &""
+	HumanRig.apply_pins(_sprite, body, pins, cur_anim)
 
 # Find the closest draggable (Marker2D or *Arm Node2D) within
 # DRAG_HIT_RADIUS of mouse_pos (in container/viewport coords).
@@ -595,15 +645,24 @@ func _path_for(n: Node) -> String:
 	return "/".join(parts)
 
 func _on_ik_toggled(pressed: bool) -> void:
+	# Manual override. When the user explicitly toggles, we respect
+	# their choice and break the auto-pair-with-play behavior until the
+	# next play/pause action.
 	_ik_disabled = pressed
-	# Apply immediately to the currently-loaded sprite. Pause the
-	# animation so the user's slider edits don't get blown away by the
-	# next animation frame either.
 	if _sprite != null and &"ik_enabled" in _sprite:
 		_sprite.ik_enabled = not pressed
 	if pressed and _anim != null:
 		_anim.pause()
 		_paused = true
+
+func _apply_auto_ik() -> void:
+	# IK on while playing, off while paused — so the weapon stays in
+	# the hand during the swing, but sliders work the moment the user
+	# pauses to tune.
+	if _sprite == null or not (&"ik_enabled" in _sprite):
+		return
+	_sprite.ik_enabled = not _paused
+	_ik_disabled = _paused
 
 # Stage 17.8 — score the CURRENT (stance, variant_anim, phase) on a
 # 1-5 scale. Writes/merges into tmp/stance_scores.json so future agent
