@@ -29,6 +29,9 @@ const STANCES: Dictionary = {
 	# Stage 17.7 default — bow held forward at shoulder height, R hand
 	# on riser, L hand pulls string. Conservative reach (BowArm 22,-42
 	# = R-shoulder-distance ~13).
+	# draw_hand: which hand pulls the string. Drives PIN_TABLE setup
+	# (other hand goes on the riser) AND which shoulder gets the
+	# charge_release rotation hint during attack.
 	&"forward_high_ready": {
 		"id": &"forward_high_ready",
 		"description": "Bow held forward at shoulder height; R grips riser, L on string. Classic side-view archer pose.",
@@ -39,6 +42,21 @@ const STANCES: Dictionary = {
 		"draw_frac":    0.30,
 		"release_frac": 0.75,
 		"attack_len":   0.9,
+		"draw_hand":    "left",     # L hand draws; R holds bow
+	},
+	# Same geometry but right-handed archer (R draws, L holds bow).
+	# Useful for left-facing variants of the sprite.
+	&"forward_high_ready_RH": {
+		"id": &"forward_high_ready_RH",
+		"description": "Forward-high-ready, swapped hands. L grips riser, R draws string. Right-handed archer.",
+		"bow_arm_pos": Vector2(-22, -42),
+		"bow_arm_rot": 0.0,
+		"nock_rest":  Vector2(12, 0),
+		"nock_drawn": Vector2(19, 0),
+		"draw_frac":    0.30,
+		"release_frac": 0.75,
+		"attack_len":   0.9,
+		"draw_hand":    "right",
 	},
 	# Lower-ready: bow at hip level pointing diagonally up. Bow arm
 	# bent more, draw arm has further to travel.
@@ -52,6 +70,7 @@ const STANCES: Dictionary = {
 		"draw_frac":    0.32,
 		"release_frac": 0.75,
 		"attack_len":   1.0,
+		"draw_hand":    "left",
 	},
 	# Aimed-high: bow raised above shoulder, R arm extended upward.
 	# Tests upper reach envelope.
@@ -65,6 +84,7 @@ const STANCES: Dictionary = {
 		"draw_frac":    0.28,
 		"release_frac": 0.78,
 		"attack_len":   0.85,
+		"draw_hand":    "left",
 	},
 }
 

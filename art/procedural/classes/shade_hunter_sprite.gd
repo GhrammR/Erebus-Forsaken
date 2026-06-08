@@ -83,29 +83,16 @@ const WALK_LEN: float    = 0.45
 @onready var _bow_tip_bot: Marker2D = $Body/BowArm/BowTipBot
 @onready var _anim: AnimationPlayer = $AnimationPlayer
 
-# Stage 17.7 — marker-driven dual IK pin table. Both arms welded to the
-# bow every frame: L hand to the riser (static), R hand to the nock
-# (animated). Pose authoring becomes "move the markers, arms follow."
-const PIN_TABLE: Array = [
-	# R arm = bow hand on the riser. Front-facing in screen space, so
-	# its forearm + hand stay readable in front of the cloak.
-	{
-		"shoulder":   ^"Body/ArmRShoulder",
-		"target":     ^"Body/BowArm/RiserMarker",
-		"elbow_dir":  +1,
-		"skip_anims": [],
-	},
-	# L arm = draw hand on the nock. Pinned ONLY during the attack —
-	# real archers don't keep both hands on the bow at rest. At idle/
-	# walk the L arm hangs freely, which also lets the bow live further
-	# forward (out of L arm's reach for a chest-grip rest pose).
-	{
-		"shoulder":   ^"Body/ArmLShoulder",
-		"target":     ^"Body/BowArm/NockMarker",
-		"elbow_dir":  -1,
-		"skip_anims": [&"idle", &"walk"],
-	},
-]
+# Stage 17.8 — PIN_TABLE is now BUILT per-stance from BowStances data.
+# `draw_hand` in the stance row determines:
+#   "left"  → R hand on riser, L hand on nock
+#   "right" → L hand on riser, R hand on nock
+# Built once in _ready before connecting the pin pass.
+var PIN_TABLE: Array = []
+
+# Path to the shoulder of the DRAWING arm — used by _anim_attack to
+# bias the IK seed during the draw. Set by _build_pin_table().
+var _draw_shoulder_path: NodePath = ^"Body/ArmLShoulder"
 
 func _ready() -> void:
 	# Stage 17.8 — apply the selected stance from the catalog before
@@ -125,6 +112,9 @@ func _ready() -> void:
 	# absent fields fall through to defaults.
 	_apply_recommended_overrides()
 	_nock_marker.position = _nock_rest
+	# Build PIN_TABLE based on stance's draw_hand. Must run before the
+	# pin pass connects (and before validator scans).
+	_build_pin_table(stance.get("draw_hand", "left"))
 	_shadow.color = SHADOW
 	_shadow.polygon = HumanRig.shadow_poly()
 	HumanRig.apply(_body, SKIN, SKIN_SHADOW)
@@ -199,6 +189,40 @@ func _apply_recommended_overrides() -> void:
 			break
 	print("[shade_hunter] recommended overrides loaded for stance=%s (anims=%s)" % [
 		stance_id, _per_anim_config.keys()])
+
+# Build the per-frame pin table based on which hand draws the string.
+# bow_hand grips the riser (constant pin), draw_hand pins to the nock
+# only during attack (idle/walk leave that arm free).
+func _build_pin_table(draw_hand: String) -> void:
+	var bow_shoulder: NodePath
+	var draw_shoulder: NodePath
+	var bow_elbow_dir: int
+	var draw_elbow_dir: int
+	if draw_hand == "right":
+		bow_shoulder = ^"Body/ArmLShoulder"
+		draw_shoulder = ^"Body/ArmRShoulder"
+		bow_elbow_dir = -1
+		draw_elbow_dir = +1
+	else:  # "left" (default)
+		bow_shoulder = ^"Body/ArmRShoulder"
+		draw_shoulder = ^"Body/ArmLShoulder"
+		bow_elbow_dir = +1
+		draw_elbow_dir = -1
+	PIN_TABLE = [
+		{
+			"shoulder":   bow_shoulder,
+			"target":     ^"Body/BowArm/RiserMarker",
+			"elbow_dir":  bow_elbow_dir,
+			"skip_anims": [],
+		},
+		{
+			"shoulder":   draw_shoulder,
+			"target":     ^"Body/BowArm/NockMarker",
+			"elbow_dir":  draw_elbow_dir,
+			"skip_anims": [&"idle", &"walk"],
+		},
+	]
+	_draw_shoulder_path = draw_shoulder
 
 # Resolve the active preset's snap for a given phase. If the phase
 # value is the new {presets: {...}, active: ...} bucket, dereference
@@ -423,9 +447,13 @@ func _anim_attack() -> Animation:
 	# hand position is dictated by the pin to NockMarker each frame —
 	# the R-shoulder rotation hint here just biases the IK seed.
 	var a := MotionArchetypes.make_anim(_attack_len, Animation.LOOP_NONE)
+	# Use the DRAW arm's shoulder (NOT the bow arm). For "left" draw_hand
+	# stances this is ArmLShoulder; for "right" it's ArmRShoulder.
+	# The bow-hand shoulder stays planted because its IK target (riser)
+	# doesn't move.
 	MotionArchetypes.add_charge_release(a,
 		^"Body/BowArm/NockMarker:position",
-		^"Body/ArmRShoulder",
+		_draw_shoulder_path,
 		_nock_rest, _nock_drawn,
 		0.0, -0.6,
 		_attack_len,
