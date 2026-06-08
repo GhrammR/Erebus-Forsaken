@@ -15,6 +15,10 @@ extends Control
 ##   D        — dump current pose to console + tmp/pose_dump.txt as
 ##              keyframe Dictionary ready to paste into sprite_specs.gd
 ##   1-5      — score CURRENT (stance, anim, time) into tmp/stance_scores.json
+##   S        — save current BowArm/NockMarker values as the RECOMMENDED
+##              override for (class, stance_id, phase) into
+##              tmp/recommended_stances.json. Sprite reads it at _ready
+##              and overrides the catalog defaults.
 ##   SPACE    — toggle play/pause of the animation
 ##   R        — reset all sliders (reload sprite fresh)
 ##
@@ -254,12 +258,22 @@ func _walk_for_sliders(node: Node, prefix: String) -> void:
 			_add_marker_sliders(child, path)
 		elif child is Node2D and _wants_rotation_slider(child.name):
 			_add_rotation_slider(child, path)
+			if _wants_position_slider(child.name):
+				_add_arm_position_sliders(child, path)
 		_walk_for_sliders(child, path)
 
 func _wants_rotation_slider(n: StringName) -> bool:
 	var s := String(n)
 	return s.ends_with("Pivot") or s.ends_with("Shoulder") \
 			or s.ends_with("StaffArm") or s.ends_with("SpearArm") \
+			or s.ends_with("BowArm")
+
+# Position sliders go on the *Arm parent nodes (BowArm/StaffArm/
+# SpearArm) so the user can drag the weapon forward/back/up/down
+# without editing the .tscn. Marker2Ds already get position sliders.
+func _wants_position_slider(n: StringName) -> bool:
+	var s := String(n)
+	return s.ends_with("StaffArm") or s.ends_with("SpearArm") \
 			or s.ends_with("BowArm")
 
 func _add_rotation_slider(n: Node2D, path: String) -> void:
@@ -274,6 +288,22 @@ func _add_rotation_slider(n: Node2D, path: String) -> void:
 	s.value_changed.connect(func(v): n.rotation = deg_to_rad(v))
 	_slider_box.add_child(s)
 	_slider_entries.append({ "kind": "rot", "path": path, "controls": [s] })
+
+func _add_arm_position_sliders(n: Node2D, path: String) -> void:
+	var label := Label.new()
+	label.text = "%s.pos" % path
+	_slider_box.add_child(label)
+	var sx := HSlider.new()
+	sx.min_value = -50.0; sx.max_value = 50.0; sx.step = 0.5
+	sx.value = n.position.x
+	sx.value_changed.connect(func(v): n.position.x = v)
+	_slider_box.add_child(sx)
+	var sy := HSlider.new()
+	sy.min_value = -70.0; sy.max_value = 20.0; sy.step = 0.5
+	sy.value = n.position.y
+	sy.value_changed.connect(func(v): n.position.y = v)
+	_slider_box.add_child(sy)
+	_slider_entries.append({ "kind": "pos", "path": path, "controls": [sx, sy] })
 
 func _add_marker_sliders(m: Marker2D, path: String) -> void:
 	var label := Label.new()
@@ -426,6 +456,68 @@ func _score_current(score: int) -> void:
 		_label_score.text = "Phase: %s     Last: %s = %d" % [
 				String(phase), key, score]
 
+# Stage 17.8 — write the CURRENT BowArm/StaffArm/SpearArm placement
+# + animated Marker2D positions into tmp/recommended_stances.json so
+# the sprite consumes the user's tweaks at next _ready. Keyed by
+# class/stance/phase so REST captures bow_arm_pos + nock_rest, and
+# STRIKE captures nock_drawn. Sprite layer merges with catalog
+# defaults: any field present in recommended_stances wins.
+func _save_recommended() -> void:
+	if _sprite == null:
+		return
+	var cls: Dictionary = CLASSES[_class_idx]
+	var stance_label: String = "default"
+	if _stance_ids.size() > 0:
+		stance_label = String(_stance_ids[_stance_idx])
+	var phase: StringName = _current_phase()
+	# Discover the weapon-arm node (BowArm/StaffArm/SpearArm) and its
+	# tunable marker children. We dump whatever is present so the file
+	# is self-describing.
+	var snap: Dictionary = {}
+	var weapon_arm: Node2D = _find_weapon_arm(_sprite)
+	if weapon_arm != null:
+		snap["weapon_arm_pos"] = [weapon_arm.position.x, weapon_arm.position.y]
+		snap["weapon_arm_rot"] = weapon_arm.rotation
+		for child in weapon_arm.get_children():
+			if child is Marker2D:
+				snap[String(child.name)] = [child.position.x, child.position.y]
+	# Load existing file if present, merge our entry, write back.
+	var recommended: Dictionary = {}
+	var f := FileAccess.open("res://tmp/recommended_stances.json", FileAccess.READ)
+	if f != null:
+		var parsed: Variant = JSON.parse_string(f.get_as_text())
+		f.close()
+		if typeof(parsed) == TYPE_DICTIONARY:
+			recommended = parsed
+	var class_key: String = String(cls["id"])
+	if not recommended.has(class_key):
+		recommended[class_key] = {}
+	if not recommended[class_key].has(stance_label):
+		recommended[class_key][stance_label] = {}
+	recommended[class_key][stance_label][String(phase)] = snap
+	DirAccess.make_dir_recursive_absolute("res://tmp")
+	var w := FileAccess.open("res://tmp/recommended_stances.json", FileAccess.WRITE)
+	if w != null:
+		w.store_string(JSON.stringify(recommended, "  "))
+		w.close()
+	var msg: String = "saved %s/%s/%s" % [class_key, stance_label, String(phase)]
+	print("[pose_tuner] %s" % msg)
+	if _label_score != null:
+		_label_score.text = "Recommended " + msg
+
+# Walk the sprite tree looking for the first Node2D whose name ends in
+# StaffArm/SpearArm/BowArm — the weapon-arm convention used by all
+# class sprites.
+func _find_weapon_arm(root: Node) -> Node2D:
+	for child in root.get_children():
+		var s: String = String(child.name)
+		if child is Node2D and (s.ends_with("BowArm") or s.ends_with("StaffArm") or s.ends_with("SpearArm")):
+			return child
+		var nested: Node2D = _find_weapon_arm(child)
+		if nested != null:
+			return nested
+	return null
+
 # Coarse phase classification by scrub time. Animation-specific —
 # attack splits into REST/CHARGE/STRIKE/RECOVERY; idle/walk are REST.
 func _current_phase() -> StringName:
@@ -466,6 +558,8 @@ func _input(event: InputEvent) -> void:
 				_load_current()
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5:
 			_score_current(event.keycode - KEY_0)
+		KEY_S:
+			_save_recommended()
 		KEY_D:
 			_on_dump_pressed()
 		KEY_SPACE:

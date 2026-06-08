@@ -107,6 +107,12 @@ func _ready() -> void:
 	_attack_len = stance["attack_len"]
 	_draw_frac = stance["draw_frac"]
 	_release_frac = stance["release_frac"]
+	# Recommended-stance overrides: if the user has tuned this stance
+	# in pose_tuner and pressed S, tmp/recommended_stances.json contains
+	# their numeric overrides. REST snapshot → bow placement + nock_rest;
+	# STRIKE snapshot → nock_drawn. Layered on top of the catalog so
+	# absent fields fall through to defaults.
+	_apply_recommended_overrides()
 	_nock_marker.position = _nock_rest
 	_shadow.color = SHADOW
 	_shadow.polygon = HumanRig.shadow_poly()
@@ -120,6 +126,50 @@ func _ready() -> void:
 	# Pin both arms to the bow every frame (after AnimationPlayer
 	# advances the nock track).
 	get_tree().process_frame.connect(_apply_pins_and_string)
+
+## Layer user-tuned overrides from tmp/recommended_stances.json on top
+## of the catalog defaults. File schema:
+##   {
+##     "shade_hunter": {
+##       "<stance_id>": {
+##         "REST":   { "weapon_arm_pos": [x, y], "weapon_arm_rot": r,
+##                     "NockMarker":  [x, y], ... },
+##         "STRIKE": { "NockMarker":  [x, y], ... },
+##       }
+##     }
+##   }
+func _apply_recommended_overrides() -> void:
+	var f := FileAccess.open("res://tmp/recommended_stances.json", FileAccess.READ)
+	if f == null:
+		return
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	f.close()
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return
+	var classes: Dictionary = parsed
+	var by_class: Dictionary = classes.get("shade_hunter", {})
+	var by_stance: Dictionary = by_class.get(String(stance_id), {})
+	if by_stance.is_empty():
+		return
+	# REST snapshot governs the resting bow placement + nock_rest.
+	var rest: Dictionary = by_stance.get("REST", {})
+	if rest.has("weapon_arm_pos"):
+		var p: Array = rest["weapon_arm_pos"]
+		_bow_arm.position = Vector2(float(p[0]), float(p[1]))
+	if rest.has("weapon_arm_rot"):
+		_bow_arm.rotation = float(rest["weapon_arm_rot"])
+	if rest.has("NockMarker"):
+		var nm: Array = rest["NockMarker"]
+		_nock_rest = Vector2(float(nm[0]), float(nm[1]))
+	# STRIKE snapshot governs the drawn nock position (and optionally
+	# overrides the bow placement during strike — captured but not
+	# applied here because the body lean already handles in-strike
+	# offsets).
+	var strike: Dictionary = by_stance.get("STRIKE", {})
+	if strike.has("NockMarker"):
+		var nd: Array = strike["NockMarker"]
+		_nock_drawn = Vector2(float(nd[0]), float(nd[1]))
+	print("[shade_hunter] applied recommended overrides for stance=%s" % stance_id)
 
 # ---- Runtime IK + bowstring ---------------------------------------------
 
