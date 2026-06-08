@@ -57,6 +57,7 @@ const SpriteOverrides = preload("res://scripts/systems/sprite_overrides.gd")
 var _stance_id: StringName = &"diagonal_back_legacy"
 var _per_anim_config: Dictionary = {}
 var _tuned_anims: Dictionary = {}
+var _replaying_for_injection: bool = false
 
 # Stage 17.7 — marker-based IK pin table. HumanRig.apply_pins reads this
 # every frame and rotates the L arm so its hand lands on LeftGripMarker.
@@ -122,18 +123,24 @@ func _apply_pins() -> void:
 		return
 	HumanRig.apply_pins(self, _body, PIN_TABLE, _anim.current_animation)
 
-# Rebuild the active anim with tuned-rotation tracks injected. Fires
-# every time play() starts a (possibly newly-installed) anim, so the
-# WeaponProfiles staff-attack anim picks up the user's rotations.
+# Inject tuned-rotation tracks then RESTART play with the fresh
+# Animation reference — AnimationPlayer locks the ref at play time,
+# so library edits during this signal handler don't reach the
+# currently-running animation. Recursion guarded by
+# _replaying_for_injection.
 func _on_anim_started(anim_name: StringName) -> void:
+	if _replaying_for_injection:
+		return
 	var cfg: Dictionary = _per_anim_config.get(String(anim_name), {})
 	if not SpriteOverrides.is_tuned(cfg):
 		return
 	var lib: AnimationLibrary = _anim.get_animation_library(&"")
 	if lib == null or not lib.has_animation(anim_name):
 		return
-	var anim: Animation = lib.get_animation(anim_name)
-	SpriteOverrides.inject_tuned_rotations(anim, cfg)
+	SpriteOverrides.inject_tuned_rotations(lib.get_animation(anim_name), cfg)
+	_replaying_for_injection = true
+	_anim.play(anim_name)
+	_replaying_for_injection = false
 
 func _paint_face() -> void:
 	HumanRig.paint_face(_body, EYE_PUPIL, EYE_SOCKET)

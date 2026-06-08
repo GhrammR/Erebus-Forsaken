@@ -54,6 +54,7 @@ const SpriteOverrides = preload("res://scripts/systems/sprite_overrides.gd")
 var _stance_id: StringName = &"hip_spear_shield_legacy"
 var _per_anim_config: Dictionary = {}
 var _tuned_anims: Dictionary = {}
+var _replaying_for_injection: bool = false
 
 func _ready() -> void:
 	_shadow.color = SHADOW
@@ -82,6 +83,8 @@ func _ready() -> void:
 # Inject tuned rotation tracks whenever an anim starts (catches both
 # the initial play and WeaponProfiles-installed spear anims).
 func _on_anim_started(anim_name: StringName) -> void:
+	if _replaying_for_injection:
+		return
 	var cfg: Dictionary = _per_anim_config.get(String(anim_name), {})
 	if not SpriteOverrides.is_tuned(cfg):
 		return
@@ -89,6 +92,9 @@ func _on_anim_started(anim_name: StringName) -> void:
 	if lib == null or not lib.has_animation(anim_name):
 		return
 	SpriteOverrides.inject_tuned_rotations(lib.get_animation(anim_name), cfg)
+	_replaying_for_injection = true
+	_anim.play(anim_name)
+	_replaying_for_injection = false
 
 func _paint_face() -> void:
 	# Custom Myrmidon face (overrides HumanRig defaults). Veteran

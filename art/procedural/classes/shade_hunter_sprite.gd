@@ -4,6 +4,7 @@ extends Node2D
 const MotionArchetypes = preload("res://scripts/systems/motion_archetypes.gd")
 const BowStances       = preload("res://scripts/systems/stances/bow_stances.gd")
 const AnatomyValidator = preload("res://scripts/systems/anatomy_validator.gd")
+const SpriteOverrides  = preload("res://scripts/systems/sprite_overrides.gd")
 
 # Stage 17.8 — pick a stance from the catalog. Override at runtime
 # (pose_tuner sets this via set_meta(&"stance_id", ...) before _ready
@@ -137,12 +138,16 @@ func _ready() -> void:
 	# with a no-op so the off hand isn't forced onto a hidden marker.
 	if not show_bow:
 		_bow_arm.visible = false
-	# Apply the idle variant's tuned values (if any) BEFORE first play.
-	if _per_anim_config.has("idle"):
-		_apply_anim_config("idle")
-		_rebuild_animation(&"idle")
-	# Re-run config swap on every animation change so each variant
-	# renders with its own tuned pose.
+	# PROACTIVELY rebuild EVERY tuned animation before first play.
+	# AnimationPlayer locks the Animation reference when play() starts;
+	# rebuilding inside _on_anim_started after the fact doesn't change
+	# what's actually running. Doing it upfront means the first play()
+	# already picks up the fresh, tuned-track-injected version.
+	for anim_name in _tuned_anims:
+		_rebuild_animation(anim_name)
+	# Re-run config swap on every animation change so newly-installed
+	# variants (none for ShadeHunter today, but mirrors the pattern
+	# Pythia/Myrmidon use for WeaponProfiles installs) pick up tuning.
 	_anim.animation_started.connect(_on_anim_started)
 	_anim.play(&"idle")
 	# Pin both arms to the bow every frame (after AnimationPlayer
@@ -159,6 +164,9 @@ var _per_anim_config: Dictionary = {}   # anim_name → { bow_pos, bow_rot, nock
 # tuned rotations stick through play instead of being recomputed
 # from marker positions every frame.
 var _tuned_anims: Dictionary = {}
+# Guard to prevent infinite recursion when we re-call play() after
+# rebuilding the animation in _on_anim_started.
+var _replaying_for_injection: bool = false
 
 ## Layer user-tuned overrides from tmp/recommended_stances.json on top
 ## of the catalog defaults. Two schemas supported:
@@ -292,13 +300,25 @@ func _load_anim_config(anim_name: String, phases: Dictionary) -> void:
 
 # Animation-start hook — switch to the variant's tuned bow placement
 # and rebuild the animation so its nock track uses the variant-
-# specific rest position. Without rebuild, the animation's baked-in
-# NOCK_REST keyframe would override the marker position.
+# specific rest position. Critical: AnimationPlayer locks the
+# Animation reference at play() time, so editing the library entry
+# after animation_started has fired has no effect on the running
+# animation. We MUST re-call play() with the fresh reference.
+# `_replaying_for_injection` breaks the would-be recursion.
 func _on_anim_started(anim_name: StringName) -> void:
+	if _replaying_for_injection:
+		return
 	var key: String = String(anim_name)
-	if _per_anim_config.has(key):
-		_apply_anim_config(key)
-		_rebuild_animation(anim_name)
+	if not _per_anim_config.has(key):
+		return
+	_apply_anim_config(key)
+	_rebuild_animation(anim_name)
+	# Restart so the player picks up the freshly-rebuilt anim with the
+	# injected rotation tracks. Without this, the OLD pre-tuned anim
+	# keeps playing for the rest of the cycle.
+	_replaying_for_injection = true
+	_anim.play(anim_name)
+	_replaying_for_injection = false
 
 # Replace a single named animation in the library with a fresh build
 # that uses the current _nock_rest / _nock_drawn / timing values.
@@ -319,31 +339,17 @@ func _rebuild_animation(anim_name: StringName) -> void:
 		lib.remove_animation(anim_name)
 	lib.add_animation(anim_name, fresh)
 
-# For each tuned (path → rotation) entry, add a value track that
-# clamps that joint to the saved rotation at every keyframe. For the
-# attack animation, also lay down STRIKE-pose rotations at the apex
-# of the draw so the animation morphs REST → STRIKE → REST.
+# Delegate to the shared helper. Critical: SpriteOverrides.inject
+# REMOVES any existing track on the same property path BEFORE adding
+# the tuned-rotation track. Without that, the catalog
+# charge_release's shoulder-rotation track collides with our tuned
+# track on the same path and the player picks one nondeterministically.
 func _inject_tuned_rotations(anim: Animation, anim_name: StringName) -> void:
 	var cfg: Dictionary = _per_anim_config.get(String(anim_name), {})
-	var rest_r: Dictionary = cfg.get("rest_rotations", {})
-	var strike_r: Dictionary = cfg.get("strike_rotations", {})
-	if rest_r.is_empty() and strike_r.is_empty():
-		return
-	# Union of paths so both REST and STRIKE write into the same track.
-	var paths: Dictionary = {}
-	for p in rest_r.keys(): paths[p] = true
-	for p in strike_r.keys(): paths[p] = true
-	for path in paths.keys():
-		var ti: int = anim.add_track(Animation.TYPE_VALUE)
-		anim.track_set_path(ti, NodePath(String(path) + ":rotation"))
-		anim.track_set_interpolation_type(ti, Animation.INTERPOLATION_CUBIC)
-		var r0: float = float(rest_r.get(path, 0.0))
-		anim.track_insert_key(ti, 0.0, r0)
-		anim.track_insert_key(ti, anim.length, r0)
-		if anim_name == &"attack" and strike_r.has(path):
-			var rs: float = float(strike_r[path])
-			anim.track_insert_key(ti, anim.length * _draw_frac, rs)
-			anim.track_insert_key(ti, anim.length * _release_frac, rs)
+	# Only strike-key the attack anim — idle/walk just hold rest.
+	var df: float = _draw_frac if anim_name == &"attack" else 0.5
+	var rf: float = _release_frac if anim_name == &"attack" else 0.5
+	SpriteOverrides.inject_tuned_rotations(anim, cfg, df, rf)
 
 func _apply_anim_config(anim_name: String) -> void:
 	var cfg: Dictionary = _per_anim_config.get(anim_name, {})
