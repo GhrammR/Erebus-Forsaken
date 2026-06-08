@@ -64,12 +64,16 @@ const CLASSES: Array = [
 	},
 ]
 
-const BowStances = preload("res://scripts/systems/stances/bow_stances.gd")
+const BowStances   = preload("res://scripts/systems/stances/bow_stances.gd")
+const StaffStances = preload("res://scripts/systems/stances/staff_stances.gd")
+const SpearStances = preload("res://scripts/systems/stances/spear_stances.gd")
 
-# Per-class stance catalog. Only classes with weapon-stance catalogs
-# need an entry; others fall through to a single-stance behavior.
+# Per-class stance catalog. Maps class id → catalog tag used in
+# _load_current to populate _stance_ids from the right catalog.
 const STANCE_CATALOGS: Dictionary = {
-	&"shade_hunter": &"bow",
+	&"shade_hunter":   &"bow",
+	&"pythia":         &"staff",
+	&"myrmidon":       &"spear",
 }
 
 # State.
@@ -177,6 +181,10 @@ func _load_current() -> void:
 	var catalog: StringName = STANCE_CATALOGS.get(cls["id"], &"")
 	if catalog == &"bow":
 		_stance_ids = BowStances.all_ids()
+	elif catalog == &"staff":
+		_stance_ids = StaffStances.all_ids()
+	elif catalog == &"spear":
+		_stance_ids = SpearStances.all_ids()
 	if _stance_idx >= _stance_ids.size():
 		_stance_idx = 0
 	var stance_label: String = "—"

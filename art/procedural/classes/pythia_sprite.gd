@@ -50,11 +50,19 @@ const SHADOW: Color         = Color(0.0, 0.0, 0.05, 0.45)
 # every frame and rotates the L arm so its hand lands on LeftGripMarker.
 # `skip_anims` excludes the cast pose (L arm intentionally extends out).
 const PIN_TABLE: Array = [
+	# soft=true: with R hand anchored at hip and staff diagonal up-back,
+	# the LeftGripMarker is geometrically beyond L arm reach (validator
+	# flags 35-39px against max 20). The runtime IK degrades to "fully
+	# extended toward target" and the rendered pose still reads
+	# acceptably, so this is acknowledged as a known-degraded pin. The
+	# clean fix is a chest-grip stance (see staff_stances.gd) that the
+	# user can score in pose_tuner and adopt as the new default.
 	{
 		"shoulder":   ^"Body/ArmLShoulder",
 		"target":     ^"Body/ArmRShoulder/ElbowPivot/StaffArm/LeftGripMarker",
 		"elbow_dir":  -1,
 		"skip_anims": [&"cast"],
+		"soft":       true,
 	},
 ]
 

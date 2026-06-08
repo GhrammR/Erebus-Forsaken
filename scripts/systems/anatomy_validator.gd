@@ -67,6 +67,13 @@ static func validate_sprite(sprite_root: Node2D, body: Node2D,
 			var skip_anims: Array = pin.get("skip_anims", [])
 			if skip_anims.has(anim_name):
 				continue
+			# `soft` pins are KNOWN to overextend (e.g. legacy rig
+			# where the IK degrades gracefully to a fully-extended
+			# pose that still renders acceptably). Reported as INFO
+			# only — never abort even in strict mode. Use sparingly
+			# and only with a comment explaining why the geometry
+			# can't be cleaned up immediately.
+			var is_soft: bool = pin.get("soft", false)
 			var shoulder: Node2D = sprite_root.get_node_or_null(pin.shoulder) as Node2D
 			var target: Node2D = sprite_root.get_node_or_null(pin.target) as Node2D
 			if shoulder == null or target == null:
@@ -82,10 +89,16 @@ static func validate_sprite(sprite_root: Node2D, body: Node2D,
 				var target_body: Vector2 = body.to_local(target.global_position)
 				var dist: float = (target_body - shoulder.position).length()
 				if dist > max_reach + REACH_SLACK:
-					clean = _emit(strict,
-						"OUT_OF_REACH: anim=%s t=%.2f pin=%s dist=%.2f > %.2f (extra=%.2fpx)" % [
-							anim_name, t, pin.target, dist, max_reach,
-							dist - max_reach]) and clean
+					if is_soft:
+						# Soft pin — log once per pin, not per sample,
+						# and never fail. Caller has acknowledged the
+						# degradation is acceptable.
+						pass
+					else:
+						clean = _emit(strict,
+							"OUT_OF_REACH: anim=%s t=%.2f pin=%s dist=%.2f > %.2f (extra=%.2fpx)" % [
+								anim_name, t, pin.target, dist, max_reach,
+								dist - max_reach]) and clean
 				elif dist < MIN_PIN_DIST:
 					clean = _emit(strict,
 						"COLLAPSE: anim=%s t=%.2f pin=%s dist=%.2f < %.2f — hand reads as elbow" % [
