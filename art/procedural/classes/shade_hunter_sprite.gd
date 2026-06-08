@@ -153,7 +153,12 @@ func _ready() -> void:
 ## entry holds the bow placement + nock positions for one animation
 ## (idle/walk/attack). On animation_started we apply the matching
 ## entry so each anim renders with its tuned pose.
-var _per_anim_config: Dictionary = {}   # anim_name → { bow_pos, bow_rot, nock_rest, nock_drawn }
+var _per_anim_config: Dictionary = {}   # anim_name → { bow_pos, bow_rot, nock_rest, nock_drawn, ... }
+# Set of anim names where the user saved explicit joint rotations.
+# _apply_pins_and_string skips the IK pin pass for these so the
+# tuned rotations stick through play instead of being recomputed
+# from marker positions every frame.
+var _tuned_anims: Dictionary = {}
 
 ## Layer user-tuned overrides from tmp/recommended_stances.json on top
 ## of the catalog defaults. Two schemas supported:
@@ -279,6 +284,10 @@ func _load_anim_config(anim_name: String, phases: Dictionary) -> void:
 	# STRIKE rotations (e.g. drawn-pose shoulder/elbow angles).
 	if strike.has("rotations"):
 		cfg["strike_rotations"] = strike["rotations"]
+	# If any rotation tuning exists for this anim, mark it so IK
+	# defers to the animation tracks instead of stomping them.
+	if rest.has("rotations") or strike.has("rotations"):
+		_tuned_anims[anim_name] = true
 	_per_anim_config[anim_name] = cfg
 
 # Animation-start hook — switch to the variant's tuned bow placement
@@ -305,9 +314,36 @@ func _rebuild_animation(anim_name: StringName) -> void:
 		&"cast":   fresh = _anim_attack()
 	if fresh == null:
 		return
+	_inject_tuned_rotations(fresh, anim_name)
 	if lib.has_animation(anim_name):
 		lib.remove_animation(anim_name)
 	lib.add_animation(anim_name, fresh)
+
+# For each tuned (path → rotation) entry, add a value track that
+# clamps that joint to the saved rotation at every keyframe. For the
+# attack animation, also lay down STRIKE-pose rotations at the apex
+# of the draw so the animation morphs REST → STRIKE → REST.
+func _inject_tuned_rotations(anim: Animation, anim_name: StringName) -> void:
+	var cfg: Dictionary = _per_anim_config.get(String(anim_name), {})
+	var rest_r: Dictionary = cfg.get("rest_rotations", {})
+	var strike_r: Dictionary = cfg.get("strike_rotations", {})
+	if rest_r.is_empty() and strike_r.is_empty():
+		return
+	# Union of paths so both REST and STRIKE write into the same track.
+	var paths: Dictionary = {}
+	for p in rest_r.keys(): paths[p] = true
+	for p in strike_r.keys(): paths[p] = true
+	for path in paths.keys():
+		var ti: int = anim.add_track(Animation.TYPE_VALUE)
+		anim.track_set_path(ti, NodePath(String(path) + ":rotation"))
+		anim.track_set_interpolation_type(ti, Animation.INTERPOLATION_CUBIC)
+		var r0: float = float(rest_r.get(path, 0.0))
+		anim.track_insert_key(ti, 0.0, r0)
+		anim.track_insert_key(ti, anim.length, r0)
+		if anim_name == &"attack" and strike_r.has(path):
+			var rs: float = float(strike_r[path])
+			anim.track_insert_key(ti, anim.length * _draw_frac, rs)
+			anim.track_insert_key(ti, anim.length * _release_frac, rs)
 
 func _apply_anim_config(anim_name: String) -> void:
 	var cfg: Dictionary = _per_anim_config.get(anim_name, {})
@@ -345,7 +381,10 @@ func _apply_anim_config(anim_name: String) -> void:
 # ---- Runtime IK + bowstring ---------------------------------------------
 
 func _apply_pins_and_string() -> void:
-	if ik_enabled and show_bow:
+	# Tuned anims own their joint rotations via animation tracks — let
+	# them play out without IK overwriting every frame.
+	var cur: String = String(_anim.current_animation)
+	if not _tuned_anims.has(cur) and ik_enabled and show_bow:
 		HumanRig.apply_pins(self, _body, PIN_TABLE, _anim.current_animation)
 	# Rebuild the bowstring as [top tip → nock → bottom tip] in bow-local
 	# coords. Line2D inherits the parent's transform so we keep things
