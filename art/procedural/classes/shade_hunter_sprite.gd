@@ -2,6 +2,13 @@ extends Node2D
 ## Stage 17.7 — ShadeHunter, HUMAN family. Hooded bow archer.
 
 const MotionArchetypes = preload("res://scripts/systems/motion_archetypes.gd")
+const BowStances       = preload("res://scripts/systems/stances/bow_stances.gd")
+const AnatomyValidator = preload("res://scripts/systems/anatomy_validator.gd")
+
+# Stage 17.8 — pick a stance from the catalog. Override at runtime
+# (pose_tuner sets this via set_meta(&"stance_id", ...) before _ready
+# of a freshly-instanced sprite).
+@export var stance_id: StringName = &"forward_high_ready"
 ##
 ## Default-facing: RIGHT. Player flips $SpriteAnchor.scale.x to face left.
 ##
@@ -41,22 +48,17 @@ const BOW_DEPTH: float     = 5.5     # how far the limbs curve forward (+x)
 const BOW_THICKNESS: float = 1.6     # radial half-thickness of the limb strip
 const BOW_GRIP_HALF: float = 5.0     # vertical extent of the grip wrap
 
-# Nock travel during draw (bow-local). Rest at riser → drawn back.
-# NOCK_REST is the position BEFORE pull-back; NOCK_DRAWN is at full
-# extension. Both must be reachable by the L (draw) arm:
-#   L shoulder at body-local (-9, -44); arm reach ~20.
-#   BowArm at body-local (22, -42), so nock world = (22 + nock.x, -42).
-#   L→nock dist = sqrt((22 + nock.x - (-9))^2 + 4) = sqrt((31 + nock.x)^2 + 4)
-#   For dist < 20 → 31 + nock.x < 20 → nock.x < -11.
-# So NOCK_REST sits at bow-local (-12, 0) (string lightly tensioned,
-# always within L's grasp) and NOCK_DRAWN at (-19, 0) (full pull-back).
-const NOCK_REST: Vector2   = Vector2(-12, 0)
-const NOCK_DRAWN: Vector2  = Vector2(-19, 0)
+# Per-stance values loaded at _ready from BowStances. Defaults match
+# forward_high_ready so the catalog is purely additive.
+var _nock_rest: Vector2  = Vector2(-12, 0)
+var _nock_drawn: Vector2 = Vector2(-19, 0)
+var _attack_len: float   = 0.9
+var _draw_frac: float    = 0.30
+var _release_frac: float = 0.75
 
 # Animation tuning.
 const IDLE_LEN: float    = 1.6
 const WALK_LEN: float    = 0.45
-const ATTACK_LEN: float  = 0.9       # full draw + hold + release
 
 @onready var _shadow: Polygon2D = $Shadow
 @onready var _body: Node2D = $Body
@@ -95,6 +97,17 @@ const PIN_TABLE: Array = [
 ]
 
 func _ready() -> void:
+	# Stage 17.8 — apply the selected stance from the catalog before
+	# painting. BowArm position + nock travel come from data.
+	var stance: Dictionary = BowStances.get_stance(stance_id)
+	_bow_arm.position = stance["bow_arm_pos"]
+	_bow_arm.rotation = stance["bow_arm_rot"]
+	_nock_rest = stance["nock_rest"]
+	_nock_drawn = stance["nock_drawn"]
+	_attack_len = stance["attack_len"]
+	_draw_frac = stance["draw_frac"]
+	_release_frac = stance["release_frac"]
+	_nock_marker.position = _nock_rest
 	_shadow.color = SHADOW
 	_shadow.polygon = HumanRig.shadow_poly()
 	HumanRig.apply(_body, SKIN, SKIN_SHADOW)
@@ -212,13 +225,13 @@ func _anim_idle() -> Animation:
 	MotionArchetypes.add_body_bob(a, ^"Body", 1.0, IDLE_LEN)
 	# Nock is held at rest — explicit hold so any prior animation's
 	# residual nock translation is overridden the moment idle starts.
-	MotionArchetypes.add_hold(a, ^"Body/BowArm/NockMarker:position", NOCK_REST)
+	MotionArchetypes.add_hold(a, ^"Body/BowArm/NockMarker:position", _nock_rest)
 	return a
 
 func _anim_walk() -> Animation:
 	var a := MotionArchetypes.make_anim(WALK_LEN, Animation.LOOP_LINEAR)
 	MotionArchetypes.add_body_bob(a, ^"Body", 2.0, WALK_LEN)
-	MotionArchetypes.add_hold(a, ^"Body/BowArm/NockMarker:position", NOCK_REST)
+	MotionArchetypes.add_hold(a, ^"Body/BowArm/NockMarker:position", _nock_rest)
 	# Simple opposing leg swing — front leg forward in first half, back in second.
 	MotionArchetypes.add_value_track(a, ^"Body/LegLHip:rotation", [
 		[0.0, 0.20], [WALK_LEN * 0.5, -0.20], [WALK_LEN, 0.20],
@@ -229,26 +242,24 @@ func _anim_walk() -> Animation:
 	return a
 
 func _anim_attack() -> Animation:
-	# CHARGE_RELEASE: nock drawn back over the first 30% of the duration,
-	# held until 75%, snaps back to rest in the final 25%.
-	# The R arm draw-shoulder rotation is HINTED here so the IK has a
-	# sensible starting pose, but the actual hand position is dictated
-	# by the pin to NockMarker each frame.
-	var a := MotionArchetypes.make_anim(ATTACK_LEN, Animation.LOOP_NONE)
+	# CHARGE_RELEASE driven by per-stance timing. The L arm's actual
+	# hand position is dictated by the pin to NockMarker each frame —
+	# the R-shoulder rotation hint here just biases the IK seed.
+	var a := MotionArchetypes.make_anim(_attack_len, Animation.LOOP_NONE)
 	MotionArchetypes.add_charge_release(a,
 		^"Body/BowArm/NockMarker:position",
 		^"Body/ArmRShoulder",
-		NOCK_REST, NOCK_DRAWN,
-		0.0, -0.6,            # shoulder rest → drawn rotation (radians)
-		ATTACK_LEN,
-		0.30, 0.75,
+		_nock_rest, _nock_drawn,
+		0.0, -0.6,
+		_attack_len,
+		_draw_frac, _release_frac,
 	)
 	# Subtle body lean back during draw — sells the tension.
 	MotionArchetypes.add_value_track(a, ^"Body:position", [
-		[0.0,                  Vector2.ZERO],
-		[ATTACK_LEN * 0.30,    Vector2(-1, 0)],
-		[ATTACK_LEN * 0.75,    Vector2(-1, 0)],
-		[ATTACK_LEN,           Vector2.ZERO],
+		[0.0,                       Vector2.ZERO],
+		[_attack_len * _draw_frac,  Vector2(-1, 0)],
+		[_attack_len * _release_frac, Vector2(-1, 0)],
+		[_attack_len,               Vector2.ZERO],
 	])
 	return a
 

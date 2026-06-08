@@ -16,6 +16,7 @@ extends Node
 ## (WSL2's WSLg provides one). Output PNGs can be Read directly.
 
 const SpriteSpecs = preload("res://test/sprite_specs.gd")
+const AnatomyValidator = preload("res://scripts/systems/anatomy_validator.gd")
 
 const FRAME_PATH := "res://docs/sprites/%s/%s_%d.png"
 const STRIP_PATH := "res://docs/sprites/%s/%s_strip.png"
@@ -208,6 +209,23 @@ func _render_variant(scene: PackedScene, id: String, class_id: StringName,
 			inv.add_item(equip[slot])
 			inv.equip(equip[slot])
 	await get_tree().process_frame
+	# Stage 17.8 — anatomy pre-flight. Walks every pin entry against
+	# every animation keyframe and reports OUT_OF_REACH / COLLAPSE
+	# violations. Promoted to strict (abort on violation) when the
+	# environment defines `ANATOMY_STRICT=1` so CI can gate on it once
+	# existing rigs are validated clean. Default report-only so a
+	# legacy violation in one class doesn't block the whole pipeline.
+	var pin_table = sprite.get(&"PIN_TABLE") if &"PIN_TABLE" in sprite else null
+	if pin_table != null:
+		var v_body: Node2D = sprite.get_node_or_null(^"Body") as Node2D
+		var v_anim: AnimationPlayer = sprite.get_node_or_null(^"AnimationPlayer") as AnimationPlayer
+		var strict: bool = OS.get_environment("ANATOMY_STRICT") == "1"
+		var ok: bool = AnatomyValidator.validate_sprite(
+				sprite, v_body, pin_table, v_anim, strict)
+		if strict and not ok:
+			push_error("sprite_render: anatomy validator failed for %s/%s" % [id, variant["name"]])
+			get_tree().quit(1)
+			return
 	# Play the animation, capture frames evenly across its length.
 	var anim_name: StringName = variant["anim"]
 	var anim_player: AnimationPlayer = sprite.get_node(^"AnimationPlayer") as AnimationPlayer

@@ -131,6 +131,19 @@ Highlights worth a look:
   validation that warns when a pin target falls outside arm reach.
   ShadeHunter now ships with a welded recurve bow + CHARGE_RELEASE
   draw animation built on the new infrastructure.
+- Anatomy validator + stance catalog (Stage 17.8):
+  `AnatomyValidator.validate_sprite` walks every pin × every animation
+  keyframe at sprite spawn, reporting OUT_OF_REACH (target beyond arm
+  length) and COLLAPSE (target so close the hand reads as the elbow)
+  violations. Soft mode by default (push_warning) so legacy rigs don't
+  block; `ANATOMY_STRICT=1` env var promotes to abort-on-violation for
+  CI gates. Stance candidates live in `scripts/systems/stances/*.gd`
+  per weapon type (e.g. `bow_stances.gd` lists `forward_high_ready /
+  low_ready_diag / high_aim`); a sprite picks one via `stance_id`
+  export var. `pose_tuner` gains F3 to cycle candidates and 1-5 keys
+  to score the current (stance, anim, phase) into
+  `tmp/stance_scores.json` — accumulated scores let future agent runs
+  bias toward patterns you rated highly.
 
 ## Running it
 

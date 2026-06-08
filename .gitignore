@@ -39,3 +39,4 @@ Screenshot*.png
 # blanket *.png ignore above.
 !docs/sprites/**
 !docs/sprites/**/*.png
+tmp/

@@ -11,8 +11,10 @@ extends Control
 ## Hotkeys:
 ##   F1       — cycle class (pythia → myrmidon → shade_hunter → ossuary_priest)
 ##   F2       — cycle variant for the current class
+##   F3       — cycle stance (within current class's weapon-stance catalog)
 ##   D        — dump current pose to console + tmp/pose_dump.txt as
 ##              keyframe Dictionary ready to paste into sprite_specs.gd
+##   1-5      — score CURRENT (stance, anim, time) into tmp/stance_scores.json
 ##   SPACE    — toggle play/pause of the animation
 ##   R        — reset all sliders (reload sprite fresh)
 ##
@@ -62,9 +64,19 @@ const CLASSES: Array = [
 	},
 ]
 
+const BowStances = preload("res://scripts/systems/stances/bow_stances.gd")
+
+# Per-class stance catalog. Only classes with weapon-stance catalogs
+# need an entry; others fall through to a single-stance behavior.
+const STANCE_CATALOGS: Dictionary = {
+	&"shade_hunter": &"bow",
+}
+
 # State.
 var _class_idx: int = 0
 var _variant_idx: int = 0
+var _stance_ids: Array = []   # candidate stance ids for current class
+var _stance_idx: int = 0
 var _vp: SubViewport
 var _sprite: Node2D
 var _anim: AnimationPlayer
@@ -160,7 +172,17 @@ func _load_current() -> void:
 	_slider_entries.clear()
 	var cls: Dictionary = CLASSES[_class_idx]
 	var variant: Dictionary = cls["variants"][_variant_idx]
-	_label_class.text = "Class: %s" % cls["id"]
+	# Populate stance ids for this class's weapon catalog.
+	_stance_ids = []
+	var catalog: StringName = STANCE_CATALOGS.get(cls["id"], &"")
+	if catalog == &"bow":
+		_stance_ids = BowStances.all_ids()
+	if _stance_idx >= _stance_ids.size():
+		_stance_idx = 0
+	var stance_label: String = "—"
+	if _stance_ids.size() > 0:
+		stance_label = "%s (%d/%d)" % [_stance_ids[_stance_idx], _stance_idx + 1, _stance_ids.size()]
+	_label_class.text = "Class: %s   Stance: %s" % [cls["id"], stance_label]
 	_label_variant.text = "Variant: %s" % variant["name"]
 	# Instantiate
 	var scene: PackedScene = load(cls["scene"]) as PackedScene
@@ -174,6 +196,10 @@ func _load_current() -> void:
 	_inv.stats = stats
 	add_child(_inv)
 	_sprite = scene.instantiate() as Node2D
+	# Apply selected stance BEFORE add_child so the sprite's _ready
+	# picks it up. The sprite exposes stance_id as @export var.
+	if _stance_ids.size() > 0 and &"stance_id" in _sprite:
+		_sprite.stance_id = _stance_ids[_stance_idx]
 	_sprite.position = FEET_POS
 	_sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
 	_vp.add_child(_sprite)
@@ -344,6 +370,63 @@ func _dump_centroid(lines: Array[String], body: Node2D,
 func _on_reset_pressed() -> void:
 	_load_current()
 
+# Stage 17.8 — score the CURRENT (stance, variant_anim, phase) on a
+# 1-5 scale. Writes/merges into tmp/stance_scores.json so future agent
+# runs can bias toward high-scored entries. Phase is derived from the
+# current scrub time: REST at boundaries, STRIKE/CHARGE in the
+# middle (variant-anim dependent — uses a coarse t/length banding).
+func _score_current(score: int) -> void:
+	if _stance_ids.size() == 0:
+		print("[pose_tuner] no stance catalog for current class; score ignored")
+		return
+	var stance_id: StringName = _stance_ids[_stance_idx]
+	var cls: Dictionary = CLASSES[_class_idx]
+	var variant: Dictionary = cls["variants"][_variant_idx]
+	var phase: StringName = _current_phase()
+	var key: String = "%s/%s/%s" % [stance_id, variant["name"], phase]
+	# Load existing.
+	var scores: Dictionary = {}
+	var f := FileAccess.open("res://tmp/stance_scores.json", FileAccess.READ)
+	if f != null:
+		var txt: String = f.get_as_text()
+		f.close()
+		var parsed: Variant = JSON.parse_string(txt)
+		if typeof(parsed) == TYPE_DICTIONARY:
+			scores = parsed
+	scores[key] = {
+		"score": score,
+		"class": String(cls["id"]),
+		"stance": String(stance_id),
+		"variant": String(variant["name"]),
+		"phase": String(phase),
+		"t": _scrub_time,
+		"timestamp": Time.get_datetime_string_from_system(),
+	}
+	DirAccess.make_dir_recursive_absolute("res://tmp")
+	var w := FileAccess.open("res://tmp/stance_scores.json", FileAccess.WRITE)
+	if w != null:
+		w.store_string(JSON.stringify(scores, "  "))
+		w.close()
+	print("[pose_tuner] scored %s = %d" % [key, score])
+
+# Coarse phase classification by scrub time. Animation-specific —
+# attack splits into REST/CHARGE/STRIKE/RECOVERY; idle/walk are REST.
+func _current_phase() -> StringName:
+	if _anim == null:
+		return &"REST"
+	var length: float = _anim.current_animation_length
+	if length <= 0.01:
+		return &"REST"
+	var anim_name: StringName = _anim.current_animation
+	if anim_name != &"attack":
+		return &"REST"
+	var f: float = _scrub_time / length
+	if f < 0.10:    return &"REST"
+	if f < 0.45:    return &"CHARGE"
+	if f < 0.75:    return &"STRIKE"
+	if f < 0.95:    return &"RECOVERY"
+	return &"REST"
+
 # =========================================================================
 # Hotkeys
 # =========================================================================
@@ -360,6 +443,12 @@ func _input(event: InputEvent) -> void:
 			var n: int = CLASSES[_class_idx]["variants"].size()
 			_variant_idx = (_variant_idx + 1) % n
 			_load_current()
+		KEY_F3:
+			if _stance_ids.size() > 0:
+				_stance_idx = (_stance_idx + 1) % _stance_ids.size()
+				_load_current()
+		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5:
+			_score_current(event.keycode - KEY_0)
 		KEY_D:
 			_on_dump_pressed()
 		KEY_SPACE:
