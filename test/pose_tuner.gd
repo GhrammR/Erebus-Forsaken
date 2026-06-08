@@ -90,6 +90,9 @@ var _stance_idx: int = 0
 # extra click. Untoggle to re-enable runtime IK pinning.
 var _ik_disabled: bool = true
 var _vp: SubViewport
+var _vp_container: SubViewportContainer
+var _drag_node: Node2D = null
+var _drag_last_mouse: Vector2 = Vector2.ZERO
 var _sprite: Node2D
 var _anim: AnimationPlayer
 var _inv: Inventory
@@ -165,12 +168,18 @@ func _build_ui() -> void:
 	_slider_box = VBoxContainer.new()
 	_slider_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_slider_box)
-	# Viewport pane
+	# Viewport pane. Stretch OFF + fixed size so mouse position in the
+	# container maps 1:1 to viewport pixels — required for drag-handle
+	# math to land on the right marker.
 	var vp_container := SubViewportContainer.new()
-	vp_container.stretch = true
+	vp_container.stretch = false
+	vp_container.custom_minimum_size = Vector2(VIEW_SIZE)
 	vp_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vp_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vp_container.gui_input.connect(_on_viewport_input)
+	vp_container.mouse_filter = Control.MOUSE_FILTER_STOP
 	root.add_child(vp_container)
+	_vp_container = vp_container
 	_vp = SubViewport.new()
 	_vp.size = VIEW_SIZE
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -490,6 +499,101 @@ func _dump_centroid(lines: Array[String], body: Node2D,
 func _on_reset_pressed() -> void:
 	_load_current()
 
+# =========================================================================
+# Click + drag handles
+# =========================================================================
+# Mouse events on the SubViewportContainer come in as gui_input. The
+# container's stretch is off + size = VIEW_SIZE, so mouse position in
+# container space == pixel in the SubViewport. Sprite is at FEET_POS
+# with scale SPRITE_SCALE, so any draggable's screen pixel can be
+# checked against the cursor with simple linear math.
+#
+# Two kinds of draggable nodes:
+#   - Marker2D (NockMarker, RiserMarker, BowTipTop/Bot, LeftGripMarker,
+#     etc.) — child of the weapon-arm subtree. Drag updates the
+#     marker's position in its parent's local space.
+#   - BowArm / StaffArm / SpearArm itself — drag updates its position
+#     in Body-local space (so its children move with it).
+
+const DRAG_HIT_RADIUS: float = 12.0
+
+func _on_viewport_input(event: InputEvent) -> void:
+	if _sprite == null:
+		return
+	if event is InputEventMouseButton:
+		var mb: InputEventMouseButton = event
+		if mb.button_index != MOUSE_BUTTON_LEFT:
+			return
+		if mb.pressed:
+			_drag_node = _find_draggable_under(mb.position)
+			_drag_last_mouse = mb.position
+		else:
+			_drag_node = null
+	elif event is InputEventMouseMotion and _drag_node != null:
+		var mm: InputEventMouseMotion = event
+		var delta_screen: Vector2 = mm.position - _drag_last_mouse
+		_drag_last_mouse = mm.position
+		# Convert screen delta → parent-local delta. SubViewport is at
+		# 1:1 with container, so screen delta divided by sprite scale
+		# gives sprite-local delta. We're modifying position in PARENT
+		# local space — if BowArm rotation = 0 and Body rotation = 0,
+		# parent-local == sprite-local. Rotation handling deferred.
+		var local_delta: Vector2 = delta_screen / SPRITE_SCALE
+		_drag_node.position += local_delta
+		_sync_sliders_for(_drag_node)
+
+# Find the closest draggable (Marker2D or *Arm Node2D) within
+# DRAG_HIT_RADIUS of mouse_pos (in container/viewport coords).
+func _find_draggable_under(mouse_pos: Vector2) -> Node2D:
+	var best: Node2D = null
+	var best_d: float = DRAG_HIT_RADIUS
+	for n in _enumerate_draggables(_sprite):
+		var d: float = mouse_pos.distance_to(n.global_position)
+		if d < best_d:
+			best_d = d
+			best = n
+	return best
+
+# Walk the sprite tree collecting Markers + *Arm Node2Ds.
+func _enumerate_draggables(root: Node) -> Array:
+	var out: Array = []
+	for child in root.get_children():
+		if child is Marker2D:
+			out.append(child)
+		elif child is Node2D:
+			var n: String = String(child.name)
+			if n.ends_with("BowArm") or n.ends_with("StaffArm") or n.ends_with("SpearArm"):
+				out.append(child)
+		out.append_array(_enumerate_draggables(child))
+	return out
+
+# After a drag, find the matching slider entry and sync slider+SpinBox
+# values so the sidebar reflects the new position.
+func _sync_sliders_for(n: Node2D) -> void:
+	var target_path: String = _path_for(n)
+	for entry in _slider_entries:
+		if entry["kind"] == "pos" and entry["path"] == target_path:
+			var controls: Array = entry["controls"]
+			# controls[0] is the X HSlider; we don't have the SpinBox
+			# refs here so this only updates the slider — SpinBox
+			# refresh would require expanding the entry schema. For
+			# now slider sync is enough to indicate the value changed.
+			if controls.size() >= 1:
+				controls[0].set_value_no_signal(n.position.x)
+			if controls.size() >= 2:
+				controls[1].set_value_no_signal(n.position.y)
+			return
+
+func _path_for(n: Node) -> String:
+	# Build the same '/'-joined path used when sliders were created.
+	var parts: Array[String] = []
+	var cur: Node = n
+	while cur != null and cur != _sprite:
+		parts.append(String(cur.name))
+		cur = cur.get_parent()
+	parts.reverse()
+	return "/".join(parts)
+
 func _on_ik_toggled(pressed: bool) -> void:
 	_ik_disabled = pressed
 	# Apply immediately to the currently-loaded sprite. Pause the
@@ -557,6 +661,12 @@ func _save_recommended() -> void:
 	if _stance_ids.size() > 0:
 		stance_label = String(_stance_ids[_stance_idx])
 	var phase: StringName = _current_phase()
+	# Save key includes the ANIMATION NAME (idle/walk/attack) so each
+	# variant gets its own slot — idle has a different bow placement
+	# than attack-rest, etc. Empty anim falls back to "global".
+	var anim_name: String = "global"
+	if _anim != null and _anim.current_animation != &"":
+		anim_name = String(_anim.current_animation)
 	# Discover the weapon-arm node (BowArm/StaffArm/SpearArm) and its
 	# tunable marker children. We dump whatever is present so the file
 	# is self-describing.
@@ -581,13 +691,15 @@ func _save_recommended() -> void:
 		recommended[class_key] = {}
 	if not recommended[class_key].has(stance_label):
 		recommended[class_key][stance_label] = {}
-	recommended[class_key][stance_label][String(phase)] = snap
+	if not recommended[class_key][stance_label].has(anim_name):
+		recommended[class_key][stance_label][anim_name] = {}
+	recommended[class_key][stance_label][anim_name][String(phase)] = snap
 	DirAccess.make_dir_recursive_absolute("res://tmp")
 	var w := FileAccess.open("res://tmp/recommended_stances.json", FileAccess.WRITE)
 	if w != null:
 		w.store_string(JSON.stringify(recommended, "  "))
 		w.close()
-	var msg: String = "saved %s/%s/%s" % [class_key, stance_label, String(phase)]
+	var msg: String = "saved %s/%s/%s/%s" % [class_key, stance_label, anim_name, String(phase)]
 	print("[pose_tuner] %s" % msg)
 	if _label_score != null:
 		_label_score.text = "Recommended " + msg

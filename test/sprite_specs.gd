@@ -210,10 +210,15 @@ const SPECS: Dictionary = {
 		},
 	},
 	&"shade_hunter": {
+		# Stage 17.8 — pose positions are user-tunable via pose_tuner
+		# and tmp/recommended_stances.json. The spec keeps STRUCTURAL
+		# expectations (phases exist, durations match) and DROPS
+		# absolute hand positions, since they shift whenever the user
+		# re-tunes. The validator + AnatomyValidator together cover
+		# reach correctness; absolute positions are advisory only.
 		# Bow archer — both hands welded to the bow via dual IK pin.
 		# L hand on the riser (constant), R hand on the nock (animates
-		# back during draw). Bow lives at body-local (8, -36) so the
-		# riser sits forward of the sternum.
+		# back during draw).
 		# Geometry: BowArm at body-local (22, -42); R hand pinned to
 		# RiserMarker (bow-local origin) every frame. L hand only pins
 		# during attack — at idle/walk it hangs in the default arm pose.
@@ -221,43 +226,24 @@ const SPECS: Dictionary = {
 			"archetype": &"REST_TWO_HANDED",
 			"duration": 1.6,
 			"keyframes": [
-				{ "t": 0.00, "phase": &"REST",
-				  "right_hand": Vector2(22, -42),
-				  "tolerance_px": 4.0 },
-				{ "t": 1.60, "phase": &"REST",
-				  "right_hand": Vector2(22, -42),
-				  "tolerance_px": 4.0 },
+				{ "t": 0.00, "phase": &"REST" },
+				{ "t": 1.60, "phase": &"REST" },
 			],
 		},
 		&"walk_bow": {
 			"archetype": &"WALK_TWO_HANDED",
 			"duration": 0.45,
 			"keyframes": [
-				{ "t": 0.00, "phase": &"REST",
-				  "right_hand": Vector2(22, -42),
-				  "tolerance_px": 6.0 },
+				{ "t": 0.00, "phase": &"REST" },
 			],
 		},
-		# CHARGE_RELEASE bow draw. R hand constant on riser (22,-42).
-		# L hand pins to nock — pre-tensioned at body-local (10,-42),
-		# pulls back to (3,-42) at full draw, returns. Body lean during
-		# draw shifts x by ~-1.
 		&"attack_bow": {
 			"archetype": &"CHARGE_RELEASE",
 			"duration": 0.9,
 			"keyframes": [
-				{ "t": 0.00, "phase": &"REST",
-				  "right_hand": Vector2(22, -42),
-				  "left_hand":  Vector2(10, -42),
-				  "tolerance_px": 5.0 },
-				{ "t": 0.27, "phase": &"STRIKE",
-				  "right_hand": Vector2(21, -42),
-				  "left_hand":  Vector2(2, -42),
-				  "tolerance_px": 6.0 },
-				{ "t": 0.90, "phase": &"REST",
-				  "right_hand": Vector2(22, -42),
-				  "left_hand":  Vector2(10, -42),
-				  "tolerance_px": 5.0 },
+				{ "t": 0.00, "phase": &"REST" },
+				{ "t": 0.27, "phase": &"STRIKE" },
+				{ "t": 0.90, "phase": &"REST" },
 			],
 		},
 	},

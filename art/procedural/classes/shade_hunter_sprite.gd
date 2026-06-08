@@ -128,22 +128,31 @@ func _ready() -> void:
 	_paint_hood()
 	_paint_bow()
 	_build_animations()
+	# Apply the idle variant's tuned values (if any) BEFORE first play.
+	if _per_anim_config.has("idle"):
+		_apply_anim_config("idle")
+		_rebuild_animation(&"idle")
+	# Re-run config swap on every animation change so each variant
+	# renders with its own tuned pose.
+	_anim.animation_started.connect(_on_anim_started)
 	_anim.play(&"idle")
 	# Pin both arms to the bow every frame (after AnimationPlayer
 	# advances the nock track).
 	get_tree().process_frame.connect(_apply_pins_and_string)
 
+## Per-variant cache populated from recommended_stances.json. Each
+## entry holds the bow placement + nock positions for one animation
+## (idle/walk/attack). On animation_started we apply the matching
+## entry so each anim renders with its tuned pose.
+var _per_anim_config: Dictionary = {}   # anim_name → { bow_pos, bow_rot, nock_rest, nock_drawn }
+
 ## Layer user-tuned overrides from tmp/recommended_stances.json on top
-## of the catalog defaults. File schema:
-##   {
-##     "shade_hunter": {
-##       "<stance_id>": {
-##         "REST":   { "weapon_arm_pos": [x, y], "weapon_arm_rot": r,
-##                     "NockMarker":  [x, y], ... },
-##         "STRIKE": { "NockMarker":  [x, y], ... },
-##       }
-##     }
-##   }
+## of the catalog defaults. Two schemas supported:
+##   New (per-variant):
+##     classes[class][stance][anim_name][phase] = { weapon_arm_pos, ... }
+##   Legacy (no anim layer, single REST/STRIKE pair):
+##     classes[class][stance][phase] = { ... }
+##   Legacy data is treated as applying to all variants.
 func _apply_recommended_overrides() -> void:
 	var f := FileAccess.open("res://tmp/recommended_stances.json", FileAccess.READ)
 	if f == null:
@@ -153,29 +162,93 @@ func _apply_recommended_overrides() -> void:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return
 	var classes: Dictionary = parsed
-	var by_class: Dictionary = classes.get("shade_hunter", {})
-	var by_stance: Dictionary = by_class.get(String(stance_id), {})
+	var by_stance: Dictionary = classes.get("shade_hunter", {}).get(String(stance_id), {})
 	if by_stance.is_empty():
 		return
-	# REST snapshot governs the resting bow placement + nock_rest.
-	var rest: Dictionary = by_stance.get("REST", {})
+	# Detect schema: if any key is a known phase (REST/STRIKE/CHARGE/
+	# RECOVERY), it's the legacy flat layout; otherwise keys are anim
+	# names (idle/walk/attack).
+	var phase_keys: PackedStringArray = ["REST", "STRIKE", "CHARGE", "RECOVERY"]
+	var is_legacy: bool = false
+	for k in by_stance.keys():
+		if phase_keys.has(String(k)):
+			is_legacy = true
+			break
+	if is_legacy:
+		# Apply once globally, treat all anims the same.
+		_load_anim_config("global", by_stance)
+		_apply_anim_config("global")
+	else:
+		# Cache per-anim configs.
+		for anim_name in by_stance:
+			_load_anim_config(String(anim_name), by_stance[anim_name])
+		# Apply the FIRST available config now so initial render shows
+		# at least the tuned attack pose. Prefer attack > idle > walk.
+		for preferred in ["attack", "idle", "walk"]:
+			if _per_anim_config.has(preferred):
+				_apply_anim_config(preferred)
+				break
+	print("[shade_hunter] recommended overrides loaded for stance=%s (anims=%s)" % [
+		stance_id, _per_anim_config.keys()])
+
+func _load_anim_config(anim_name: String, phases: Dictionary) -> void:
+	var cfg: Dictionary = _per_anim_config.get(anim_name, {})
+	var rest: Dictionary = phases.get("REST", {})
 	if rest.has("weapon_arm_pos"):
 		var p: Array = rest["weapon_arm_pos"]
-		_bow_arm.position = Vector2(float(p[0]), float(p[1]))
+		cfg["bow_pos"] = Vector2(float(p[0]), float(p[1]))
 	if rest.has("weapon_arm_rot"):
-		_bow_arm.rotation = float(rest["weapon_arm_rot"])
+		cfg["bow_rot"] = float(rest["weapon_arm_rot"])
 	if rest.has("NockMarker"):
 		var nm: Array = rest["NockMarker"]
-		_nock_rest = Vector2(float(nm[0]), float(nm[1]))
-	# STRIKE snapshot governs the drawn nock position (and optionally
-	# overrides the bow placement during strike — captured but not
-	# applied here because the body lean already handles in-strike
-	# offsets).
-	var strike: Dictionary = by_stance.get("STRIKE", {})
+		cfg["nock_rest"] = Vector2(float(nm[0]), float(nm[1]))
+	var strike: Dictionary = phases.get("STRIKE", {})
 	if strike.has("NockMarker"):
 		var nd: Array = strike["NockMarker"]
-		_nock_drawn = Vector2(float(nd[0]), float(nd[1]))
-	print("[shade_hunter] applied recommended overrides for stance=%s" % stance_id)
+		cfg["nock_drawn"] = Vector2(float(nd[0]), float(nd[1]))
+	_per_anim_config[anim_name] = cfg
+
+# Animation-start hook — switch to the variant's tuned bow placement
+# and rebuild the animation so its nock track uses the variant-
+# specific rest position. Without rebuild, the animation's baked-in
+# NOCK_REST keyframe would override the marker position.
+func _on_anim_started(anim_name: StringName) -> void:
+	var key: String = String(anim_name)
+	if _per_anim_config.has(key):
+		_apply_anim_config(key)
+		_rebuild_animation(anim_name)
+
+# Replace a single named animation in the library with a fresh build
+# that uses the current _nock_rest / _nock_drawn / timing values.
+func _rebuild_animation(anim_name: StringName) -> void:
+	var lib: AnimationLibrary = _anim.get_animation_library(&"")
+	if lib == null:
+		return
+	var fresh: Animation = null
+	match anim_name:
+		&"idle":   fresh = _anim_idle()
+		&"walk":   fresh = _anim_walk()
+		&"attack": fresh = _anim_attack()
+		&"cast":   fresh = _anim_attack()
+	if fresh == null:
+		return
+	if lib.has_animation(anim_name):
+		lib.remove_animation(anim_name)
+	lib.add_animation(anim_name, fresh)
+
+func _apply_anim_config(anim_name: String) -> void:
+	var cfg: Dictionary = _per_anim_config.get(anim_name, {})
+	if cfg.is_empty():
+		return
+	if cfg.has("bow_pos"):
+		_bow_arm.position = cfg["bow_pos"]
+	if cfg.has("bow_rot"):
+		_bow_arm.rotation = cfg["bow_rot"]
+	if cfg.has("nock_rest"):
+		_nock_rest = cfg["nock_rest"]
+		_nock_marker.position = _nock_rest
+	if cfg.has("nock_drawn"):
+		_nock_drawn = cfg["nock_drawn"]
 
 # ---- Runtime IK + bowstring ---------------------------------------------
 
