@@ -683,7 +683,18 @@ func _cycle_preset() -> void:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return
 	var recommended: Dictionary = parsed
-	var slot: Variant = recommended.get(class_key, {}).get(stance_label, {}).get(anim_name, {}).get(phase_key, null)
+	# Look in primary anim slot; fall back to legacy "global" bucket
+	# if nothing's there yet.
+	var stance_block: Dictionary = recommended.get(class_key, {}).get(stance_label, {})
+	var anim_block: Dictionary = stance_block.get(anim_name, {})
+	if typeof(anim_block) != TYPE_DICTIONARY or anim_block.is_empty():
+		anim_block = stance_block.get("global", {})
+	var slot: Variant = anim_block.get(phase_key, null) if typeof(anim_block) == TYPE_DICTIONARY else null
+	# Legacy flat snapshot at stance/phase — migrate on the fly.
+	if slot == null:
+		var legacy_flat: Variant = stance_block.get(phase_key, null)
+		if typeof(legacy_flat) == TYPE_DICTIONARY:
+			slot = { "presets": { "legacy": legacy_flat }, "active": "legacy" }
 	if typeof(slot) != TYPE_DICTIONARY or not slot.has("presets"):
 		print("[pose_tuner] no presets at %s/%s/%s/%s" % [class_key, stance_label, anim_name, phase_key])
 		return
@@ -770,12 +781,12 @@ func _save_recommended() -> void:
 	if _stance_ids.size() > 0:
 		stance_label = String(_stance_ids[_stance_idx])
 	var phase: StringName = _current_phase()
-	# Save key includes the ANIMATION NAME (idle/walk/attack) so each
-	# variant gets its own slot — idle has a different bow placement
-	# than attack-rest, etc. Empty anim falls back to "global".
-	var anim_name: String = "global"
-	if _anim != null and _anim.current_animation != &"":
-		anim_name = String(_anim.current_animation)
+	# Save key uses the variant's anim name (idle/walk/attack), not
+	# _anim.current_animation — the latter can be empty if the user
+	# saves before play settles. Variant comes from the CLASSES catalog
+	# which is always populated.
+	var variant: Dictionary = cls["variants"][_variant_idx]
+	var anim_name: String = String(variant.get("anim", &"idle"))
 	# Snapshot EVERY tunable transform — arms (shoulder + elbow rotations)
 	# and the weapon-arm subtree (position + rotation + every marker
 	# position). Schema is keyed by tree path so apply-side knows

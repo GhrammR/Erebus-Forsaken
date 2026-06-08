@@ -175,29 +175,28 @@ func _apply_recommended_overrides() -> void:
 	var by_stance: Dictionary = classes.get("shade_hunter", {}).get(String(stance_id), {})
 	if by_stance.is_empty():
 		return
-	# Detect schema: if any key is a known phase (REST/STRIKE/CHARGE/
-	# RECOVERY), it's the legacy flat layout; otherwise keys are anim
-	# names (idle/walk/attack).
+	# Schema can be mixed: keys at this level are either phase names
+	# (REST/STRIKE/... — legacy flat) OR anim names (idle/walk/attack
+	# — new per-variant schema). Split them and load both.
 	var phase_keys: PackedStringArray = ["REST", "STRIKE", "CHARGE", "RECOVERY"]
-	var is_legacy: bool = false
+	var legacy_phases: Dictionary = {}
+	var anim_blocks: Dictionary = {}
 	for k in by_stance.keys():
-		if phase_keys.has(String(k)):
-			is_legacy = true
+		var ks: String = String(k)
+		if phase_keys.has(ks):
+			legacy_phases[ks] = by_stance[k]
+		else:
+			anim_blocks[ks] = by_stance[k]
+	if not legacy_phases.is_empty():
+		_load_anim_config("global", legacy_phases)
+	for anim_name in anim_blocks:
+		_load_anim_config(String(anim_name), anim_blocks[anim_name])
+	# Apply the FIRST available config so initial render uses tuned
+	# values. Prefer current_animation > attack > idle > walk > global.
+	for preferred in ["attack", "idle", "walk", "global"]:
+		if _per_anim_config.has(preferred):
+			_apply_anim_config(preferred)
 			break
-	if is_legacy:
-		# Apply once globally, treat all anims the same.
-		_load_anim_config("global", by_stance)
-		_apply_anim_config("global")
-	else:
-		# Cache per-anim configs.
-		for anim_name in by_stance:
-			_load_anim_config(String(anim_name), by_stance[anim_name])
-		# Apply the FIRST available config now so initial render shows
-		# at least the tuned attack pose. Prefer attack > idle > walk.
-		for preferred in ["attack", "idle", "walk"]:
-			if _per_anim_config.has(preferred):
-				_apply_anim_config(preferred)
-				break
 	print("[shade_hunter] recommended overrides loaded for stance=%s (anims=%s)" % [
 		stance_id, _per_anim_config.keys()])
 
