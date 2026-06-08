@@ -15,6 +15,11 @@ const AnatomyValidator = preload("res://scripts/systems/anatomy_validator.gd")
 # having the IK stomp them every frame. Production sprites leave this
 # true; pose_tuner flips it for manual tuning.
 @export var ik_enabled: bool = true
+
+# Stage 17.8 — toggle for "bow on back / no bow" stances. False hides
+# the entire BowArm subtree at _ready and skips L→Nock pinning so the
+# off hand hangs free. Used by pose_tuner's `*_bare` variants.
+@export var show_bow: bool = true
 ##
 ## Default-facing: RIGHT. Player flips $SpriteAnchor.scale.x to face left.
 ##
@@ -128,6 +133,11 @@ func _ready() -> void:
 	_paint_hood()
 	_paint_bow()
 	_build_animations()
+	# Stage 17.8 — bare/equipped toggle. When show_bow is false the
+	# whole bow subtree is hidden and the dual-pin table is replaced
+	# with a no-op so the off hand isn't forced onto a hidden marker.
+	if not show_bow:
+		_bow_arm.visible = false
 	# Apply the idle variant's tuned values (if any) BEFORE first play.
 	if _per_anim_config.has("idle"):
 		_apply_anim_config("idle")
@@ -191,9 +201,28 @@ func _apply_recommended_overrides() -> void:
 	print("[shade_hunter] recommended overrides loaded for stance=%s (anims=%s)" % [
 		stance_id, _per_anim_config.keys()])
 
+# Resolve the active preset's snap for a given phase. If the phase
+# value is the new {presets: {...}, active: ...} bucket, dereference
+# to the active preset. Otherwise treat the value as a flat snap (old
+# schema written before Stage 17.8 presets).
+static func _resolve_phase(phase_value: Variant) -> Dictionary:
+	if typeof(phase_value) != TYPE_DICTIONARY:
+		return {}
+	var d: Dictionary = phase_value
+	if d.has("presets"):
+		var active: String = String(d.get("active", ""))
+		var presets: Dictionary = d.get("presets", {})
+		if presets.has(active):
+			return presets[active]
+		# Fall back to last preset by key order.
+		if presets.size() > 0:
+			return presets.values()[presets.size() - 1]
+		return {}
+	return d
+
 func _load_anim_config(anim_name: String, phases: Dictionary) -> void:
 	var cfg: Dictionary = _per_anim_config.get(anim_name, {})
-	var rest: Dictionary = phases.get("REST", {})
+	var rest: Dictionary = _resolve_phase(phases.get("REST", {}))
 	# New schema (rotations/positions/markers) — load shoulder/elbow
 	# rotations the user manually tuned, plus weapon-arm placement.
 	if rest.has("rotations"):
@@ -211,7 +240,7 @@ func _load_anim_config(anim_name: String, phases: Dictionary) -> void:
 	if rest.has("NockMarker"):
 		var nm: Array = rest["NockMarker"]
 		cfg["nock_rest"] = Vector2(float(nm[0]), float(nm[1]))
-	var strike: Dictionary = phases.get("STRIKE", {})
+	var strike: Dictionary = _resolve_phase(phases.get("STRIKE", {}))
 	if strike.has("NockMarker"):
 		var nd: Array = strike["NockMarker"]
 		cfg["nock_drawn"] = Vector2(float(nd[0]), float(nd[1]))
@@ -284,7 +313,7 @@ func _apply_anim_config(anim_name: String) -> void:
 # ---- Runtime IK + bowstring ---------------------------------------------
 
 func _apply_pins_and_string() -> void:
-	if ik_enabled:
+	if ik_enabled and show_bow:
 		HumanRig.apply_pins(self, _body, PIN_TABLE, _anim.current_animation)
 	# Rebuild the bowstring as [top tip → nock → bottom tip] in bow-local
 	# coords. Line2D inherits the parent's transform so we keep things

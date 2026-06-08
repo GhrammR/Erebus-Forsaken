@@ -54,8 +54,14 @@ const CLASSES: Array = [
 		"id": &"shade_hunter",
 		"scene": "res://art/procedural/classes/shade_hunter_sprite.tscn",
 		"variants": [
-			{ "name": "idle",   "anim": &"idle",   "equip": {} },
-			{ "name": "attack", "anim": &"attack", "equip": {} },
+			# Equipped (bow visible) — primary scoring path.
+			{ "name": "idle_bow",   "anim": &"idle",   "equip": {}, "show_bow": true },
+			{ "name": "walk_bow",   "anim": &"walk",   "equip": {}, "show_bow": true },
+			{ "name": "attack_bow", "anim": &"attack", "equip": {}, "show_bow": true },
+			# Bare (bow stowed) — for off-stance tuning.
+			{ "name": "idle_bare",   "anim": &"idle",   "equip": {}, "show_bow": false },
+			{ "name": "walk_bare",   "anim": &"walk",   "equip": {}, "show_bow": false },
+			{ "name": "attack_bare", "anim": &"attack", "equip": {}, "show_bow": false },
 		],
 	},
 	{
@@ -158,7 +164,7 @@ func _build_ui() -> void:
 	ik_box.toggled.connect(_on_ik_toggled)
 	side.add_child(ik_box)
 	var hint := Label.new()
-	hint.text = "F1 class  ·  F2 variant  ·  F3 stance  ·  1-5 score  ·  Space play/pause  ·  D dump  ·  R reset"
+	hint.text = "F1 class · F2 variant · F3 stance · F4 preset · 1-5 score · S save · D dump · Space play · R reset"
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	side.add_child(hint)
 	var scroll := ScrollContainer.new()
@@ -238,6 +244,9 @@ func _load_current() -> void:
 	# picks it up. The sprite exposes stance_id as @export var.
 	if _stance_ids.size() > 0 and &"stance_id" in _sprite:
 		_sprite.stance_id = _stance_ids[_stance_idx]
+	# show_bow toggle (ShadeHunter bare/equipped variants).
+	if variant.has("show_bow") and &"show_bow" in _sprite:
+		_sprite.show_bow = bool(variant["show_bow"])
 	# IK starts OFF on a fresh load (sprite paused → tuning mode).
 	# Pressing Space flips both at once via _apply_auto_ik.
 	if &"ik_enabled" in _sprite:
@@ -655,6 +664,47 @@ func _on_ik_toggled(pressed: bool) -> void:
 		_anim.pause()
 		_paused = true
 
+# F4 — advance the "active" preset under the current
+# (class, stance, anim, phase) tuple, then reload the sprite so the
+# next preset becomes the rendered pose. Wraps around.
+func _cycle_preset() -> void:
+	var cls: Dictionary = CLASSES[_class_idx]
+	var class_key: String = String(cls["id"])
+	var stance_label: String = String(_stance_ids[_stance_idx]) if _stance_ids.size() > 0 else "default"
+	var variant: Dictionary = cls["variants"][_variant_idx]
+	var anim_name: String = String(variant.get("anim", &"idle"))
+	var phase_key: String = String(_current_phase())
+	var f := FileAccess.open("res://tmp/recommended_stances.json", FileAccess.READ)
+	if f == null:
+		print("[pose_tuner] no presets file yet")
+		return
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	f.close()
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return
+	var recommended: Dictionary = parsed
+	var slot: Variant = recommended.get(class_key, {}).get(stance_label, {}).get(anim_name, {}).get(phase_key, null)
+	if typeof(slot) != TYPE_DICTIONARY or not slot.has("presets"):
+		print("[pose_tuner] no presets at %s/%s/%s/%s" % [class_key, stance_label, anim_name, phase_key])
+		return
+	var presets: Dictionary = slot["presets"]
+	var keys: Array = presets.keys()
+	if keys.is_empty():
+		return
+	var active: String = String(slot.get("active", ""))
+	var idx: int = keys.find(active)
+	var next_idx: int = (idx + 1) % keys.size()
+	slot["active"] = String(keys[next_idx])
+	# Write back.
+	var w := FileAccess.open("res://tmp/recommended_stances.json", FileAccess.WRITE)
+	if w != null:
+		w.store_string(JSON.stringify(recommended, "  "))
+		w.close()
+	print("[pose_tuner] preset → %s (%d/%d)" % [slot["active"], next_idx + 1, keys.size()])
+	if _label_score != null:
+		_label_score.text = "Preset: %s (%d/%d)" % [slot["active"], next_idx + 1, keys.size()]
+	_load_current()
+
 func _apply_auto_ik() -> void:
 	# IK on while playing, off while paused — so the weapon stays in
 	# the hand during the swing, but sliders work the moment the user
@@ -775,7 +825,25 @@ func _save_recommended() -> void:
 		recommended[class_key][stance_label] = {}
 	if not recommended[class_key][stance_label].has(anim_name):
 		recommended[class_key][stance_label][anim_name] = {}
-	recommended[class_key][stance_label][anim_name][String(phase)] = snap
+	# Stage 17.8 — each S press writes a new TIMESTAMPED preset under
+	# the phase. The "active" key tracks which preset to load. F4
+	# cycles by advancing the active pointer.
+	var phase_key: String = String(phase)
+	if not recommended[class_key][stance_label][anim_name].has(phase_key):
+		recommended[class_key][stance_label][anim_name][phase_key] = {
+			"presets": {}, "active": "",
+		}
+	# Tolerate older flat snapshots: migrate to presets bucket.
+	var slot: Variant = recommended[class_key][stance_label][anim_name][phase_key]
+	if typeof(slot) != TYPE_DICTIONARY or not slot.has("presets"):
+		recommended[class_key][stance_label][anim_name][phase_key] = {
+			"presets": { "legacy": slot if typeof(slot) == TYPE_DICTIONARY else {} },
+			"active": "legacy",
+		}
+		slot = recommended[class_key][stance_label][anim_name][phase_key]
+	var ts: String = Time.get_datetime_string_from_system().replace(":", "-")
+	slot["presets"][ts] = snap
+	slot["active"] = ts
 	DirAccess.make_dir_recursive_absolute("res://tmp")
 	var w := FileAccess.open("res://tmp/recommended_stances.json", FileAccess.WRITE)
 	if w != null:
@@ -837,6 +905,8 @@ func _input(event: InputEvent) -> void:
 			if _stance_ids.size() > 0:
 				_stance_idx = (_stance_idx + 1) % _stance_ids.size()
 				_load_current()
+		KEY_F4:
+			_cycle_preset()
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5:
 			_score_current(event.keycode - KEY_0)
 		KEY_S:
