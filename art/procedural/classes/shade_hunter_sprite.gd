@@ -71,6 +71,9 @@ var _release_frac: float = 0.75
 const IDLE_LEN: float    = 1.6
 const WALK_LEN: float    = 0.45
 
+# Stage 17.8 — per-stance attack action descriptor (see bow_stances.gd).
+var _attack_action: Dictionary = {}
+
 @onready var _shadow: Polygon2D = $Shadow
 @onready var _body: Node2D = $Body
 @onready var _cloak: Polygon2D = $Body/Cloak
@@ -105,6 +108,12 @@ func _ready() -> void:
 	_attack_len = stance["attack_len"]
 	_draw_frac = stance["draw_frac"]
 	_release_frac = stance["release_frac"]
+	# Action descriptor (overrides timing if present).
+	_attack_action = stance.get("attack", {})
+	if not _attack_action.is_empty():
+		_attack_len = float(_attack_action.get("length", _attack_len))
+		_draw_frac = float(_attack_action.get("draw_frac", _draw_frac))
+		_release_frac = float(_attack_action.get("release_frac", _release_frac))
 	# Recommended-stance overrides: if the user has tuned this stance
 	# in pose_tuner and pressed S, tmp/recommended_stances.json contains
 	# their numeric overrides. REST snapshot → bow placement + nock_rest;
@@ -443,22 +452,26 @@ func _anim_walk() -> Animation:
 	return a
 
 func _anim_attack() -> Animation:
-	# CHARGE_RELEASE driven by per-stance timing. The L arm's actual
-	# hand position is dictated by the pin to NockMarker each frame —
-	# the R-shoulder rotation hint here just biases the IK seed.
+	# Dispatch on stance.attack.motion. Currently only charge_release
+	# is wired for bow; future archetypes (snap_release, burst_volley,
+	# overhand_loose) plug in here without changing the sprite.
+	var motion: String = String(_attack_action.get("motion", "charge_release"))
 	var a := MotionArchetypes.make_anim(_attack_len, Animation.LOOP_NONE)
-	# Use the DRAW arm's shoulder (NOT the bow arm). For "left" draw_hand
-	# stances this is ArmLShoulder; for "right" it's ArmRShoulder.
-	# The bow-hand shoulder stays planted because its IK target (riser)
-	# doesn't move.
-	MotionArchetypes.add_charge_release(a,
-		^"Body/BowArm/NockMarker:position",
-		_draw_shoulder_path,
-		_nock_rest, _nock_drawn,
-		0.0, -0.6,
-		_attack_len,
-		_draw_frac, _release_frac,
-	)
+	# Shoulder-seed hint defaults to [0.0, -0.6] if the stance doesn't
+	# specify. Hint biases the IK starting pose during the draw.
+	var seed: Array = _attack_action.get("shoulder_seed", [0.0, -0.6])
+	var seed_rest: float = float(seed[0]) if seed.size() > 0 else 0.0
+	var seed_drawn: float = float(seed[1]) if seed.size() > 1 else -0.6
+	match motion:
+		"charge_release", _:
+			MotionArchetypes.add_charge_release(a,
+				^"Body/BowArm/NockMarker:position",
+				_draw_shoulder_path,
+				_nock_rest, _nock_drawn,
+				seed_rest, seed_drawn,
+				_attack_len,
+				_draw_frac, _release_frac,
+			)
 	# Subtle body lean back during draw — sells the tension.
 	MotionArchetypes.add_value_track(a, ^"Body:position", [
 		[0.0,                       Vector2.ZERO],
