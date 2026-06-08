@@ -103,7 +103,10 @@ func _apply_weapon(item: ItemData) -> void:
 		_install_weapon_profile(item)
 		return
 	if item == null:
-		arm.visible = false
+		# Built-in weapons (ShadeHunter's welded bow) stay visible —
+		# there's no item to hide them with.
+		if not EquipmentVisuals.has_builtin_weapon(_class_id):
+			arm.visible = false
 	else:
 		arm.visible = true
 		# Light retint so weapon brightness reads at a glance. The hit-flash

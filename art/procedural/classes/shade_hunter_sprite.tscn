@@ -10,22 +10,99 @@ z_index = -1
 
 [node name="Body" type="Node2D" parent="."]
 
-[node name="Cloak" type="Polygon2D" parent="Body"]
-z_index = -1
+; --- LEFT LEG ---
+[node name="LegLHip" type="Node2D" parent="Body"]
+position = Vector2(-3.5, -22)
+[node name="Thigh" type="Polygon2D" parent="Body/LegLHip"]
+[node name="KneePivot" type="Node2D" parent="Body/LegLHip"]
+position = Vector2(0, 10)
+[node name="Shin" type="Polygon2D" parent="Body/LegLHip/KneePivot"]
+[node name="Foot" type="Polygon2D" parent="Body/LegLHip/KneePivot"]
 
-[node name="Legs" type="Polygon2D" parent="Body"]
+; --- RIGHT LEG ---
+[node name="LegRHip" type="Node2D" parent="Body"]
+position = Vector2(3.5, -22)
+[node name="Thigh" type="Polygon2D" parent="Body/LegRHip"]
+[node name="KneePivot" type="Node2D" parent="Body/LegRHip"]
+position = Vector2(0, 10)
+[node name="Shin" type="Polygon2D" parent="Body/LegRHip/KneePivot"]
+[node name="Foot" type="Polygon2D" parent="Body/LegRHip/KneePivot"]
 
+; --- Core flesh ---
+[node name="Hips"  type="Polygon2D" parent="Body"]
 [node name="Torso" type="Polygon2D" parent="Body"]
 
-[node name="Hood" type="Polygon2D" parent="Body"]
+; --- Cloak layered BEFORE arms so reaching draw arm renders on top. ---
+[node name="Cloak" type="Polygon2D" parent="Body"]
 
-[node name="EyeGlow" type="Polygon2D" parent="Body"]
+; --- LEFT ARM: bow hand. IK-pinned to BowArm/RiserMarker every frame. ---
+[node name="ArmLShoulder" type="Node2D" parent="Body"]
+position = Vector2(-9, -44)
+[node name="UpperArm" type="Polygon2D" parent="Body/ArmLShoulder"]
+[node name="ElbowPivot" type="Node2D" parent="Body/ArmLShoulder"]
+position = Vector2(0, 10)
+[node name="Forearm" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
+; L hand pinches the bowstring at the nock. z_index = 3 so it renders
+; in front of the bowstring + bow at full draw.
+[node name="Hand"    type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
+z_index = 3
 
-[node name="BowArm" type="Node2D" parent="."]
-position = Vector2(12, -28)
+; --- RIGHT ARM: draw hand. IK-pinned to BowArm/NockMarker every frame.
+;     The animation drives NockMarker:position; this arm chases it. ---
+[node name="ArmRShoulder" type="Node2D" parent="Body"]
+position = Vector2(9, -44)
+[node name="UpperArm" type="Polygon2D" parent="Body/ArmRShoulder"]
+[node name="ElbowPivot" type="Node2D" parent="Body/ArmRShoulder"]
+position = Vector2(0, 10)
+[node name="Forearm" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot"]
+; R hand wraps the bow riser. z_index = 3 puts it above the bow
+; polygon (parent BowArm at z=2) so the hand visibly grips instead of
+; disappearing behind the limb.
+[node name="Hand"    type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot"]
+z_index = 3
 
-[node name="Bow" type="Polygon2D" parent="BowArm"]
+; --- BOW SUBTREE ---
+; Parented under Body AFTER the arms so it renders in front of the
+; torso + L/R arms. z_index = 2 keeps the whole bow above any equipment
+; overlays (cuirass / cloak trim) added later in tree order.
+;
+; BowArm position = the bow's RISER (centre grip) in body-local space:
+; forward of the sternum, between sternum and waist. L hand IK-pins to
+; RiserMarker (bow-local origin), so picking BowArm position picks
+; where the L hand lives.
+;
+; Geometry note: RISER is the bow's center grip. The bow polygon is a
+; C-curve facing left (concave toward the archer). The bowstring
+; (Line2D) runs from BowTipTop → NockMarker → BowTipBot — at rest the
+; nock sits at the riser so the string is straight; at full draw the
+; nock moves to bow-local (-12, 0) so the string forms a V pulled back
+; toward the cheek.
+[node name="BowArm" type="Node2D" parent="Body"]
+position = Vector2(22, -42)
+z_index = 2
+[node name="Bow" type="Polygon2D" parent="Body/BowArm"]
+[node name="Bowstring" type="Line2D" parent="Body/BowArm"]
+width = 1.2
+default_color = Color(0.92, 0.90, 0.78, 1.0)
+[node name="RiserMarker" type="Marker2D" parent="Body/BowArm"]
+position = Vector2(0, 0)
+[node name="NockMarker" type="Marker2D" parent="Body/BowArm"]
+position = Vector2(0, 0)
+[node name="BowTipTop" type="Marker2D" parent="Body/BowArm"]
+position = Vector2(0, -17)
+[node name="BowTipBot" type="Marker2D" parent="Body/BowArm"]
+position = Vector2(0, 17)
 
-[node name="String" type="Polygon2D" parent="BowArm"]
+; --- Head / face LAST so hood + face stay readable over arms ---
+[node name="Neck"  type="Polygon2D" parent="Body"]
+[node name="Head"  type="Polygon2D" parent="Body"]
+[node name="Face"  type="Node2D"    parent="Body"]
+[node name="EyeSocketL" type="Polygon2D" parent="Body/Face"]
+[node name="EyeSocketR" type="Polygon2D" parent="Body/Face"]
+[node name="EyeL"  type="Polygon2D" parent="Body/Face"]
+[node name="EyeR"  type="Polygon2D" parent="Body/Face"]
+[node name="Brow"  type="Polygon2D" parent="Body/Face"]
+[node name="Mouth" type="Polygon2D" parent="Body/Face"]
+[node name="Hood"  type="Polygon2D" parent="Body"]
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]

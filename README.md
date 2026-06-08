@@ -120,6 +120,17 @@ Highlights worth a look:
   per-variant `_trace.txt` with numeric pose data + PASS/FAIL diff
   against `test/sprite_specs.gd` keyframes. Numbers replace
   pixel-squinting when iterating procedural animations.
+- Sprite-authoring infrastructure (Stage 17.7): marker-based dual-IK
+  pin system in `HumanRig.apply_pins` (each class declares a PIN_TABLE
+  of shoulder→Marker2D entries; arms follow markers every frame),
+  motion-archetype library (`MotionArchetypes.add_arc_overhead /
+  thrust_linear / charge_release / conduit_lift`) so attacks are
+  composed from named patterns instead of hand-keyed tracks, an
+  interactive `pose_tuner.tscn` with live slider tweaking + pose-dump,
+  reference-image overlay in `sprite_render`, and per-frame reach
+  validation that warns when a pin target falls outside arm reach.
+  ShadeHunter now ships with a welded recurve bow + CHARGE_RELEASE
+  draw animation built on the new infrastructure.
 
 ## Running it
 

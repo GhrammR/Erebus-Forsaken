@@ -35,6 +35,13 @@ func install(sprite_root: Node2D, weapon_item: ItemData, offhand_item: ItemData)
 	var lib: AnimationLibrary = anim.get_animation_library(&"")
 	if lib == null:
 		return
+	# Sprites with a built-in weapon (ShadeHunter's welded bow) author
+	# their own idle/walk/attack — WeaponProfiles must NOT overwrite
+	# those with the unarmed fallback when no weapon item is equipped.
+	# Once a bow item exists in Act 1 inventory this guard can drop in
+	# favor of a real BOW profile branch.
+	if weapon_item == null and _has_builtin_weapon(sprite_root):
+		return
 	# A sprite with a built-in offhand (Myrmidon's buckler is welded
 	# to the left forearm) ALWAYS attacks with shield-guard posture,
 	# even with the OFFHAND slot empty. Otherwise the no-shield
@@ -90,6 +97,13 @@ func _build_weapon_anims(weapon_type: int, has_shield: bool) -> Dictionary:
 		ItemData.WeaponType.NONE:
 			return { &"attack": _build_unarmed_fallback() }
 	return { &"attack": _build_unarmed_fallback() }
+
+## True if the sprite has a class-baked weapon graphic + animations
+## that the profile system shouldn't stomp. ShadeHunter's bow is the
+## current example — the BowArm subtree is always present and the
+## sprite's own attack drives the draw via NockMarker translation.
+static func _has_builtin_weapon(sprite_root: Node) -> bool:
+	return sprite_root.has_node(^"Body/BowArm")
 
 static func _has_builtin_shield(sprite_root: Node) -> bool:
 	# Mirrors EquipmentVisuals.BUILTIN_OFFHAND — kept inline so the

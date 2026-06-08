@@ -77,6 +77,11 @@ z_index = 2
 ; Parented to the staff so it rotates with it; the L arm is
 ; IK-pinned to land its hand polygon at this marker every frame.
 [node name="LeftGrip" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/StaffArm"]
+; IK pin target for the L hand. Marker2D at the staff-local position
+; where the LeftGrip cosmetic centroid sits (+11 along the shaft).
+; HumanRig.apply_pins reads its global_position each frame.
+[node name="LeftGripMarker" type="Marker2D" parent="Body/ArmRShoulder/ElbowPivot/StaffArm"]
+position = Vector2(11, 0)
 [node name="Orb"   type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/StaffArm"]
 
 ; --- Head/face LAST so hood + face stay readable over arms ---

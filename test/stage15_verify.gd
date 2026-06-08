@@ -47,8 +47,8 @@ func _verify_visuals_weapon_arm_table(fail: int) -> int:
 			"Myrmidon weapon arm path = Body/ArmRShoulder/ElbowPivot/SpearArm", fail)
 	fail = _expect(EquipmentVisuals.weapon_arm_for(&"pythia") == &"Body/ArmRShoulder/ElbowPivot/StaffArm",
 			"Pythia weapon arm path = Body/ArmRShoulder/ElbowPivot/StaffArm", fail)
-	fail = _expect(EquipmentVisuals.weapon_arm_for(&"shade_hunter") == &"BowArm",
-			"ShadeHunter weapon arm = BowArm", fail)
+	fail = _expect(EquipmentVisuals.weapon_arm_for(&"shade_hunter") == &"Body/BowArm",
+			"ShadeHunter weapon arm = Body/BowArm", fail)
 	fail = _expect(EquipmentVisuals.weapon_arm_for(&"ossuary_priest") == &"WandArm",
 			"OssuaryPriest weapon arm = WandArm", fail)
 	fail = _expect(EquipmentVisuals.weapon_arm_for(&"unknown_class") == &"",

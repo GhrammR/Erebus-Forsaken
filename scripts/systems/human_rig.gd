@@ -291,6 +291,93 @@ static func apply(body: Node2D, skin: Color = SKIN_BASE,
 		paint_arm(r_arm, skin)
 
 # =========================================================================
+# 2-BONE IK + MARKER-DRIVEN ARM PINNING
+# =========================================================================
+# Shared driver so per-class sprites don't each reimplement the math.
+# Each pin entry is data: shoulder NodePath (from sprite root) + target
+# NodePath (any Node2D — typically a Marker2D parented under the weapon
+# subtree at the desired grip point). Caller invokes apply_pins() once
+# per frame from SceneTree.process_frame.
+#
+# Pin entry schema:
+#   {
+#     "shoulder":   NodePath,    # e.g. ^"Body/ArmLShoulder"
+#     "target":     NodePath,    # e.g. ^"BowArm/Bow/RiserMarker"
+#     "elbow_dir":  int,         # +1 or -1 — which side the elbow bends
+#     "skip_anims": Array,       # optional StringName list — pin disabled
+#                                # while one of these is the current anim
+#   }
+
+## 2-bone IK in body-local (Godot y-down). Returns
+##   (shoulder_rotation_local, elbow_rotation_local)
+## such that the chain end (l1+l2 from shoulder) lands on `target`.
+## `elbow_dir` ±1 selects which side of the shoulder→target line the
+## elbow bends toward. Out-of-reach targets degrade to fully-extended.
+static func solve_2bone_ik(shoulder: Vector2, target: Vector2,
+		l1: float, l2: float, elbow_dir: int) -> Vector2:
+	var diff: Vector2 = target - shoulder
+	var d: float = diff.length()
+	if d < 0.0001:
+		return Vector2.ZERO
+	if d > l1 + l2 - 0.01:
+		var r_extend: float = atan2(-diff.x, diff.y)
+		return Vector2(r_extend, 0.0)
+	var cos_psi: float = (l1 * l1 + d * d - l2 * l2) / (2.0 * l1 * d)
+	cos_psi = clampf(cos_psi, -1.0, 1.0)
+	var psi: float = acos(cos_psi)
+	var r_st: float = atan2(-diff.x, diff.y)
+	var r_shoulder_local: float = r_st - float(elbow_dir) * psi
+	var elbow_pos: Vector2 = shoulder + l1 * Vector2(
+			-sin(r_shoulder_local), cos(r_shoulder_local))
+	var dir_et: Vector2 = target - elbow_pos
+	var r_chain: float = atan2(-dir_et.x, dir_et.y)
+	var r_elbow_local: float = r_chain - r_shoulder_local
+	return Vector2(r_shoulder_local, r_elbow_local)
+
+## Apply a list of pin entries. `sprite_root` is the class sprite's
+## top-level Node2D; `body` is the Body Node2D used as the IK reference
+## frame (shoulder positions and target are converted to body-local).
+## `current_anim` lets entries opt out of pinning during named anims
+## (e.g. Pythia's cast pose intentionally lifts the L arm free).
+static func apply_pins(sprite_root: Node2D, body: Node2D,
+		pins: Array, current_anim: StringName = &"") -> void:
+	if sprite_root == null or body == null:
+		return
+	for pin in pins:
+		var skip: Array = pin.get("skip_anims", [])
+		if skip.has(current_anim):
+			continue
+		var shoulder: Node2D = sprite_root.get_node_or_null(pin.shoulder) as Node2D
+		if shoulder == null:
+			continue
+		var elbow: Node2D = shoulder.get_node_or_null(^"ElbowPivot") as Node2D
+		if elbow == null:
+			continue
+		var target_node: Node2D = sprite_root.get_node_or_null(pin.target) as Node2D
+		if target_node == null:
+			continue
+		var target_world: Vector2 = target_node.global_position
+		var target_body_local: Vector2 = body.to_local(target_world)
+		var elbow_dir: int = int(pin.get("elbow_dir", -1))
+		# Anatomy validation: the target must be within the arm's
+		# reach envelope. Distance < ~3 means folded so tight the
+		# "hand" reads as the elbow (Stage 17.7 bow incident). Out of
+		# range > l1+l2 means the IK extends fully and the hand floats
+		# off-target. Both are visual anatomy violations — log once so
+		# the dev sees them when scoring stance options later.
+		var l1: float = ELBOW_DROP
+		var l2: float = WRIST_DROP + 1.0
+		var dist: float = (target_body_local - shoulder.position).length()
+		if dist > l1 + l2 + 0.5:
+			push_warning("apply_pins: target %s OUT OF REACH (dist=%.1f > %.1f) — arm fully extended but won't land" % [pin.target, dist, l1 + l2])
+		elif dist < 3.0:
+			push_warning("apply_pins: target %s TOO CLOSE (dist=%.1f < 3.0) — arm collapses, hand reads as elbow" % [pin.target, dist])
+		var ik: Vector2 = solve_2bone_ik(shoulder.position, target_body_local,
+				l1, l2, elbow_dir)
+		shoulder.rotation = ik.x
+		elbow.rotation = ik.y
+
+# =========================================================================
 # Internals
 # =========================================================================
 

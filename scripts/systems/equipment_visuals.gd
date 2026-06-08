@@ -27,7 +27,7 @@ const WEAPON_ARMS: Dictionary = {
 	# grip (per reference-photo two-handed quarterstaff stance); the
 	# LEFT arm grips the upper shaft via IK pinning.
 	&"pythia":         &"Body/ArmRShoulder/ElbowPivot/StaffArm",
-	&"shade_hunter":   &"BowArm",
+	&"shade_hunter":   &"Body/BowArm",
 	&"ossuary_priest": &"WandArm",
 }
 
@@ -40,8 +40,21 @@ const BUILTIN_OFFHAND: Dictionary = {
 	&"myrmidon": ^"Body/ArmLShoulder/ElbowPivot/Buckler",
 }
 
+## Classes whose weapon arm subtree is BUILT-IN to the sprite (always
+## visible, no item needed to materialize it). EquipmentPaperdoll's
+## "hide arm when weapon=null" rule is skipped for these. ShadeHunter's
+## bow is welded into the rig; until Stage 18 introduces bow items this
+## keeps it on-screen.
+const BUILTIN_WEAPON_CLASSES: Array = [&"shade_hunter"]
+
 func weapon_arm_for(class_id: StringName) -> StringName:
 	return WEAPON_ARMS.get(class_id, &"")
+
+## True if the weapon arm should remain visible regardless of equipped
+## weapon item. EquipmentPaperdoll skips its hide-on-null rule for
+## these classes.
+func has_builtin_weapon(class_id: StringName) -> bool:
+	return class_id in BUILTIN_WEAPON_CLASSES
 
 func builtin_offhand_path_for(class_id: StringName) -> NodePath:
 	return BUILTIN_OFFHAND.get(class_id, NodePath(""))

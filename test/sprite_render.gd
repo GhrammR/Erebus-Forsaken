@@ -20,6 +20,10 @@ const SpriteSpecs = preload("res://test/sprite_specs.gd")
 const FRAME_PATH := "res://docs/sprites/%s/%s_%d.png"
 const STRIP_PATH := "res://docs/sprites/%s/%s_strip.png"
 const DEBUG_STRIP_PATH := "res://docs/sprites/%s/%s_debug_strip.png"
+# Reference-overlay strip: [reference photo | rendered strip]. Generated
+# only when a variant declares a "reference" path. Lets us A/B a pose
+# against a real-world photo before committing.
+const REF_STRIP_PATH := "res://docs/sprites/%s/%s_ref.png"
 # Stage 17.6 — per-variant text trace + pose-spec verifier report.
 # The trace.txt holds per-frame numeric pose data (positions of both
 # hands, both elbows, weapon angle, tip, butt) PLUS the verifier's
@@ -99,6 +103,16 @@ const RENDER_PLAN := [
 				"head": &"worn_helm",
 				"legs": &"linen_wrap",
 			} },
+		],
+	},
+	{
+		"id": "shade_hunter",
+		"class_id": &"shade_hunter",
+		"scene": "res://art/procedural/classes/shade_hunter_sprite.tscn",
+		"variants": [
+			{ "name": "idle_bow",   "anim": &"idle",   "equip": {} },
+			{ "name": "walk_bow",   "anim": &"walk",   "equip": {} },
+			{ "name": "attack_bow", "anim": &"attack", "equip": {} },
 		],
 	},
 ]
@@ -231,6 +245,12 @@ func _render_variant(scene: PackedScene, id: String, class_id: StringName,
 	# scrub for fluidity than reading 12 separate files.
 	_save_strip(frames, id, variant["name"])
 	_save_debug_strip(debug_frames, id, variant["name"])
+	# Reference-photo overlay: if the variant declares a reference image
+	# path, append it as a leading column so the rendered pose can be
+	# A/B'd against a real-world photo without context-switching.
+	var ref_path: String = variant.get("reference", "")
+	if ref_path != "":
+		_save_ref_strip(frames, ref_path, id, variant["name"])
 	# Stage 17.6 — write per-frame numeric trace + pose-spec verifier.
 	# Numbers replace squinting at the strip. Runs sequentially after
 	# the strip is saved so the trace and the PNGs land in the same
@@ -256,6 +276,36 @@ func _save_debug_strip(frames: Array, id: String, variant_name: String) -> void:
 		return
 	_blit_strip(frames, DEBUG_STRIP_PATH % [id, variant_name])
 	print("  DEBUG %s" % (DEBUG_STRIP_PATH % [id, variant_name]))
+
+# Reference-strip writer. Loads `ref_path` (a JPG/PNG photo the dev
+# dropped in the repo), resizes it to frame height preserving aspect,
+# and prepends it as a leading column on the rendered strip. The output
+# is [reference | f0 | f1 | ... | fN] — one image to scan instead of
+# alt-tabbing between a photo and the strip.
+func _save_ref_strip(frames: Array, ref_path: String, id: String,
+		variant_name: String) -> void:
+	if frames.is_empty():
+		return
+	var ref_img: Image = Image.load_from_file(ProjectSettings.globalize_path(ref_path))
+	if ref_img == null:
+		print("  REF   skip %s — load failed: %s" % [variant_name, ref_path])
+		return
+	var first: Image = frames[0]
+	var fh := first.get_height()
+	var fw := first.get_width()
+	# Scale reference to frame height preserving aspect.
+	var rw := int(round(ref_img.get_width() * float(fh) / float(ref_img.get_height())))
+	ref_img.resize(rw, fh, Image.INTERPOLATE_BILINEAR)
+	# Match frame format so blit_rect doesn't reject the source.
+	ref_img.convert(first.get_format())
+	var total_w := rw + fw * frames.size()
+	var out := Image.create(total_w, fh, false, first.get_format())
+	out.blit_rect(ref_img, Rect2i(0, 0, rw, fh), Vector2i(0, 0))
+	for i in frames.size():
+		out.blit_rect(frames[i], Rect2i(0, 0, fw, fh), Vector2i(rw + fw * i, 0))
+	var fs_path := ProjectSettings.globalize_path(REF_STRIP_PATH % [id, variant_name])
+	out.save_png(fs_path)
+	print("  REF   %s" % (REF_STRIP_PATH % [id, variant_name]))
 
 func _blit_strip(frames: Array, path_template: String) -> void:
 	var first: Image = frames[0]

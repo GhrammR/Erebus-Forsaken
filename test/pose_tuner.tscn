@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://b4posetnr1tnr"]
+
+[ext_resource type="Script" path="res://test/pose_tuner.gd" id="1_tuner"]
+
+[node name="PoseTuner" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_tuner")
