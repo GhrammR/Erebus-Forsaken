@@ -63,7 +63,7 @@ func install(sprite_root: Node2D, weapon_item: ItemData, offhand_item: ItemData)
 				snap[n] = lib.get_animation(n)
 		sprite_root.set_meta(&"wp_bare_snapshot", snap)
 	var snapshot: Dictionary = sprite_root.get_meta(&"wp_bare_snapshot", {})
-	var to_install: Dictionary = _build_weapon_anims(weapon_type, has_shield)
+	var to_install: Dictionary = _build_weapon_anims(sprite_root, weapon_type, has_shield)
 	# Restore from snapshot for any managed anim the weapon profile
 	# didn't author. Without this, unequipping a staff would leave
 	# Pythia frozen in the two-handed grip pose forever.
@@ -78,22 +78,28 @@ func install(sprite_root: Node2D, weapon_item: ItemData, offhand_item: ItemData)
 ## Returns the dictionary of animations this weapon profile authors.
 ## Only managed anims included; any name omitted is restored from the
 ## bare-hands snapshot by install().
-func _build_weapon_anims(weapon_type: int, has_shield: bool) -> Dictionary:
+func _build_weapon_anims(sprite_root: Node2D, weapon_type: int, has_shield: bool) -> Dictionary:
 	match weapon_type:
 		ItemData.WeaponType.SPEAR:
-			return { &"attack": _build_spear(has_shield) }
+			return { &"attack": _build_spear(sprite_root, has_shield) }
 		ItemData.WeaponType.STAFF:
 			# Two-handed grip has to hold across idle/walk/cast too —
 			# the bare-hands rest pose has arms at sides, which would
 			# leave the staff dangling weirdly.
 			return {
-				&"idle":   _build_staff_idle(),
-				&"walk":   _build_staff_walk(),
-				&"attack": _build_staff_attack(),
-				&"cast":   _build_staff_cast(),
+				&"idle":   _build_staff_idle(sprite_root),
+				&"walk":   _build_staff_walk(sprite_root),
+				&"attack": _build_staff_attack(sprite_root),
+				&"cast":   _build_staff_cast(sprite_root),
+			}
+		ItemData.WeaponType.WAND:
+			return {
+				&"idle":   _build_wand_idle(sprite_root),
+				&"walk":   _build_wand_walk(sprite_root),
+				&"attack": _build_wand_attack(sprite_root),
+				&"cast":   _build_wand_cast(sprite_root),
 			}
 		ItemData.WeaponType.BOW, \
-		ItemData.WeaponType.WAND, \
 		ItemData.WeaponType.NONE:
 			return { &"attack": _build_unarmed_fallback() }
 	return { &"attack": _build_unarmed_fallback() }
@@ -134,7 +140,7 @@ static func _is_shield(item: ItemData) -> bool:
 # Without shield: left hand crosses to grip the shaft (rotates
 # inward + downward), both arms thrust forward together.
 
-func _build_spear(has_shield: bool) -> Animation:
+func _build_spear(sprite_root: Node2D, has_shield: bool) -> Animation:
 	# HIP-LEVEL ARM-THRUST (Stage 17.5 follow-up).
 	#
 	# The spear is gripped at the back of the shaft by the right hand
@@ -148,13 +154,17 @@ func _build_spear(has_shield: bool) -> Animation:
 	# hip level (small upward drift during the peak ~2px) so the
 	# motion does not read as a pelvic thrust.
 	var a := Animation.new()
-	a.length = 0.85
+	a.length = _weapon_meta_float(sprite_root, &"spear_stance", "attack_len", 0.85)
 	a.loop_mode = Animation.LOOP_NONE
+	var t_load: float = a.length * 0.21
+	var t_hit: float = a.length * 0.54
+	var t_hold: float = a.length * 0.73
+	var t_end: float = a.length
 
 	# --- Body holds steady — no lean, no pelvic slide ---
 	var tbr := _cubic_track(a, NodePath("Body:rotation"))
 	a.track_insert_key(tbr, 0.00, 0.0)
-	a.track_insert_key(tbr, 0.85, 0.0)
+	a.track_insert_key(tbr, t_end, 0.0)
 
 	# --- Right shoulder: cock back → drive forward → recover ---
 	# Small magnitudes keep the arc nearly horizontal at the strike
@@ -162,22 +172,38 @@ func _build_spear(has_shield: bool) -> Animation:
 	# in y from its rest position.
 	var tra := _cubic_track(a, NodePath("Body/ArmRShoulder:rotation"))
 	a.track_insert_key(tra, 0.00, 0.0)
-	a.track_insert_key(tra, 0.18, 0.10)      # tiny back-load
-	a.track_insert_key(tra, 0.46, -0.50)     # strike: arm swings forward
-	a.track_insert_key(tra, 0.62, -0.25)
-	a.track_insert_key(tra, 0.85, 0.0)
+	a.track_insert_key(tra, t_load, 0.10)      # tiny back-load
+	a.track_insert_key(tra, t_hit, -0.50)     # strike: arm swings forward
+	a.track_insert_key(tra, t_hold, -0.25)
+	a.track_insert_key(tra, t_end, 0.0)
 
 	# --- Right elbow: stays straight throughout ---
 	var tre := _cubic_track(a, NodePath("Body/ArmRShoulder/ElbowPivot:rotation"))
 	a.track_insert_key(tre, 0.00, 0.0)
-	a.track_insert_key(tre, 0.85, 0.0)
+	a.track_insert_key(tre, t_end, 0.0)
 
 	# --- SpearArm: held at 0 (horizontal forward, gripped at back). ---
 	# The shaft doesn't rotate around the grip. It just translates
 	# with the hand as the arm swings.
 	var tsa := _cubic_track(a, NodePath("Body/ArmRShoulder/ElbowPivot/SpearArm:rotation"))
-	a.track_insert_key(tsa, 0.00, 0.0)
-	a.track_insert_key(tsa, 0.85, 0.0)
+	var spear_rest_rot: float = _weapon_meta_float(sprite_root, &"spear_stance", "rest_rot", 0.0)
+	a.track_insert_key(tsa, 0.00, spear_rest_rot)
+	a.track_insert_key(tsa, t_end, spear_rest_rot)
+	var current_spear_pos := Vector2.ZERO
+	var spear_node := sprite_root.get_node_or_null(
+			^"Body/ArmRShoulder/ElbowPivot/SpearArm") as Node2D
+	if spear_node != null:
+		current_spear_pos = spear_node.position
+	var spear_rest_pos: Vector2 = _weapon_meta_vec2(sprite_root,
+			&"spear_stance", "rest_pos", current_spear_pos)
+	var spear_thrust_pos: Vector2 = _weapon_meta_vec2(sprite_root,
+			&"spear_stance", "thrust_pos", spear_rest_pos)
+	var tsp := _cubic_track(a, NodePath("Body/ArmRShoulder/ElbowPivot/SpearArm:position"))
+	a.track_insert_key(tsp, 0.00, spear_rest_pos)
+	a.track_insert_key(tsp, t_load, spear_rest_pos)
+	a.track_insert_key(tsp, t_hit, spear_thrust_pos)
+	a.track_insert_key(tsp, t_hold, spear_thrust_pos.lerp(spear_rest_pos, 0.35))
+	a.track_insert_key(tsp, t_end, spear_rest_pos)
 
 	# --- LEFT ARM ---
 	var tla := _cubic_track(a, NodePath("Body/ArmLShoulder:rotation"))
@@ -188,29 +214,29 @@ func _build_spear(has_shield: bool) -> Animation:
 		# the fix for "raises shield as he whacks" — separating the
 		# guard-up from the thrust.
 		a.track_insert_key(tla, 0.00, 0.0)
-		a.track_insert_key(tla, 0.18, -0.85)    # shield raised to guard
-		a.track_insert_key(tla, 0.46, -0.95)    # slight tighten on strike
-		a.track_insert_key(tla, 0.62, -0.85)    # holds at guard
-		a.track_insert_key(tla, 0.85, 0.0)      # lowers after recovery
+		a.track_insert_key(tla, t_load, -0.85)    # shield raised to guard
+		a.track_insert_key(tla, t_hit, -0.95)    # slight tighten on strike
+		a.track_insert_key(tla, t_hold, -0.85)    # holds at guard
+		a.track_insert_key(tla, t_end, 0.0)      # lowers after recovery
 		a.track_insert_key(tle, 0.00, 0.0)
-		a.track_insert_key(tle, 0.18, -1.05)    # elbow folds shield in
-		a.track_insert_key(tle, 0.46, -1.15)
-		a.track_insert_key(tle, 0.62, -1.05)
-		a.track_insert_key(tle, 0.85, 0.0)
+		a.track_insert_key(tle, t_load, -1.05)    # elbow folds shield in
+		a.track_insert_key(tle, t_hit, -1.15)
+		a.track_insert_key(tle, t_hold, -1.05)
+		a.track_insert_key(tle, t_end, 0.0)
 	else:
 		# Two-handed grip — left hand reaches forward to grip shaft.
 		# (Unused for Myrmidon now that the buckler counts as built-in
 		# shield, but kept for future spear-wielders without shields.)
 		a.track_insert_key(tla, 0.00, 0.0)
 		a.track_insert_key(tla, 0.34, 0.10)
-		a.track_insert_key(tla, 0.46, -0.32)
-		a.track_insert_key(tla, 0.62, -0.20)
-		a.track_insert_key(tla, 0.85, 0.0)
+		a.track_insert_key(tla, t_hit, -0.32)
+		a.track_insert_key(tla, t_hold, -0.20)
+		a.track_insert_key(tla, t_end, 0.0)
 		a.track_insert_key(tle, 0.00, 0.0)
 		a.track_insert_key(tle, 0.34, 0.45)
-		a.track_insert_key(tle, 0.46, 0.60)
-		a.track_insert_key(tle, 0.62, 0.50)
-		a.track_insert_key(tle, 0.85, 0.0)
+		a.track_insert_key(tle, t_hit, 0.60)
+		a.track_insert_key(tle, t_hold, 0.50)
+		a.track_insert_key(tle, t_end, 0.0)
 
 	return a
 
@@ -288,22 +314,24 @@ const _PATH_ANCHOR_SHOULDER := ^"Body/ArmRShoulder:rotation"
 const _PATH_ANCHOR_ELBOW    := ^"Body/ArmRShoulder/ElbowPivot:rotation"
 const _PATH_REACH_SHOULDER  := ^"Body/ArmLShoulder:rotation"
 const _PATH_REACH_ELBOW     := ^"Body/ArmLShoulder/ElbowPivot:rotation"
-const _PATH_STAFF_ROT       := ^"Body/ArmRShoulder/ElbowPivot/StaffArm:rotation"
-const _PATH_STAFF_ORB_MOD   := ^"Body/ArmRShoulder/ElbowPivot/StaffArm/Orb:modulate"
+const _PATH_STAFF_ROT       := ^"Body/StaffArm:rotation"
+const _PATH_STAFF_ORB_MOD   := ^"Body/StaffArm/Orb:modulate"
 
 # Keys the two-handed rest pose at one timestamp. Drives BOTH arms
 # (anchor + reach) plus the staff local rotation so transitions
 # between animations stay continuous.
 static func _key_staff_rest(a: Animation, tsa: int, t_anchor_s: int,
-		t_anchor_e: int, t_reach_s: int, t_reach_e: int, t: float) -> void:
-	a.track_insert_key(tsa,         t, STAFF_ANGLE_REST)
+		t_anchor_e: int, t_reach_s: int, t_reach_e: int, t: float,
+		rest_rot: float) -> void:
+	a.track_insert_key(tsa,         t, rest_rot)
 	a.track_insert_key(t_anchor_s,  t, STAFF_ANCHOR_SHOULDER_REST)
 	a.track_insert_key(t_anchor_e,  t, STAFF_ANCHOR_ELBOW_REST)
 	a.track_insert_key(t_reach_s,   t, STAFF_REACH_SHOULDER_REST)
 	a.track_insert_key(t_reach_e,   t, STAFF_REACH_ELBOW_REST)
 
 # ---- IDLE: two-handed grip held steady, faint breath bob ----
-func _build_staff_idle() -> Animation:
+func _build_staff_idle(sprite_root: Node2D) -> Animation:
+	var rest_rot: float = _weapon_meta_float(sprite_root, &"staff_stance", "rest_rot", STAFF_ANGLE_REST)
 	var a := Animation.new()
 	a.length = 2.0
 	a.loop_mode = Animation.LOOP_LINEAR
@@ -317,12 +345,13 @@ func _build_staff_idle() -> Animation:
 	var t_ae := _cubic_track(a, _PATH_ANCHOR_ELBOW)
 	var t_rs := _cubic_track(a, _PATH_REACH_SHOULDER)
 	var t_re := _cubic_track(a, _PATH_REACH_ELBOW)
-	_key_staff_rest(a, tsa, t_as, t_ae, t_rs, t_re, 0.0)
-	_key_staff_rest(a, tsa, t_as, t_ae, t_rs, t_re, 2.0)
+	_key_staff_rest(a, tsa, t_as, t_ae, t_rs, t_re, 0.0, rest_rot)
+	_key_staff_rest(a, tsa, t_as, t_ae, t_rs, t_re, 2.0, rest_rot)
 	return a
 
 # ---- WALK: legs swing under a body bob, staff held two-handed ----
-func _build_staff_walk() -> Animation:
+func _build_staff_walk(sprite_root: Node2D) -> Animation:
+	var rest_rot: float = _weapon_meta_float(sprite_root, &"staff_stance", "rest_rot", STAFF_ANGLE_REST)
 	var a := Animation.new()
 	a.length = 0.6
 	a.loop_mode = Animation.LOOP_LINEAR
@@ -350,8 +379,8 @@ func _build_staff_walk() -> Animation:
 	var t_ae := _cubic_track(a, _PATH_ANCHOR_ELBOW)
 	var t_rs := _cubic_track(a, _PATH_REACH_SHOULDER)
 	var t_re := _cubic_track(a, _PATH_REACH_ELBOW)
-	_key_staff_rest(a, tsa, t_as, t_ae, t_rs, t_re, 0.0)
-	_key_staff_rest(a, tsa, t_as, t_ae, t_rs, t_re, 0.6)
+	_key_staff_rest(a, tsa, t_as, t_ae, t_rs, t_re, 0.0, rest_rot)
+	_key_staff_rest(a, tsa, t_as, t_ae, t_rs, t_re, 0.6, rest_rot)
 	return a
 
 # ---- ATTACK: overhead arc → ends at hip-front. No forward thrust. ----
@@ -362,7 +391,10 @@ func _build_staff_walk() -> Animation:
 #   at hip-height-front (rotation ≈ +0.35 — slight down-tilt past
 #   horizontal). Both arms drive the swing.
 # Recovery (0.55 → 0.95): pose eases back to the two-handed rest.
-func _build_staff_attack() -> Animation:
+func _build_staff_attack(sprite_root: Node2D) -> Animation:
+	var rest_rot: float = _weapon_meta_float(sprite_root, &"staff_stance", "rest_rot", STAFF_ANGLE_REST)
+	var apex_rot: float = _weapon_meta_float(sprite_root, &"staff_stance", "attack_apex_rot", -PI / 2.0)
+	var attack_len: float = _weapon_meta_float(sprite_root, &"staff_stance", "attack_len", 0.55)
 	# BOP. Simple overhead lift — orb arcs from upper-back-left to
 	# straight-overhead and back. No windup, no body lean.
 	#   Rest: staff world -135° (orb upper-back, photo-grip pose).
@@ -374,35 +406,37 @@ func _build_staff_attack() -> Animation:
 	#     bop in exchange for hands-on-staff continuity.
 	#   Recovery: back to rest.
 	var a := Animation.new()
-	a.length = 0.55
+	a.length = attack_len
 	a.loop_mode = Animation.LOOP_NONE
+	var t_apex: float = a.length * 0.45
+	var t_end: float = a.length
 
 	var tbr := _cubic_track(a, NodePath("Body:rotation"))
 	a.track_insert_key(tbr, 0.00, 0.0)
-	a.track_insert_key(tbr, 0.55, 0.0)
+	a.track_insert_key(tbr, t_end, 0.0)
 
 	# Anchor stays at rest — no body drive.
 	var t_as := _cubic_track(a, _PATH_ANCHOR_SHOULDER)
 	a.track_insert_key(t_as, 0.00, STAFF_ANCHOR_SHOULDER_REST)
-	a.track_insert_key(t_as, 0.55, STAFF_ANCHOR_SHOULDER_REST)
+	a.track_insert_key(t_as, t_end, STAFF_ANCHOR_SHOULDER_REST)
 	var t_ae := _cubic_track(a, _PATH_ANCHOR_ELBOW)
 	a.track_insert_key(t_ae, 0.00, STAFF_ANCHOR_ELBOW_REST)
-	a.track_insert_key(t_ae, 0.55, STAFF_ANCHOR_ELBOW_REST)
+	a.track_insert_key(t_ae, t_end, STAFF_ANCHOR_ELBOW_REST)
 
 	# Staff: world -135° → world -90° → world -135°.
 	#   Parent (R anchor) = 0 throughout, so local angle = world angle.
 	var tsa := _cubic_track(a, _PATH_STAFF_ROT)
-	a.track_insert_key(tsa, 0.00, STAFF_ANGLE_REST)
-	a.track_insert_key(tsa, 0.25, -PI / 2.0)          # world -90° (vertical)
-	a.track_insert_key(tsa, 0.55, STAFF_ANGLE_REST)
+	a.track_insert_key(tsa, 0.00, rest_rot)
+	a.track_insert_key(tsa, t_apex, apex_rot)
+	a.track_insert_key(tsa, t_end, rest_rot)
 
 	# L arm placeholder tracks; IK overrides every frame.
 	var t_rs := _cubic_track(a, _PATH_REACH_SHOULDER)
 	a.track_insert_key(t_rs, 0.00, STAFF_REACH_SHOULDER_REST)
-	a.track_insert_key(t_rs, 0.55, STAFF_REACH_SHOULDER_REST)
+	a.track_insert_key(t_rs, t_end, STAFF_REACH_SHOULDER_REST)
 	var t_re := _cubic_track(a, _PATH_REACH_ELBOW)
 	a.track_insert_key(t_re, 0.00, STAFF_REACH_ELBOW_REST)
-	a.track_insert_key(t_re, 0.55, STAFF_REACH_ELBOW_REST)
+	a.track_insert_key(t_re, t_end, STAFF_REACH_ELBOW_REST)
 	return a
 
 # ---- CAST: lift staff vertical, orb pulses, no strike ----
@@ -410,7 +444,9 @@ func _build_staff_attack() -> Animation:
 #   above the head). Right shoulder lifts the arm up.
 # Hold  (0.30 → 0.55): pose held, orb glows bright.
 # Recovery (0.55 → 0.85): back to two-handed rest.
-func _build_staff_cast() -> Animation:
+func _build_staff_cast(sprite_root: Node2D) -> Animation:
+	var rest_rot: float = _weapon_meta_float(sprite_root, &"staff_stance", "rest_rot", STAFF_ANGLE_REST)
+	var apex_rot: float = _weapon_meta_float(sprite_root, &"staff_stance", "attack_apex_rot", -PI / 2.0)
 	var a := Animation.new()
 	a.length = 0.85
 	a.loop_mode = Animation.LOOP_NONE
@@ -427,10 +463,10 @@ func _build_staff_cast() -> Animation:
 	# Staff rotates from rest -135° → vertical -90° (orb high above
 	# head) and back. Parent (R anchor) stays at 0 so world = local.
 	var tsa := _cubic_track(a, _PATH_STAFF_ROT)
-	a.track_insert_key(tsa, 0.00, STAFF_ANGLE_REST)
-	a.track_insert_key(tsa, 0.30, -PI / 2.0)
-	a.track_insert_key(tsa, 0.55, -PI / 2.0)
-	a.track_insert_key(tsa, 0.85, STAFF_ANGLE_REST)
+	a.track_insert_key(tsa, 0.00, rest_rot)
+	a.track_insert_key(tsa, 0.30, apex_rot)
+	a.track_insert_key(tsa, 0.55, apex_rot)
+	a.track_insert_key(tsa, 0.85, rest_rot)
 
 	# Reach (L) sweeps out as the invocation gesture. Open arm to
 	# the left: shoulder rotates +1.40 (upper arm horizontal-left),
@@ -453,6 +489,113 @@ func _build_staff_cast() -> Animation:
 	a.track_insert_key(torb, 0.30, Color(2.4, 1.8, 0.7, 1))
 	a.track_insert_key(torb, 0.55, Color(2.4, 1.8, 0.7, 1))
 	a.track_insert_key(torb, 0.85, Color(1, 1, 1, 1))
+	return a
+
+static func _weapon_meta_float(sprite_root: Node, meta_key: StringName,
+		value_key: String, fallback: float) -> float:
+	if sprite_root == null or not sprite_root.has_meta(meta_key):
+		return fallback
+	var data_v: Variant = sprite_root.get_meta(meta_key)
+	if typeof(data_v) != TYPE_DICTIONARY:
+		return fallback
+	return float((data_v as Dictionary).get(value_key, fallback))
+
+static func _weapon_meta_vec2(sprite_root: Node, meta_key: StringName,
+		value_key: String, fallback: Vector2) -> Vector2:
+	if sprite_root == null or not sprite_root.has_meta(meta_key):
+		return fallback
+	var data_v: Variant = sprite_root.get_meta(meta_key)
+	if typeof(data_v) != TYPE_DICTIONARY:
+		return fallback
+	var value: Variant = (data_v as Dictionary).get(value_key, fallback)
+	return value if value is Vector2 else fallback
+
+# =========================================================================
+# WAND profile (Ossuary Priest)
+# =========================================================================
+
+func _build_wand_idle(sprite_root: Node2D) -> Animation:
+	var rest_pos: Vector2 = _weapon_meta_vec2(sprite_root, &"wand_stance", "rest_pos", Vector2(10, -28))
+	var rest_rot: float = _weapon_meta_float(sprite_root, &"wand_stance", "rest_rot", 0.0)
+	var a := Animation.new()
+	a.length = 1.4
+	a.loop_mode = Animation.LOOP_LINEAR
+	var tb := _cubic_track(a, NodePath("Body:position"))
+	a.track_insert_key(tb, 0.0, Vector2.ZERO)
+	a.track_insert_key(tb, 0.7, Vector2(0, -1))
+	a.track_insert_key(tb, 1.4, Vector2.ZERO)
+	var twp := _cubic_track(a, NodePath("WandArm:position"))
+	a.track_insert_key(twp, 0.0, rest_pos)
+	a.track_insert_key(twp, 1.4, rest_pos)
+	var twr := _cubic_track(a, NodePath("WandArm:rotation"))
+	a.track_insert_key(twr, 0.0, rest_rot)
+	a.track_insert_key(twr, 1.4, rest_rot)
+	return a
+
+func _build_wand_walk(sprite_root: Node2D) -> Animation:
+	var rest_pos: Vector2 = _weapon_meta_vec2(sprite_root, &"wand_stance", "rest_pos", Vector2(10, -28))
+	var rest_rot: float = _weapon_meta_float(sprite_root, &"wand_stance", "rest_rot", 0.0)
+	var a := Animation.new()
+	a.length = 0.46
+	a.loop_mode = Animation.LOOP_LINEAR
+	var tb := _cubic_track(a, NodePath("Body:position"))
+	a.track_insert_key(tb, 0.0, Vector2.ZERO)
+	a.track_insert_key(tb, 0.23, Vector2(0, -2))
+	a.track_insert_key(tb, 0.46, Vector2.ZERO)
+	var br := _cubic_track(a, NodePath("Body:rotation"))
+	a.track_insert_key(br, 0.0, 0.0)
+	a.track_insert_key(br, 0.23, 0.035)
+	a.track_insert_key(br, 0.46, 0.0)
+	var twp := _cubic_track(a, NodePath("WandArm:position"))
+	a.track_insert_key(twp, 0.0, rest_pos)
+	a.track_insert_key(twp, 0.46, rest_pos)
+	var twr := _cubic_track(a, NodePath("WandArm:rotation"))
+	a.track_insert_key(twr, 0.0, rest_rot)
+	a.track_insert_key(twr, 0.23, rest_rot + 0.08)
+	a.track_insert_key(twr, 0.46, rest_rot)
+	return a
+
+func _build_wand_attack(sprite_root: Node2D) -> Animation:
+	var rest_pos: Vector2 = _weapon_meta_vec2(sprite_root, &"wand_stance", "rest_pos", Vector2(10, -28))
+	var rest_rot: float = _weapon_meta_float(sprite_root, &"wand_stance", "rest_rot", 0.0)
+	var apex_rot: float = _weapon_meta_float(sprite_root, &"wand_stance", "attack_apex_rot", -0.45)
+	var a := Animation.new()
+	a.length = _weapon_meta_float(sprite_root, &"wand_stance", "attack_len", 0.34)
+	a.loop_mode = Animation.LOOP_NONE
+	var t_hit := a.length * 0.45
+	var twr := _cubic_track(a, NodePath("WandArm:rotation"))
+	a.track_insert_key(twr, 0.0, rest_rot)
+	a.track_insert_key(twr, t_hit, apex_rot)
+	a.track_insert_key(twr, a.length, rest_rot)
+	var twp := _cubic_track(a, NodePath("WandArm:position"))
+	a.track_insert_key(twp, 0.0, rest_pos)
+	a.track_insert_key(twp, t_hit, rest_pos + Vector2(2, -1))
+	a.track_insert_key(twp, a.length, rest_pos)
+	return a
+
+func _build_wand_cast(sprite_root: Node2D) -> Animation:
+	var rest_pos: Vector2 = _weapon_meta_vec2(sprite_root, &"wand_stance", "rest_pos", Vector2(10, -28))
+	var rest_rot: float = _weapon_meta_float(sprite_root, &"wand_stance", "rest_rot", 0.0)
+	var apex_rot: float = _weapon_meta_float(sprite_root, &"wand_stance", "cast_apex_rot", -0.8)
+	var a := Animation.new()
+	a.length = _weapon_meta_float(sprite_root, &"wand_stance", "cast_len", 0.65)
+	a.loop_mode = Animation.LOOP_NONE
+	var t_peak := a.length * 0.38
+	var twr := _cubic_track(a, NodePath("WandArm:rotation"))
+	a.track_insert_key(twr, 0.0, rest_rot)
+	a.track_insert_key(twr, t_peak, apex_rot)
+	a.track_insert_key(twr, a.length, rest_rot)
+	var twp := _cubic_track(a, NodePath("WandArm:position"))
+	a.track_insert_key(twp, 0.0, rest_pos)
+	a.track_insert_key(twp, a.length, rest_pos)
+	var tg := _cubic_track(a, NodePath("WandArm/Glow:modulate"))
+	a.track_insert_key(tg, 0.0, Color(1, 1, 1, 1))
+	a.track_insert_key(tg, t_peak, Color(2.0, 2.5, 1.0, 1))
+	a.track_insert_key(tg, a.length, Color(1, 1, 1, 1))
+	var ts := _cubic_track(a, NodePath("WandArm/Glow:scale"))
+	a.track_insert_key(ts, 0.0, Vector2.ONE)
+	a.track_insert_key(ts, t_peak, Vector2(1.55, 1.55))
+	a.track_insert_key(ts, a.length, Vector2.ONE)
 	return a
 
 # =========================================================================

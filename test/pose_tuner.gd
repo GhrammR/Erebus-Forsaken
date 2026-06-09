@@ -34,6 +34,7 @@ const FEET_POS := Vector2(180, 320)
 const CLASSES: Array = [
 	{
 		"id": &"pythia",
+		"bucket": &"classes",
 		"scene": "res://art/procedural/classes/pythia_sprite.tscn",
 		"variants": [
 			{ "name": "idle_staff",   "anim": &"idle",   "equip": { "weapon": &"pythia_staff_starter" } },
@@ -44,6 +45,7 @@ const CLASSES: Array = [
 	},
 	{
 		"id": &"myrmidon",
+		"bucket": &"classes",
 		"scene": "res://art/procedural/classes/myrmidon_sprite.tscn",
 		"variants": [
 			{ "name": "idle_bare",   "anim": &"idle",   "equip": {} },
@@ -52,6 +54,7 @@ const CLASSES: Array = [
 	},
 	{
 		"id": &"shade_hunter",
+		"bucket": &"classes",
 		"scene": "res://art/procedural/classes/shade_hunter_sprite.tscn",
 		"variants": [
 			# Equipped (bow visible) — primary scoring path.
@@ -66,10 +69,86 @@ const CLASSES: Array = [
 	},
 	{
 		"id": &"ossuary_priest",
+		"bucket": &"classes",
 		"scene": "res://art/procedural/classes/ossuary_priest_sprite.tscn",
 		"variants": [
-			{ "name": "idle",   "anim": &"idle",   "equip": {} },
+			{ "name": "idle_wand",   "anim": &"idle",   "equip": { "weapon": &"ossuary_wand_starter" } },
+			{ "name": "walk_wand",   "anim": &"walk",   "equip": { "weapon": &"ossuary_wand_starter" } },
+			{ "name": "attack_wand", "anim": &"attack", "equip": { "weapon": &"ossuary_wand_starter" } },
+			{ "name": "cast_wand",   "anim": &"cast",   "equip": { "weapon": &"ossuary_wand_starter" } },
+		],
+	},
+	{
+		"id": &"training_dummy",
+		"bucket": &"enemies",
+		"scene": "res://art/procedural/enemies/dummy_sprite.tscn",
+		"variants": [
+			{ "name": "idle", "anim": &"idle", "equip": {} },
+			{ "name": "hit", "anim": &"hit", "equip": {} },
+			{ "name": "die", "anim": &"die", "equip": {} },
+		],
+	},
+	{
+		"id": &"bone_servant",
+		"bucket": &"enemies",
+		"scene": "res://art/procedural/enemies/bone_servant_sprite.tscn",
+		"variants": [
+			{ "name": "idle", "anim": &"idle", "equip": {} },
+			{ "name": "walk", "anim": &"walk", "equip": {} },
 			{ "name": "attack", "anim": &"attack", "equip": {} },
+		],
+	},
+	{
+		"id": &"shade_wretch",
+		"bucket": &"enemies",
+		"scene": "res://art/procedural/enemies/shade_wretch_sprite.tscn",
+		"variants": [
+			{ "name": "idle", "anim": &"idle", "equip": {} },
+			{ "name": "walk", "anim": &"walk", "equip": {} },
+			{ "name": "attack", "anim": &"attack", "equip": {} },
+			{ "name": "cast", "anim": &"cast", "equip": {} },
+		],
+	},
+	{
+		"id": &"bog_caller",
+		"bucket": &"enemies",
+		"scene": "res://art/procedural/enemies/bog_caller_sprite.tscn",
+		"variants": [
+			{ "name": "idle", "anim": &"idle", "equip": {} },
+			{ "name": "walk", "anim": &"walk", "equip": {} },
+			{ "name": "attack", "anim": &"attack", "equip": {} },
+			{ "name": "cast", "anim": &"cast", "equip": {} },
+		],
+	},
+	{
+		"id": &"act_boss",
+		"bucket": &"enemies",
+		"scene": "res://art/procedural/enemies/act_boss_sprite.tscn",
+		"variants": [
+			{ "name": "idle", "anim": &"idle", "equip": {} },
+			{ "name": "walk", "anim": &"walk", "equip": {} },
+			{ "name": "attack", "anim": &"attack", "equip": {} },
+			{ "name": "cast", "anim": &"cast", "equip": {} },
+		],
+	},
+	{
+		"id": &"kallias",
+		"bucket": &"npcs",
+		"scene": "res://art/procedural/npcs/kallias_sprite.tscn",
+		"variants": [
+			{ "name": "idle", "anim": &"idle", "equip": {} },
+			{ "name": "walk", "anim": &"walk", "equip": {} },
+			{ "name": "gesture", "anim": &"cast", "equip": {} },
+		],
+	},
+	{
+		"id": &"eurynome",
+		"bucket": &"npcs",
+		"scene": "res://art/procedural/npcs/eurynome_sprite.tscn",
+		"variants": [
+			{ "name": "idle", "anim": &"idle", "equip": {} },
+			{ "name": "walk", "anim": &"walk", "equip": {} },
+			{ "name": "gesture", "anim": &"cast", "equip": {} },
 		],
 	},
 ]
@@ -77,6 +156,12 @@ const CLASSES: Array = [
 const BowStances   = preload("res://scripts/systems/stances/bow_stances.gd")
 const StaffStances = preload("res://scripts/systems/stances/staff_stances.gd")
 const SpearStances = preload("res://scripts/systems/stances/spear_stances.gd")
+const WandStances = preload("res://scripts/systems/stances/wand_stances.gd")
+const SpriteMotionStances = preload("res://scripts/systems/stances/sprite_motion_stances.gd")
+
+const SCORE_FILE: String = "res://tmp/stance_scores.json"
+const SELECTED_STANCES_FILE: String = "res://tmp/selected_stances.json"
+const LAUNCH_FILE: String = "res://tmp/pose_tuner_launch.json"
 
 # Per-class stance catalog. Maps class id → catalog tag used in
 # _load_current to populate _stance_ids from the right catalog.
@@ -84,6 +169,14 @@ const STANCE_CATALOGS: Dictionary = {
 	&"shade_hunter":   &"bow",
 	&"pythia":         &"staff",
 	&"myrmidon":       &"spear",
+	&"ossuary_priest": &"wand",
+	&"training_dummy": &"motion",
+	&"bone_servant":   &"motion",
+	&"shade_wretch":   &"motion",
+	&"bog_caller":     &"motion",
+	&"act_boss":       &"motion",
+	&"kallias":        &"motion",
+	&"eurynome":       &"motion",
 }
 
 # State.
@@ -112,13 +205,23 @@ var _label_class: Label
 var _label_variant: Label
 var _label_time: Label
 var _label_score: Label
+var _label_completion: Label
+var _class_select: OptionButton
+var _variant_select: OptionButton
+var _stance_select: OptionButton
+var _use_stance_button: Button
 var _time_slider: HSlider
 var _slider_box: VBoxContainer
+var _ui_syncing: bool = false
+var _scores: Dictionary = {}
+var _selected_stances: Dictionary = {}
 # Per-node slider references for the "Dump Pose" extractor.
 # Each entry: { "kind": "rot"|"pos", "node_path": String, "controls": [Range...] }
 var _slider_entries: Array = []
 
 func _ready() -> void:
+	_load_scores_from_disk()
+	_load_selected_stances_from_disk()
 	_build_ui()
 	_load_current()
 
@@ -130,18 +233,63 @@ func _build_ui() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var root := HSplitContainer.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.split_offset = 360
+	root.split_offset = 500
 	add_child(root)
-	# Sidebar
+	# Sidebar. The ScrollContainer wraps the entire control stack so
+	# class/variant/legend/buttons remain reachable on small windows.
+	var side_scroll := ScrollContainer.new()
+	side_scroll.custom_minimum_size = Vector2(500, 0)
+	side_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	side_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root.add_child(side_scroll)
 	var side := VBoxContainer.new()
-	side.custom_minimum_size = Vector2(360, 0)
-	root.add_child(side)
+	side.custom_minimum_size = Vector2(480, 0)
+	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	side_scroll.add_child(side)
+	var class_row := HBoxContainer.new()
+	side.add_child(class_row)
+	var class_label := Label.new()
+	class_label.text = "Class"
+	class_label.custom_minimum_size = Vector2(72, 0)
+	class_row.add_child(class_label)
+	_class_select = OptionButton.new()
+	_class_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_class_select.item_selected.connect(_on_class_selected)
+	class_row.add_child(_class_select)
+	var variant_row := HBoxContainer.new()
+	side.add_child(variant_row)
+	var variant_label := Label.new()
+	variant_label.text = "Variant"
+	variant_label.custom_minimum_size = Vector2(72, 0)
+	variant_row.add_child(variant_label)
+	_variant_select = OptionButton.new()
+	_variant_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_variant_select.item_selected.connect(_on_variant_selected)
+	variant_row.add_child(_variant_select)
+	var stance_row := HBoxContainer.new()
+	side.add_child(stance_row)
+	var stance_label := Label.new()
+	stance_label.text = "Stance"
+	stance_label.custom_minimum_size = Vector2(72, 0)
+	stance_row.add_child(stance_label)
+	_stance_select = OptionButton.new()
+	_stance_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_stance_select.item_selected.connect(_on_stance_selected)
+	stance_row.add_child(_stance_select)
+	_use_stance_button = Button.new()
+	_use_stance_button.text = "Use Stance"
+	_use_stance_button.pressed.connect(_on_use_stance_pressed)
+	side.add_child(_use_stance_button)
 	_label_class = Label.new(); side.add_child(_label_class)
 	_label_variant = Label.new(); side.add_child(_label_variant)
 	_label_time = Label.new(); side.add_child(_label_time)
 	_label_score = Label.new()
-	_label_score.text = "Phase: —     Last score: —"
+	_label_score.text = "Current score: -"
 	side.add_child(_label_score)
+	_label_completion = Label.new()
+	_label_completion.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_label_completion.text = "Coverage: -"
+	side.add_child(_label_completion)
 	_time_slider = HSlider.new()
 	_time_slider.min_value = 0.0
 	_time_slider.max_value = 1.0
@@ -156,6 +304,8 @@ func _build_ui() -> void:
 	play.pressed.connect(_on_play_toggle); btn_row.add_child(play)
 	var reset := Button.new(); reset.text = "Reset (R)"
 	reset.pressed.connect(_on_reset_pressed); btn_row.add_child(reset)
+	var launch := Button.new(); launch.text = "Launch in Maw"
+	launch.pressed.connect(_on_launch_game_pressed); btn_row.add_child(launch)
 	# Stage 17.8 — Disable IK so shoulder/elbow rotation sliders can
 	# actually move arms. With IK on, the runtime pin pass overwrites
 	# any manual rotation every frame.
@@ -165,16 +315,16 @@ func _build_ui() -> void:
 	ik_box.toggled.connect(_on_ik_toggled)
 	side.add_child(ik_box)
 	var hint := Label.new()
-	hint.text = "F1 class · F2 variant · F3 stance · F4 preset · 1-5 score · S save · D dump · Space play · R reset"
+	hint.text = "Keys: F1 target · F2 variant · F3 stance · F4 preset · 1-5 score · S save phase · D dump · Space play · R reset"
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	side.add_child(hint)
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	side.add_child(scroll)
+	var legend := Label.new()
+	legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	legend.text = "Legend: ROT sliders turn joints/weapons. POS X/Y sliders move bodies, hands, weapons, and markers. Yellow dots are click-drag handles; elbow dots rotate the parent limb."
+	side.add_child(legend)
 	_slider_box = VBoxContainer.new()
 	_slider_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_slider_box)
+	side.add_child(_slider_box)
 	# Viewport pane. Stretch OFF + fixed size so mouse position in the
 	# container maps 1:1 to viewport pixels — required for drag-handle
 	# math to land on the right marker.
@@ -200,7 +350,7 @@ func _build_ui() -> void:
 # Sprite loading
 # =========================================================================
 
-func _load_current() -> void:
+func _load_current(scrub_time: float = 0.0) -> void:
 	# Tear down prior sprite.
 	if _sprite != null:
 		_sprite.queue_free(); _sprite = null
@@ -222,8 +372,13 @@ func _load_current() -> void:
 		_stance_ids = StaffStances.all_ids()
 	elif catalog == &"spear":
 		_stance_ids = SpearStances.all_ids()
+	elif catalog == &"wand":
+		_stance_ids = WandStances.all_ids()
+	elif catalog == &"motion":
+		_stance_ids = SpriteMotionStances.all_ids()
 	if _stance_idx >= _stance_ids.size():
 		_stance_idx = 0
+	_refresh_picker_options()
 	var stance_label: String = "—"
 	if _stance_ids.size() > 0:
 		stance_label = "%s (%d/%d)" % [_stance_ids[_stance_idx], _stance_idx + 1, _stance_ids.size()]
@@ -234,21 +389,27 @@ func _load_current() -> void:
 	if scene == null:
 		_label_class.text += " (scene missing)"
 		return
-	var stats := Stats.new()
-	stats.class_id = cls["id"]
-	_inv = Inventory.new()
-	_inv.class_id = cls["id"]
-	_inv.stats = stats
-	add_child(_inv)
+	var bucket: StringName = cls.get("bucket", &"classes")
+	if bucket == &"classes":
+		var stats := Stats.new()
+		stats.class_id = cls["id"]
+		_inv = Inventory.new()
+		_inv.class_id = cls["id"]
+		_inv.stats = stats
+		add_child(_inv)
 	_sprite = scene.instantiate() as Node2D
 	# Apply selected stance BEFORE add_child so the sprite's _ready
 	# picks it up. The sprite exposes stance_id as @export var.
 	if _stance_ids.size() > 0 and &"stance_id" in _sprite:
 		_sprite.stance_id = _stance_ids[_stance_idx]
+	if &"sprite_id" in _sprite:
+		_sprite.sprite_id = cls["id"]
+	if &"stance_bucket" in _sprite:
+		_sprite.stance_bucket = bucket
 	# show_bow toggle (ShadeHunter bare/equipped variants).
 	if variant.has("show_bow") and &"show_bow" in _sprite:
 		_sprite.show_bow = bool(variant["show_bow"])
-	# IK starts OFF on a fresh load (sprite paused → tuning mode).
+	# IK starts OFF on a fresh load (sprite paused -> tuning mode).
 	# Pressing Space flips both at once via _apply_auto_ik.
 	if &"ik_enabled" in _sprite:
 		_sprite.ik_enabled = false
@@ -257,13 +418,14 @@ func _load_current() -> void:
 	_sprite.position = FEET_POS
 	_sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
 	_vp.add_child(_sprite)
-	_paperdoll = EquipmentPaperdoll.new()
-	add_child(_paperdoll)
-	_paperdoll.bind(_sprite, _inv, cls["id"])
-	for slot in ["weapon", "offhand", "head", "chest", "legs"]:
-		if variant["equip"].has(slot):
-			_inv.add_item(variant["equip"][slot])
-			_inv.equip(variant["equip"][slot])
+	if bucket == &"classes":
+		_paperdoll = EquipmentPaperdoll.new()
+		add_child(_paperdoll)
+		_paperdoll.bind(_sprite, _inv, cls["id"])
+		for slot in ["weapon", "offhand", "head", "chest", "legs"]:
+			if variant["equip"].has(slot):
+				_inv.add_item(variant["equip"][slot])
+				_inv.equip(variant["equip"][slot])
 	await get_tree().process_frame
 	_anim = _sprite.get_node(^"AnimationPlayer") as AnimationPlayer
 	_anim.play(variant["anim"])
@@ -271,10 +433,11 @@ func _load_current() -> void:
 	_anim.pause()
 	var length: float = _anim.current_animation_length
 	_time_slider.max_value = max(length, 0.01)
-	_time_slider.value = 0.0
-	_scrub_time = 0.0
-	_anim.seek(0.0, true)
-	_label_time.text = "Time: 0.00s / %.2fs" % length
+	var target_time: float = clampf(scrub_time, 0.0, _time_slider.max_value)
+	_time_slider.set_value_no_signal(target_time)
+	_scrub_time = target_time
+	_anim.seek(target_time, true)
+	_update_time_label(target_time)
 	_spawn_drag_dots()
 	_build_sliders()
 	# Final pass: re-assert paused + IK-disabled state on the freshly-
@@ -284,9 +447,10 @@ func _load_current() -> void:
 	# first slider drag/spinbox edit takes effect without the user
 	# having to toggle the Disable IK checkbox.
 	_anim.pause()
-	_anim.seek(0.0, true)
+	_anim.seek(target_time, true)
 	if &"ik_enabled" in _sprite:
 		_sprite.ik_enabled = false
+	_refresh_score_panel()
 
 # =========================================================================
 # Slider construction
@@ -326,11 +490,11 @@ func _build_sliders() -> void:
 	# Pin arm + weapon-arm sliders at the top so the user doesn't have
 	# to scroll past legs to reach them.
 	var header := Label.new()
-	header.text = "── arms + weapon ──"
+	header.text = "ARMS / HANDS / WEAPONS"
 	_slider_box.add_child(header)
 	_walk_for_sliders_filtered(_sprite, "", true)
 	var sep := Label.new()
-	sep.text = "── everything else ──"
+	sep.text = "BODY / MARKERS / OTHER PARTS"
 	_slider_box.add_child(sep)
 	_walk_for_sliders_filtered(_sprite, "", false)
 
@@ -341,8 +505,7 @@ func _walk_for_sliders_filtered(node: Node, prefix: String,
 		arms_only: bool) -> void:
 	for child in node.get_children():
 		var path: String = (prefix + "/" + String(child.name)) if prefix != "" else String(child.name)
-		var in_arm: bool = path.contains("Shoulder") or path.contains("BowArm") \
-				or path.contains("StaffArm") or path.contains("SpearArm")
+		var in_arm: bool = _is_arm_weapon_or_hand_path(path)
 		var should_add: bool = in_arm if arms_only else not in_arm
 		if should_add:
 			if child is Marker2D:
@@ -364,19 +527,35 @@ func _walk_for_sliders(node: Node, prefix: String) -> void:
 				_add_arm_position_sliders(child, path)
 		_walk_for_sliders(child, path)
 
+func _is_arm_weapon_or_hand_path(path: String) -> bool:
+	return path.contains("Shoulder") or path.contains("ArmAnchor") \
+			or path.contains("BowArm") or path.contains("StaffArm") \
+			or path.contains("SpearArm") or path.contains("WandArm") \
+			or path.contains("ArmR") or path.contains("ArmL") \
+			or path.contains("HandR") or path.contains("HandL") \
+			or path.contains("ClawR") or path.contains("ClawL") \
+			or path.contains("Finger") or path.ends_with("Staff")
+
 func _wants_rotation_slider(n: StringName) -> bool:
 	var s := String(n)
-	return s.ends_with("Pivot") or s.ends_with("Shoulder") \
-			or s.ends_with("StaffArm") or s.ends_with("SpearArm") \
-			or s.ends_with("BowArm")
+	return s == "Body" or s == "Staff" or s == "ArmAnchor" \
+			or s.contains("ArmR") or s.contains("ArmL") \
+			or s.contains("HandR") or s.contains("HandL") \
+			or s.contains("ClawR") or s.contains("ClawL") \
+			or s.contains("Finger") or s.ends_with("Pivot") \
+			or s.ends_with("Shoulder") or s.ends_with("StaffArm") \
+			or s.ends_with("SpearArm") or s.ends_with("BowArm") \
+			or s.ends_with("WandArm")
 
-# Position sliders go on the *Arm parent nodes (BowArm/StaffArm/
-# SpearArm) so the user can drag the weapon forward/back/up/down
-# without editing the .tscn. Marker2Ds already get position sliders.
+# Position sliders go on movable body/arm/hand/weapon nodes so the
+# editor supports player classes, enemies, NPCs, and bespoke rigs.
 func _wants_position_slider(n: StringName) -> bool:
 	var s := String(n)
-	return s.ends_with("StaffArm") or s.ends_with("SpearArm") \
-			or s.ends_with("BowArm")
+	return s == "Body" or s == "Staff" or s == "ArmAnchor" \
+			or s.contains("HandR") or s.contains("HandL") \
+			or s.contains("ClawR") or s.contains("ClawL") \
+			or s.ends_with("StaffArm") or s.ends_with("SpearArm") \
+			or s.ends_with("BowArm") or s.ends_with("WandArm")
 
 func _add_rotation_slider(n: Node2D, path: String) -> void:
 	var row := HBoxContainer.new()
@@ -467,8 +646,7 @@ func _on_time_changed(v: float) -> void:
 	# Phase guide for attack: 0-20% = BEGIN (start pose), 20-65% =
 	# MIDDLE (strike apex), 65-100% = END (recovery). Save at each
 	# point with S to capture the per-phase pose.
-	_label_time.text = "Time: %.2fs / %.2fs    Phase: %s    (S saves this phase)" % [
-			v, _anim.current_animation_length, String(_current_phase())]
+	_update_time_label(v)
 
 func _on_play_toggle() -> void:
 	if _anim == null:
@@ -477,6 +655,13 @@ func _on_play_toggle() -> void:
 	if _paused:
 		_anim.pause()
 	else:
+		var length: float = _time_slider.max_value if _time_slider != null else _anim.current_animation_length
+		if length > 0.01 and _anim.current_animation_position >= length - 0.001:
+			_scrub_time = 0.0
+			if _time_slider != null:
+				_time_slider.set_value_no_signal(0.0)
+			_anim.seek(0.0, true)
+			_update_time_label(0.0)
 		_anim.play()
 	# IK follows play state: ON when running (so the hand sticks to the
 	# weapon during the swing), OFF when paused (so the sidebar sliders
@@ -489,8 +674,17 @@ func _process(_delta: float) -> void:
 	# value directly (Godot won't re-emit for same value).
 	if _anim != null and not _paused:
 		var t: float = _anim.current_animation_position
+		_scrub_time = t
 		_time_slider.set_value_no_signal(t)
-		_label_time.text = "Time: %.2fs / %.2fs" % [t, _anim.current_animation_length]
+		_update_time_label(t)
+
+func _update_time_label(t: float) -> void:
+	if _label_time == null:
+		return
+	var length: float = _time_slider.max_value if _time_slider != null else 0.0
+	_label_time.text = "Time: %.2fs / %.2fs    Phase: %s    (S saves this phase)" % [
+			t, length, String(_current_phase())]
+	_refresh_score_panel()
 
 # =========================================================================
 # Pose dump
@@ -557,6 +751,274 @@ func _on_reset_pressed() -> void:
 	_load_current()
 
 # =========================================================================
+# Picker + score state
+# =========================================================================
+
+func _refresh_picker_options() -> void:
+	if _class_select == null or _variant_select == null or _stance_select == null:
+		return
+	_ui_syncing = true
+	_class_select.clear()
+	for i in range(CLASSES.size()):
+		_class_select.add_item(String(CLASSES[i]["id"]))
+	_class_select.select(clampi(_class_idx, 0, max(0, CLASSES.size() - 1)))
+	_variant_select.clear()
+	var variants: Array = CLASSES[_class_idx]["variants"]
+	for i in range(variants.size()):
+		var variant: Dictionary = variants[i]
+		_variant_select.add_item(String(variant["name"]))
+	_variant_select.select(clampi(_variant_idx, 0, max(0, variants.size() - 1)))
+	_stance_select.clear()
+	if _stance_ids.is_empty():
+		_stance_select.add_item("default")
+		_stance_select.disabled = true
+	else:
+		_stance_select.disabled = false
+		var selected: String = _selected_stance_for_class(String(CLASSES[_class_idx]["id"]))
+		for i in range(_stance_ids.size()):
+			var stance_id: String = String(_stance_ids[i])
+			var coverage: Dictionary = _coverage_for_stance(stance_id)
+			var label: String = "%s  [%d/%d]" % [
+				stance_id,
+				int(coverage.get("completed", 0)),
+				int(coverage.get("total", 0)),
+			]
+			if stance_id == selected:
+				label += "  ACTIVE"
+			_stance_select.add_item(label)
+		_stance_select.select(clampi(_stance_idx, 0, max(0, _stance_ids.size() - 1)))
+	_ui_syncing = false
+
+func _on_class_selected(index: int) -> void:
+	if _ui_syncing:
+		return
+	if index < 0 or index >= CLASSES.size():
+		return
+	_class_idx = index
+	_variant_idx = 0
+	_stance_idx = 0
+	_load_current()
+
+func _on_variant_selected(index: int) -> void:
+	if _ui_syncing:
+		return
+	var variants: Array = CLASSES[_class_idx]["variants"]
+	if index < 0 or index >= variants.size():
+		return
+	_variant_idx = index
+	_load_current()
+
+func _on_stance_selected(index: int) -> void:
+	if _ui_syncing:
+		return
+	if index < 0 or index >= _stance_ids.size():
+		return
+	_stance_idx = index
+	_load_current()
+
+func _load_scores_from_disk() -> void:
+	_scores = _read_json_dict(SCORE_FILE)
+
+func _load_selected_stances_from_disk() -> void:
+	_selected_stances = _read_json_dict(SELECTED_STANCES_FILE)
+
+func _read_json_dict(path: String) -> Dictionary:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return {}
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	f.close()
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return {}
+	return parsed
+
+func _write_json_dict(path: String, data: Dictionary) -> void:
+	DirAccess.make_dir_recursive_absolute("res://tmp")
+	var w := FileAccess.open(path, FileAccess.WRITE)
+	if w != null:
+		w.store_string(JSON.stringify(data, "  "))
+		w.close()
+
+func _current_class_key() -> String:
+	return String(CLASSES[_class_idx]["id"])
+
+func _current_bucket() -> StringName:
+	return CLASSES[_class_idx].get("bucket", &"classes")
+
+func _current_stance_key() -> String:
+	if _stance_ids.is_empty():
+		return "default"
+	return String(_stance_ids[_stance_idx])
+
+func _score_key(stance_id: String, variant_name: String, phase: String) -> String:
+	return "%s/%s/%s" % [stance_id, variant_name, phase]
+
+func _score_record_for(class_key: String, stance_id: String,
+		variant_name: String, phase: String) -> Dictionary:
+	var rec_v: Variant = _scores.get(_score_key(stance_id, variant_name, phase), {})
+	if typeof(rec_v) != TYPE_DICTIONARY:
+		return {}
+	var rec: Dictionary = rec_v
+	if String(rec.get("class", class_key)) != class_key:
+		return {}
+	return rec
+
+func _required_phases_for_variant(variant: Dictionary) -> Array[String]:
+	match String(variant.get("anim", &"idle")):
+		"attack", "cast":
+			return ["BEGIN", "MIDDLE", "END"]
+		_:
+			return ["BEGIN"]
+
+func _coverage_for_stance(stance_id: String) -> Dictionary:
+	var class_key: String = _current_class_key()
+	var variants: Array = CLASSES[_class_idx]["variants"]
+	var lines: Array[String] = []
+	var missing: Array[String] = []
+	var required: Array[String] = []
+	var completed: int = 0
+	var total: int = 0
+	for variant_v in variants:
+		var variant: Dictionary = variant_v
+		var variant_name: String = String(variant["name"])
+		var parts: Array[String] = []
+		for phase in _required_phases_for_variant(variant):
+			total += 1
+			var token: String = "%s/%s" % [variant_name, phase]
+			required.append(token)
+			var rec: Dictionary = _score_record_for(class_key, stance_id, variant_name, phase)
+			var phase_short: String = phase.substr(0, 1)
+			if rec.is_empty():
+				parts.append("%s-" % phase_short)
+				missing.append(token)
+			else:
+				completed += 1
+				parts.append("%s%d" % [phase_short, int(rec.get("score", 0))])
+		lines.append("%s: %s" % [variant_name, " ".join(parts)])
+	return {
+		"completed": completed,
+		"total": total,
+		"lines": lines,
+		"missing": missing,
+		"required": required,
+	}
+
+func _selected_stance_for_class(class_key: String) -> String:
+	var bucket := _current_bucket()
+	if bucket == &"classes":
+		var rec_v: Variant = _selected_stances.get(class_key, {})
+		if typeof(rec_v) != TYPE_DICTIONARY:
+			return ""
+		return String((rec_v as Dictionary).get("stance", ""))
+	var bucket_v: Variant = _selected_stances.get(String(bucket), {})
+	if typeof(bucket_v) != TYPE_DICTIONARY:
+		return ""
+	var rec_v: Variant = (bucket_v as Dictionary).get(class_key, {})
+	if typeof(rec_v) != TYPE_DICTIONARY:
+		return ""
+	return String((rec_v as Dictionary).get("stance", ""))
+
+func _refresh_score_panel() -> void:
+	if _label_score == null or _label_completion == null:
+		return
+	var class_key: String = _current_class_key()
+	var stance_id: String = _current_stance_key()
+	var variant: Dictionary = CLASSES[_class_idx]["variants"][_variant_idx]
+	var variant_name: String = String(variant["name"])
+	var phase: String = String(_current_phase())
+	var rec: Dictionary = _score_record_for(class_key, stance_id, variant_name, phase)
+	var current_score: String = "unscored"
+	if not rec.is_empty():
+		current_score = "%d at %.2fs" % [int(rec.get("score", 0)), float(rec.get("t", 0.0))]
+	_label_score.text = "Current: %s / %s / %s / %s    Score: %s" % [
+		class_key, stance_id, variant_name, phase, current_score]
+	var coverage: Dictionary = _coverage_for_stance(stance_id)
+	var selected: String = _selected_stance_for_class(class_key)
+	var active_text: String = selected if selected != "" else "none"
+	var lines: Array = coverage.get("lines", [])
+	var missing: Array = coverage.get("missing", [])
+	var text: String = "Selected for game: %s\nCoverage: %d/%d\n%s" % [
+		active_text,
+		int(coverage.get("completed", 0)),
+		int(coverage.get("total", 0)),
+		"\n".join(lines),
+	]
+	if not missing.is_empty():
+		text += "\nMissing: %s" % ", ".join(missing.slice(0, 8))
+		if missing.size() > 8:
+			text += " ..."
+	_label_completion.text = text
+	if _use_stance_button != null:
+		_use_stance_button.disabled = _stance_ids.is_empty()
+		_use_stance_button.text = "Use Stance (%d/%d)" % [
+			int(coverage.get("completed", 0)),
+			int(coverage.get("total", 0)),
+		]
+
+func _on_use_stance_pressed() -> void:
+	if _stance_ids.is_empty():
+		return
+	var class_key: String = _current_class_key()
+	var stance_id: String = _current_stance_key()
+	var coverage: Dictionary = _coverage_for_stance(stance_id)
+	var missing: Array = coverage.get("missing", [])
+	if not missing.is_empty():
+		var msg: String = "blocked: score required animations first: %s" % ", ".join(missing.slice(0, 10))
+		if missing.size() > 10:
+			msg += " ..."
+		print("[pose_tuner] %s" % msg)
+		_label_completion.text = msg
+		return
+	var selected_record := {
+		"class": class_key,
+		"bucket": String(_current_bucket()),
+		"stance": stance_id,
+		"completed": int(coverage.get("completed", 0)),
+		"total": int(coverage.get("total", 0)),
+		"required": coverage.get("required", []),
+		"timestamp": Time.get_datetime_string_from_system(),
+	}
+	var bucket := _current_bucket()
+	if bucket == &"classes":
+		_selected_stances[class_key] = selected_record
+	else:
+		var bucket_key := String(bucket)
+		if typeof(_selected_stances.get(bucket_key, {})) != TYPE_DICTIONARY:
+			_selected_stances[bucket_key] = {}
+		(_selected_stances[bucket_key] as Dictionary)[class_key] = selected_record
+	_write_json_dict(SELECTED_STANCES_FILE, _selected_stances)
+	print("[pose_tuner] selected %s/%s for game" % [class_key, stance_id])
+	_refresh_picker_options()
+	_refresh_score_panel()
+
+func _on_launch_game_pressed() -> void:
+	if _current_bucket() != &"classes":
+		print("[pose_tuner] launch blocked: select a player class target")
+		return
+	var class_key: String = _current_class_key()
+	var stance_id: String = _current_stance_key()
+	_selected_stances[class_key] = {
+		"class": class_key,
+		"bucket": "classes",
+		"stance": stance_id,
+		"debug_launch": true,
+		"timestamp": Time.get_datetime_string_from_system(),
+	}
+	_write_json_dict(SELECTED_STANCES_FILE, _selected_stances)
+	_write_json_dict(LAUNCH_FILE, {
+		"class_id": class_key,
+		"stance_id": stance_id,
+		"zone_id": "forsaken_depths",
+		"arrival_marker": "DepthsEntry",
+		"source": "pose_tuner",
+		"timestamp": Time.get_datetime_string_from_system(),
+	})
+	var exe := OS.get_executable_path()
+	var project_dir := ProjectSettings.globalize_path("res://")
+	var pid := OS.create_process(exe, ["--path", project_dir, "res://scenes/game.tscn"])
+	print("[pose_tuner] launch in Maw class=%s stance=%s pid=%d" % [class_key, stance_id, pid])
+
+# =========================================================================
 # Click + drag handles
 # =========================================================================
 # Mouse events on the SubViewportContainer come in as gui_input. The
@@ -569,8 +1031,8 @@ func _on_reset_pressed() -> void:
 #   - Marker2D (NockMarker, RiserMarker, BowTipTop/Bot, LeftGripMarker,
 #     etc.) — child of the weapon-arm subtree. Drag updates the
 #     marker's position in its parent's local space.
-#   - BowArm / StaffArm / SpearArm itself — drag updates its position
-#     in Body-local space (so its children move with it).
+#   - weapon / arm / hand / claw nodes — drag updates their position
+#     in parent-local space (so children move with them).
 
 const DRAG_HIT_RADIUS: float = 18.0
 const DRAG_DOT_COLOR := Color(1.0, 0.7, 0.1, 0.9)
@@ -657,9 +1119,9 @@ func _enumerate_draggables(root: Node) -> Array:
 			out.append(child)
 		elif child is Node2D:
 			var n: String = String(child.name)
-			if n.ends_with("BowArm") or n.ends_with("StaffArm") or n.ends_with("SpearArm"):
+			if n.ends_with("ElbowPivot") or n.ends_with("KneePivot"):
 				out.append(child)
-			elif n.ends_with("ElbowPivot") or n.ends_with("KneePivot"):
+			elif _wants_position_slider(child.name) or n.contains("ArmR") or n.contains("ArmL") or n.contains("Finger"):
 				out.append(child)
 		out.append_array(_enumerate_draggables(child))
 	return out
@@ -778,33 +1240,23 @@ func _score_current(score: int) -> void:
 	var variant: Dictionary = cls["variants"][_variant_idx]
 	var phase: StringName = _current_phase()
 	var key: String = "%s/%s/%s" % [stance_id, variant["name"], phase]
-	# Load existing.
-	var scores: Dictionary = {}
-	var f := FileAccess.open("res://tmp/stance_scores.json", FileAccess.READ)
-	if f != null:
-		var txt: String = f.get_as_text()
-		f.close()
-		var parsed: Variant = JSON.parse_string(txt)
-		if typeof(parsed) == TYPE_DICTIONARY:
-			scores = parsed
+	_load_scores_from_disk()
+	var scores: Dictionary = _scores
 	scores[key] = {
 		"score": score,
 		"class": String(cls["id"]),
+		"bucket": String(cls.get("bucket", &"classes")),
 		"stance": String(stance_id),
 		"variant": String(variant["name"]),
 		"phase": String(phase),
 		"t": _scrub_time,
 		"timestamp": Time.get_datetime_string_from_system(),
 	}
-	DirAccess.make_dir_recursive_absolute("res://tmp")
-	var w := FileAccess.open("res://tmp/stance_scores.json", FileAccess.WRITE)
-	if w != null:
-		w.store_string(JSON.stringify(scores, "  "))
-		w.close()
+	_scores = scores
+	_write_json_dict(SCORE_FILE, _scores)
 	print("[pose_tuner] scored %s = %d" % [key, score])
-	if _label_score != null:
-		_label_score.text = "Phase: %s     Last: %s = %d" % [
-				String(phase), key, score]
+	_refresh_picker_options()
+	_refresh_score_panel()
 
 # Stage 17.8 — write the CURRENT BowArm/StaffArm/SpearArm placement
 # + animated Marker2D positions into tmp/recommended_stances.json so
@@ -815,6 +1267,7 @@ func _score_current(score: int) -> void:
 func _save_recommended() -> void:
 	if _sprite == null:
 		return
+	var reload_time: float = _scrub_time
 	var cls: Dictionary = CLASSES[_class_idx]
 	var stance_label: String = "default"
 	if _stance_ids.size() > 0:
@@ -836,6 +1289,20 @@ func _save_recommended() -> void:
 		"positions": {},
 		"markers": {},
 	}
+	for entry_v in _slider_entries:
+		var entry: Dictionary = entry_v
+		var path: String = String(entry.get("path", ""))
+		if path == "":
+			continue
+		var n := _sprite.get_node_or_null(NodePath(path)) as Node2D
+		if n == null:
+			continue
+		if String(entry.get("kind", "")) == "rot":
+			snap["rotations"][path] = n.rotation
+		elif String(entry.get("kind", "")) == "pos":
+			snap["positions"][path] = [n.position.x, n.position.y]
+			if n is Marker2D:
+				snap["markers"][path] = [n.position.x, n.position.y]
 	# Both arms — shoulders + elbow pivots.
 	for arm_path in ["Body/ArmLShoulder", "Body/ArmRShoulder"]:
 		var shoulder: Node2D = _sprite.get_node_or_null(NodePath(arm_path)) as Node2D
@@ -903,14 +1370,19 @@ func _save_recommended() -> void:
 	print("[pose_tuner] %s" % msg)
 	if _label_score != null:
 		_label_score.text = "Recommended " + msg
+	# The current sprite loaded its animation tracks before this write.
+	# Reload at the same scrub time so Play consumes the saved phase now.
+	_load_current(reload_time)
 
 # Walk the sprite tree looking for the first Node2D whose name ends in
 # StaffArm/SpearArm/BowArm — the weapon-arm convention used by all
-# class sprites.
+# class/enemy/NPC sprites.
 func _find_weapon_arm(root: Node) -> Node2D:
 	for child in root.get_children():
 		var s: String = String(child.name)
-		if child is Node2D and (s.ends_with("BowArm") or s.ends_with("StaffArm") or s.ends_with("SpearArm")):
+		if child is Node2D and (s.ends_with("BowArm") or s.ends_with("StaffArm") \
+				or s.ends_with("SpearArm") or s.ends_with("WandArm") \
+				or s == "Staff" or s == "ArmAnchor"):
 			return child
 		var nested: Node2D = _find_weapon_arm(child)
 		if nested != null:
@@ -918,13 +1390,13 @@ func _find_weapon_arm(root: Node) -> Node2D:
 	return null
 
 # Phase classification — three save slots BEGIN/MIDDLE/END, banded
-# by scrub-time fraction. Applies to EVERY animation (idle/walk
-# included) so the user can tune start/middle/end poses across the
-# whole catalog, not just attack.
+# by scrub-time fraction. Uses _time_slider.max_value as the length
+# source so the classification stays correct even after the animation
+# has played past its end (current_animation_length goes to 0 then).
 func _current_phase() -> StringName:
-	if _anim == null:
+	if _time_slider == null:
 		return &"BEGIN"
-	var length: float = _anim.current_animation_length
+	var length: float = _time_slider.max_value
 	if length <= 0.01:
 		return &"BEGIN"
 	var f: float = _scrub_time / length
@@ -943,6 +1415,7 @@ func _input(event: InputEvent) -> void:
 		KEY_F1:
 			_class_idx = (_class_idx + 1) % CLASSES.size()
 			_variant_idx = 0
+			_stance_idx = 0
 			_load_current()
 		KEY_F2:
 			var n: int = CLASSES[_class_idx]["variants"].size()

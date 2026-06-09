@@ -17,6 +17,7 @@ extends Node2D
 
 const DEFAULT_CLASS: StringName = &"myrmidon"
 const DEFAULT_ZONE: StringName = &"threshold_camp"
+const EDITOR_LAUNCH_FILE: String = "res://tmp/pose_tuner_launch.json"
 
 const _DAMAGE_NUMBER := preload("res://scenes/vfx/damage_number.tscn")
 const _WORLD_ITEM := preload("res://scenes/items/world_item.tscn")
@@ -97,12 +98,16 @@ func _ready() -> void:
 	# Help label across the top-centre and ate the KillCounter row.
 	_help.text = "Click=move  WASD  E=interact  I=inv  F5/F9=save/load  Esc=pause"
 
+	var editor_launch := _consume_editor_launch()
 	# Default class on first launch; load_game below may overwrite it.
 	# Stage 10: character_select.tscn stashes the player's pick in
 	# GameState.pending_class_id before swapping here. Consume it
 	# (and clear it) so a subsequent zone reload doesn't re-apply it.
+	# pose_tuner launch intent takes precedence and skips save auto-load.
 	var first_class: StringName = DEFAULT_CLASS
-	if GameState.pending_class_id != &"":
+	if not editor_launch.is_empty():
+		first_class = StringName(editor_launch.get("class_id", String(DEFAULT_CLASS)))
+	elif GameState.pending_class_id != &"":
 		first_class = GameState.pending_class_id
 		GameState.pending_class_id = &""
 	var cd: ClassData = Database.get_class_data(first_class) as ClassData
@@ -171,7 +176,9 @@ func _ready() -> void:
 	# Auto-load on entry: if a save exists, restore it; otherwise
 	# stay on the fresh defaults. Always reports what happened so
 	# the player can tell "no save" apart from "fresh Myrmidon".
-	if SaveSystem.has_save():
+	if not editor_launch.is_empty():
+		_apply_editor_launch(editor_launch)
+	elif SaveSystem.has_save():
 		if SaveSystem.load_game():
 			_zone_cache = SaveSystem.consume_pending_zone_caches()
 			_inventory_panel.bind_inventory(_player.get_inventory())
@@ -183,6 +190,29 @@ func _ready() -> void:
 	else:
 		_set_status("New game — fresh start.", true)
 		_maybe_show_tutorial()
+
+func _consume_editor_launch() -> Dictionary:
+	if not FileAccess.file_exists(EDITOR_LAUNCH_FILE):
+		return {}
+	var f := FileAccess.open(EDITOR_LAUNCH_FILE, FileAccess.READ)
+	if f == null:
+		return {}
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	f.close()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(EDITOR_LAUNCH_FILE))
+	if typeof(parsed) != TYPE_DICTIONARY:
+		push_warning("Game: bad pose_tuner launch file; ignoring")
+		return {}
+	return parsed as Dictionary
+
+func _apply_editor_launch(launch: Dictionary) -> void:
+	var zone_id := StringName(launch.get("zone_id", "forsaken_depths"))
+	var arrival := StringName(launch.get("arrival_marker", "DepthsEntry"))
+	if not EndlessRun.active:
+		EndlessRun.begin(randi())
+	GameState.act_1_complete = true
+	_do_transit.call_deferred(zone_id, true, arrival, true)
+	_set_status("Editor launch: %s in The Maw." % String(launch.get("class_id", DEFAULT_CLASS)), true)
 
 func _maybe_show_tutorial() -> void:
 	# First-launch only: skip if the player has already dismissed it

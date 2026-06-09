@@ -22,7 +22,7 @@ quickly, vs. a meatier 2+ hour ARPG shipped when ready.
    stage can pull on it for procedural-plus-AI hybrid art and voice.
 4. **Stages 12–17** — town-to-wilderness walk, procgen seeds,
    waypoints, paper-doll equipment, item icons, NPC voice + portraits.
-5. **Stage 18** — Forsaken Boss demote + final-boss state-machine.
+5. **Stage 18** — Boss state-machine cleanup + legacy Forsaken/Hekate rare-routing audit.
 6. **Stage 19** — The Maw entrance moves to town, gated behind
    first-quest completion.
 7. **Stage 20** — Wilderness content authorship: 10+ areas, 5+

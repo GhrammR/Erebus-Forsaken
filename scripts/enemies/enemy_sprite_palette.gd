@@ -1,4 +1,4 @@
-class_name EnemySpritePalette extends Node2D
+class_name EnemySpritePalette extends "res://scripts/systems/sprite_runtime_2d.gd"
 ## Stage 13 — sits as the script on a procedural enemy sprite root
 ## (Node2D-built sprites with named Polygon2D children). Re-tints
 ## those children at _ready per a small variant table baked into the
@@ -23,6 +23,7 @@ class_name EnemySpritePalette extends Node2D
 
 func _ready() -> void:
 	apply(palette_variant)
+	setup_sprite_runtime()
 
 func set_palette_variant(v: int) -> void:
 	palette_variant = v

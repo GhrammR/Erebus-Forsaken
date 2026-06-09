@@ -47,11 +47,11 @@ const SHADOW: Color         = Color(0.0, 0.0, 0.05, 0.45)
 @onready var _anim: AnimationPlayer = $AnimationPlayer
 
 const SpriteOverrides = preload("res://scripts/systems/sprite_overrides.gd")
+const SpearStances = preload("res://scripts/systems/stances/spear_stances.gd")
+const StanceSelection = preload("res://scripts/systems/stance_selection.gd")
 
-# Stage 17.8 — per-anim tuned rotations (rest/strike) loaded from
-# tmp/recommended_stances.json. Stance id is hardcoded until spear-
-# stance selection moves into a real @export var.
-var _stance_id: StringName = &"hip_spear_shield_legacy"
+# Stage 17.8 — per-anim tuned rotations loaded from tmp/recommended_stances.json.
+@export var stance_id: StringName = &"hip_spear_shield_legacy"
 var _per_anim_config: Dictionary = {}
 var _tuned_anims: Dictionary = {}
 var _replaying_for_injection: bool = false
@@ -69,11 +69,12 @@ func _ready() -> void:
 	# and reads as not-bald.
 	_paint_hair()
 	_paint_armor()
+	_apply_spear_stance()
 	_paint_spear()
 	_build_animations()
 	SpriteSidecar.apply(self, &"myrmidon")
 	# Stage 17.8 — wire tuned-rotation overrides for tuned anims.
-	_per_anim_config = SpriteOverrides.load_for_class(&"myrmidon", _stance_id)
+	_per_anim_config = SpriteOverrides.load_for_class(&"myrmidon", stance_id)
 	for anim_name in _per_anim_config:
 		if SpriteOverrides.is_tuned(_per_anim_config[anim_name]):
 			_tuned_anims[anim_name] = true
@@ -95,6 +96,28 @@ func _on_anim_started(anim_name: StringName) -> void:
 	_replaying_for_injection = true
 	_anim.play(anim_name)
 	_replaying_for_injection = false
+
+func _apply_spear_stance() -> void:
+	stance_id = StanceSelection.selected_for_class(&"myrmidon", stance_id, SpearStances.all_ids())
+	var stance: Dictionary = SpearStances.get_stance(stance_id)
+	var parent := _spear_arm.get_parent() as Node2D
+	var spear_body_pos: Vector2 = stance.get("spear_pos", Vector2(9, -24))
+	var thrust_body_pos: Vector2 = stance.get("thrust_reach", Vector2(28, -24))
+	var rest_local := _spear_arm.position
+	var thrust_local := _spear_arm.position
+	if parent != null:
+		rest_local = parent.to_local(_body.to_global(spear_body_pos))
+		thrust_local = parent.to_local(_body.to_global(thrust_body_pos))
+		_spear_arm.position = rest_local
+	_spear_arm.rotation = float(stance.get("spear_rot", 0.0))
+	set_meta(&"spear_stance", {
+		"stance_id": String(stance_id),
+		"rest_rot": _spear_arm.rotation,
+		"rest_pos": rest_local,
+		"thrust_pos": thrust_local,
+		"attack_len": float(stance.get("attack_len", 0.85)),
+		"thrust_reach": thrust_body_pos,
+	})
 
 func _paint_face() -> void:
 	# Custom Myrmidon face (overrides HumanRig defaults). Veteran
@@ -297,6 +320,12 @@ func _anim_idle() -> Animation:
 		var tr := a.add_track(Animation.TYPE_VALUE)
 		a.track_set_path(tr, path)
 		a.track_insert_key(tr, 0.0, 0.0)
+	var tsr := a.add_track(Animation.TYPE_VALUE)
+	a.track_set_path(tsr, NodePath("Body/ArmRShoulder/ElbowPivot/SpearArm:rotation"))
+	a.track_insert_key(tsr, 0.0, _spear_arm.rotation)
+	var tsp := a.add_track(Animation.TYPE_VALUE)
+	a.track_set_path(tsp, NodePath("Body/ArmRShoulder/ElbowPivot/SpearArm:position"))
+	a.track_insert_key(tsp, 0.0, _spear_arm.position)
 	return a
 
 const _RESET_PATHS: Array = [
@@ -309,7 +338,6 @@ const _RESET_PATHS: Array = [
 	NodePath("Body/ArmLShoulder/ElbowPivot:rotation"),
 	NodePath("Body/ArmRShoulder:rotation"),
 	NodePath("Body/ArmRShoulder/ElbowPivot:rotation"),
-	NodePath("Body/ArmRShoulder/ElbowPivot/SpearArm:rotation"),
 ]
 
 func _anim_walk() -> Animation:
@@ -365,6 +393,14 @@ func _anim_walk() -> Animation:
 	a.track_insert_key(tra, 0.3, 0.0)
 	a.track_insert_key(tra, 0.45, 0.25)
 	a.track_insert_key(tra, 0.6, 0.0)
+	var tsr := a.add_track(Animation.TYPE_VALUE)
+	a.track_set_path(tsr, NodePath("Body/ArmRShoulder/ElbowPivot/SpearArm:rotation"))
+	a.track_insert_key(tsr, 0.0, _spear_arm.rotation)
+	a.track_insert_key(tsr, 0.6, _spear_arm.rotation)
+	var tsp := a.add_track(Animation.TYPE_VALUE)
+	a.track_set_path(tsp, NodePath("Body/ArmRShoulder/ElbowPivot/SpearArm:position"))
+	a.track_insert_key(tsp, 0.0, _spear_arm.position)
+	a.track_insert_key(tsp, 0.6, _spear_arm.position)
 	return a
 
 func _anim_attack_placeholder() -> Animation:
@@ -391,9 +427,14 @@ func _anim_attack_placeholder() -> Animation:
 	a.track_insert_key(tra, 0.35, 0.0)
 	var tsa := a.add_track(Animation.TYPE_VALUE)
 	a.track_set_path(tsa, NodePath("Body/ArmRShoulder/ElbowPivot/SpearArm:rotation"))
-	a.track_insert_key(tsa, 0.00, 0.0)
-	a.track_insert_key(tsa, 0.18, -0.3)
-	a.track_insert_key(tsa, 0.35, 0.0)
+	var rest_rot := _spear_arm.rotation
+	a.track_insert_key(tsa, 0.00, rest_rot)
+	a.track_insert_key(tsa, 0.18, rest_rot - 0.3)
+	a.track_insert_key(tsa, 0.35, rest_rot)
+	var tsp := a.add_track(Animation.TYPE_VALUE)
+	a.track_set_path(tsp, NodePath("Body/ArmRShoulder/ElbowPivot/SpearArm:position"))
+	a.track_insert_key(tsp, 0.00, _spear_arm.position)
+	a.track_insert_key(tsp, 0.35, _spear_arm.position)
 	return a
 
 func _anim_cast() -> Animation:

@@ -327,7 +327,7 @@ func _migrate_v17_to_v18(old: Dictionary) -> Dictionary:
 	var dropped_loot: int = (old.get("loot", []) as Array).size()
 	old["enemies"] = []
 	old["loot"] = []
-	push_warning("SaveSystem v17->v18: stale-zone repair snapped position from %s to %s for zone %s; dropped %d misattributed enemies + %d loot" % [
+	print("SaveSystem v17->v18: stale-zone repair snapped position from %s to %s for zone %s; dropped %d misattributed enemies + %d loot" % [
 			p, spawn, String(zone_id), dropped_enemies, dropped_loot])
 	return old
 

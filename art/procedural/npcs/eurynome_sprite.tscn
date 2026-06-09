@@ -1,33 +1,94 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/sprite_runtime_2d.gd" id="1_rt"]
 
 [node name="EurynomeSprite" type="Node2D"]
+script = ExtResource("1_rt")
+sprite_id = &"eurynome"
+stance_bucket = &"npcs"
+stance_id = &"merchant_idle"
 
 [node name="Shadow" type="Polygon2D" parent="."]
 z_index = -1
-polygon = PackedVector2Array(-8, 0, 8, 0, 6, 4, -6, 4)
+position = Vector2(0, 4)
+polygon = PackedVector2Array(-13, -3, -8, -6, 8, -6, 13, -3, 9, 4, -9, 4)
 color = Color(0, 0, 0, 0.5)
 
-[node name="Robe" type="Polygon2D" parent="."]
-position = Vector2(0, -22)
-polygon = PackedVector2Array(-9, 22, -7, -4, 7, -4, 9, 22)
+[node name="Body" type="Node2D" parent="."]
+
+[node name="Robe" type="Polygon2D" parent="Body"]
+polygon = PackedVector2Array(-12, 0, -10, -33, -6, -45, 6, -45, 10, -33, 12, 0, 8, 4, -8, 4)
 color = Color(0.30, 0.32, 0.42, 1)
 
-[node name="Mantle" type="Polygon2D" parent="."]
-position = Vector2(0, -22)
-polygon = PackedVector2Array(-9, -2, -10, 8, -6, 6, 6, 6, 10, 8, 9, -2)
+[node name="Mantle" type="Polygon2D" parent="Body"]
+polygon = PackedVector2Array(-11, -35, 11, -35, 13, -22, 7, -18, 0, -23, -7, -18, -13, -22)
 color = Color(0.20, 0.22, 0.30, 1)
 
-[node name="Brooch" type="Polygon2D" parent="."]
-position = Vector2(0, -16)
-polygon = PackedVector2Array(-2, -1, 2, -1, 2, 1, -2, 1)
+[node name="Brooch" type="Polygon2D" parent="Body"]
+position = Vector2(0, -28)
+polygon = PackedVector2Array(0, -3, 3, 0, 0, 3, -3, 0)
 color = Color(0.85, 0.85, 0.95, 1)
 
-[node name="Head" type="Polygon2D" parent="."]
-position = Vector2(0, -36)
-polygon = PackedVector2Array(-5, -6, 5, -6, 6, 0, 5, 6, -5, 6, -6, 0)
+[node name="Head" type="Polygon2D" parent="Body"]
+position = Vector2(0, -48)
+polygon = PackedVector2Array(-6, -7, 6, -7, 7, 0, 5, 7, -5, 7, -7, 0)
 color = Color(0.75, 0.60, 0.55, 1)
 
-[node name="Hair" type="Polygon2D" parent="."]
-position = Vector2(0, -42)
-polygon = PackedVector2Array(-6, -2, -7, 6, -2, 6, 2, 6, 7, 6, 6, -2)
+[node name="EyeL" type="Polygon2D" parent="Body"]
+position = Vector2(-2.5, -50)
+polygon = PackedVector2Array(-0.8, -0.8, 0.8, -0.8, 0.8, 0.8, -0.8, 0.8)
+color = Color(0.06, 0.07, 0.10, 1)
+
+[node name="EyeR" type="Polygon2D" parent="Body"]
+position = Vector2(2.5, -50)
+polygon = PackedVector2Array(-0.8, -0.8, 0.8, -0.8, 0.8, 0.8, -0.8, 0.8)
+color = Color(0.06, 0.07, 0.10, 1)
+
+[node name="Hair" type="Polygon2D" parent="Body"]
+position = Vector2(0, -54)
+polygon = PackedVector2Array(-7, -1, -8, 9, -3, 6, 0, 9, 3, 6, 8, 9, 7, -1, 3, -6, -3, -6)
 color = Color(0.12, 0.15, 0.22, 1)
+
+[node name="ArmL" type="Node2D" parent="Body"]
+position = Vector2(-9, -32)
+rotation = -0.20
+
+[node name="UpperArmL" type="Polygon2D" parent="Body/ArmL"]
+polygon = PackedVector2Array(0, -3, -11, 0, -12, 4, 0, 3)
+color = Color(0.24, 0.25, 0.34, 1)
+
+[node name="ElbowPivot" type="Node2D" parent="Body/ArmL"]
+position = Vector2(-11, 2)
+rotation = -0.28
+
+[node name="ForearmL" type="Polygon2D" parent="Body/ArmL/ElbowPivot"]
+polygon = PackedVector2Array(0, -2, -11, 0, -12, 4, 0, 3)
+color = Color(0.30, 0.32, 0.42, 1)
+
+[node name="HandL" type="Polygon2D" parent="Body/ArmL/ElbowPivot"]
+position = Vector2(-12, 2)
+polygon = PackedVector2Array(0, -3, -4, -2, -5, 3, 0, 4)
+color = Color(0.75, 0.60, 0.55, 1)
+
+[node name="ArmR" type="Node2D" parent="Body"]
+position = Vector2(9, -32)
+rotation = 0.20
+
+[node name="UpperArmR" type="Polygon2D" parent="Body/ArmR"]
+polygon = PackedVector2Array(0, -3, 11, 0, 12, 4, 0, 3)
+color = Color(0.24, 0.25, 0.34, 1)
+
+[node name="ElbowPivot" type="Node2D" parent="Body/ArmR"]
+position = Vector2(11, 2)
+rotation = 0.28
+
+[node name="ForearmR" type="Polygon2D" parent="Body/ArmR/ElbowPivot"]
+polygon = PackedVector2Array(0, -2, 11, 0, 12, 4, 0, 3)
+color = Color(0.30, 0.32, 0.42, 1)
+
+[node name="HandR" type="Polygon2D" parent="Body/ArmR/ElbowPivot"]
+position = Vector2(12, 2)
+polygon = PackedVector2Array(0, -3, 4, -2, 5, 3, 0, 4)
+color = Color(0.75, 0.60, 0.55, 1)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

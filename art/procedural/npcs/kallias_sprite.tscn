@@ -1,38 +1,99 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/sprite_runtime_2d.gd" id="1_rt"]
 
 [node name="KalliasSprite" type="Node2D"]
+script = ExtResource("1_rt")
+sprite_id = &"kallias"
+stance_bucket = &"npcs"
+stance_id = &"merchant_idle"
 
 [node name="Shadow" type="Polygon2D" parent="."]
 z_index = -1
-polygon = PackedVector2Array(-9, 0, 9, 0, 7, 4, -7, 4)
+position = Vector2(0, 4)
+polygon = PackedVector2Array(-14, -3, -8, -6, 8, -6, 14, -3, 10, 4, -10, 4)
 color = Color(0, 0, 0, 0.5)
 
-[node name="Cloak" type="Polygon2D" parent="."]
-position = Vector2(0, -22)
-polygon = PackedVector2Array(-10, 22, -8, -4, 8, -4, 10, 22)
+[node name="Body" type="Node2D" parent="."]
+
+[node name="Cloak" type="Polygon2D" parent="Body"]
+polygon = PackedVector2Array(-12, 0, -10, -31, -6, -43, 6, -43, 10, -31, 12, 0, 7, 4, -7, 4)
 color = Color(0.20, 0.16, 0.18, 1)
 
-[node name="Tunic" type="Polygon2D" parent="."]
-position = Vector2(0, -22)
-polygon = PackedVector2Array(-7, 18, -6, -2, 6, -2, 7, 18)
+[node name="Tunic" type="Polygon2D" parent="Body"]
+polygon = PackedVector2Array(-8, -4, -7, -35, 7, -35, 8, -4, 5, 1, -5, 1)
 color = Color(0.38, 0.30, 0.22, 1)
 
-[node name="BeltPouch" type="Polygon2D" parent="."]
-position = Vector2(0, -8)
-polygon = PackedVector2Array(-6, -1, 6, -1, 5, 4, -5, 4)
+[node name="BeltPouch" type="Polygon2D" parent="Body"]
+position = Vector2(0, -11)
+polygon = PackedVector2Array(-8, -2, 8, -2, 7, 5, -7, 5)
 color = Color(0.18, 0.14, 0.10, 1)
 
-[node name="Head" type="Polygon2D" parent="."]
-position = Vector2(0, -36)
-polygon = PackedVector2Array(-5, -6, 5, -6, 6, 0, 5, 6, -5, 6, -6, 0)
+[node name="Head" type="Polygon2D" parent="Body"]
+position = Vector2(0, -47)
+polygon = PackedVector2Array(-6, -7, 6, -7, 7, 0, 5, 7, -5, 7, -7, 0)
 color = Color(0.78, 0.62, 0.48, 1)
 
-[node name="Beard" type="Polygon2D" parent="."]
-position = Vector2(0, -32)
-polygon = PackedVector2Array(-5, 0, 5, 0, 4, 6, -4, 6)
-color = Color(0.85, 0.85, 0.85, 1)
+[node name="EyeL" type="Polygon2D" parent="Body"]
+position = Vector2(-2.5, -49)
+polygon = PackedVector2Array(-0.8, -0.8, 0.8, -0.8, 0.8, 0.8, -0.8, 0.8)
+color = Color(0.08, 0.06, 0.05, 1)
 
-[node name="Hood" type="Polygon2D" parent="."]
-position = Vector2(0, -38)
-polygon = PackedVector2Array(-7, -8, 7, -8, 7, 2, -7, 2)
-color = Color(0.14, 0.10, 0.12, 1)
+[node name="EyeR" type="Polygon2D" parent="Body"]
+position = Vector2(2.5, -49)
+polygon = PackedVector2Array(-0.8, -0.8, 0.8, -0.8, 0.8, 0.8, -0.8, 0.8)
+color = Color(0.08, 0.06, 0.05, 1)
+
+[node name="Beard" type="Polygon2D" parent="Body"]
+position = Vector2(0, -43)
+polygon = PackedVector2Array(-5, 0, 5, 0, 4, 8, 0, 11, -4, 8)
+color = Color(0.82, 0.82, 0.78, 1)
+
+[node name="Hair" type="Polygon2D" parent="Body"]
+position = Vector2(0, -53)
+polygon = PackedVector2Array(-7, -2, -6, 5, 6, 5, 7, -2, 3, -6, -3, -6)
+color = Color(0.78, 0.76, 0.68, 1)
+
+[node name="ArmL" type="Node2D" parent="Body"]
+position = Vector2(-9, -31)
+rotation = -0.15
+
+[node name="UpperArmL" type="Polygon2D" parent="Body/ArmL"]
+polygon = PackedVector2Array(0, -3, -11, 0, -12, 4, 0, 3)
+color = Color(0.22, 0.17, 0.15, 1)
+
+[node name="ElbowPivot" type="Node2D" parent="Body/ArmL"]
+position = Vector2(-11, 2)
+rotation = -0.18
+
+[node name="ForearmL" type="Polygon2D" parent="Body/ArmL/ElbowPivot"]
+polygon = PackedVector2Array(0, -2, -11, 0, -12, 4, 0, 3)
+color = Color(0.30, 0.22, 0.16, 1)
+
+[node name="HandL" type="Polygon2D" parent="Body/ArmL/ElbowPivot"]
+position = Vector2(-12, 2)
+polygon = PackedVector2Array(0, -3, -4, -2, -5, 3, 0, 4)
+color = Color(0.78, 0.62, 0.48, 1)
+
+[node name="ArmR" type="Node2D" parent="Body"]
+position = Vector2(9, -31)
+rotation = 0.25
+
+[node name="UpperArmR" type="Polygon2D" parent="Body/ArmR"]
+polygon = PackedVector2Array(0, -3, 11, 0, 12, 4, 0, 3)
+color = Color(0.22, 0.17, 0.15, 1)
+
+[node name="ElbowPivot" type="Node2D" parent="Body/ArmR"]
+position = Vector2(11, 2)
+rotation = 0.18
+
+[node name="ForearmR" type="Polygon2D" parent="Body/ArmR/ElbowPivot"]
+polygon = PackedVector2Array(0, -2, 11, 0, 12, 4, 0, 3)
+color = Color(0.30, 0.22, 0.16, 1)
+
+[node name="HandR" type="Polygon2D" parent="Body/ArmR/ElbowPivot"]
+position = Vector2(12, 2)
+polygon = PackedVector2Array(0, -3, 4, -2, 5, 3, 0, 4)
+color = Color(0.78, 0.62, 0.48, 1)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

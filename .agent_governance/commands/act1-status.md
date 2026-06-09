@@ -270,8 +270,8 @@ stable for already-closed work; new stages are appended. Existing
 15.5. Stage 17 — NPC voice + portraits (each town NPC ships an intro
     line, AI-generated voice + portrait — portrait prompts reference
     the Stage 17.5 in-world sprite)
-16. Stage 18 — Demote Forsaken Boss → rare; refactor `act_1_complete`
-    state machine for the new final-boss model
+16. Stage 18 — Boss state-machine cleanup + legacy Forsaken/Hekate
+    rare-routing audit for the final-boss model
 17. Stage 19 — The Maw entrance moves to town; gated behind first-quest
     completion (anchor model preserved)
 18. Stage 20 — Wilderness content authorship: 10+ areas, 5+ dungeons,
@@ -1451,21 +1451,24 @@ differs.
 | HUMANOID  | HUMAN base + species mods (extra digits, tail anchor, horn pair, etc.). Reserved part slots for Stage 20 monstrous mortals. | Contract only — no sprites yet                       |
 | UNDEAD    | Skeleton subtype: skull, jaw, sternum, ribs, spine, pelvis, articulated limbs, hip cloth (Bone Servant template). Wraith subtype: hood + cloak + face void + tattered hem + articulated upper limbs; no legs (floats). | Bone Servant (skeleton-subtype anchor, **unchanged**), Shade Wretch (wraith subtype, **new anatomy**), Bog Caller (wraith subtype, **new anatomy**) |
 | BEAST     | Quadruped base: head, body trunk, four legs with shoulder/hip pivots, tail anchor. | Contract only — no sprites yet                       |
-| DEMON     | HUMAN base + infernal mods: horn pair, hoof feet option, vestigial wing anchors, glowing eye sockets. | Contract only — no sprites yet                       |
+| DEMON     | HUMAN base + infernal mods: horn pair, hoof feet option, vestigial wing anchors, glowing eye sockets; bespoke entries may exceed this part set. | Hexacheir (bespoke six-arm DEMON Act Boss); shared contract otherwise reserved for Stage 20 |
 | FLYING    | Reduced/no leg set, paired wings with shoulder + elbow pivots, light torso, claw feet. | Contract only — no sprites yet                       |
 
 **Per-unique-boss bespoke anatomies:** each named unique boss
-(Hekate-Marked Forsaken now, the new Stage 18 final boss, future
-Act 1 unique bosses if added) gets its **own anatomy entry**, not
+(Hexacheir, the God-Spurned now; Hekate-Marked retained only for
+legacy/rare routing; future Act 1 unique bosses if added) gets its
+**own anatomy entry**, not
 a family slot. This is what lets a unique boss be larger / smaller /
 asymmetric / multi-armed / partially-disassembled — properties a
 shared family rig can't carry. The bespoke entry still uses the
 modular sprite contract (one Polygon2D per part), it just doesn't
 have to match any family's part-name set.
 
-This stage authors the bespoke entry for **Hekate-Marked Forsaken**
-(act-1 boss, currently `act_boss_sprite.tscn`). Stage 18's new
-final boss authors its own bespoke entry on creation.
+This stage authors the bespoke entry for **Hexacheir, the
+God-Spurned** (current Act Boss, `act_boss_sprite.tscn`) and retains
+Hekate-Marked as legacy bespoke routing metadata only. Stage 18 must
+extend/refactor the boss state machine without reverting this current
+boss identity.
 
 **Bone Servant fate:** keep as-is. Visual untouched. It becomes the
 UNDEAD skeleton-subtype anchor; future skeletal enemies inherit its
@@ -1476,7 +1479,8 @@ Stage 20 inherit the skeleton-subtype rig for free.
 UNDEAD wraith-subtype part set (Hood / Cloak / CloakInner /
 TatteredHem / FaceVoid / Eyes / articulated arms / claws — no
 legs). Cloak palettes preserved (void-grey, bog-green). Animations
-rebuilt; behavior unchanged.
+rebuilt; Bog Caller behavior now uses bait, dodge, and re-cast
+pressure instead of pure retreat.
 
 **Resolved scope decisions (2026-06-05):**
 - **Articulation:** full joints inside each family (shoulder /
@@ -1504,8 +1508,8 @@ rebuilt; behavior unchanged.
 **Why this stage lands here, not later:** anatomy is the contract
 `EquipmentVisuals.OVERLAYS` builds against AND what every sprite's
 AnimationPlayer tracks reference. Doing the refactor after Stage 18
-(new final-boss sprite) and Stage 20 (10+ new enemy archetypes)
-means redoing every overlay + animation. Stage 17 (NPC portraits) is
+(boss state-machine and any replacement boss sprite) and Stage 20
+(10+ new enemy archetypes) means redoing every overlay + animation. Stage 17 (NPC portraits) is
 independent of in-world sprite anatomy, so the order is
 17 → 17.5 → 18 onward.
 
@@ -1543,11 +1547,10 @@ independent of in-world sprite anatomy, so the order is
 * \[ ] **HUMANOID, BEAST, DEMON, FLYING** — contract + part-set
   declarations only this stage. No sprites authored. Stage 20
   consumes them.
-* \[ ] **Hekate-Marked Forsaken** bespoke entry registered in the
-  family registry as a per-sprite anatomy. Existing
-  `act_boss_sprite.tscn` documented as the v1 baseline; minor
-  pass allowed to lock its part names cleanly (Stage 18 demote
-  inherits whatever ships here).
+* \[ ] **Hexacheir, the God-Spurned** bespoke entry registered in
+  the family registry as the current six-arm DEMON Act Boss anatomy.
+  Hekate-Marked remains registry-only legacy/rare routing metadata
+  unless Stage 18 explicitly re-scopes it.
 * \[ ] **HUMAN sprites** rebuilt: 4 player classes + 2 NPCs
   rebuilt around the HUMAN part set with their respective
   clothing/accoutrement polygons layered on top under `Body/`.
@@ -1581,10 +1584,10 @@ independent of in-world sprite anatomy, so the order is
   silently passes structural checks — verifier asserts each
   sprite's declared family matches its part set.
 * \[ ] `--verify17_5` covers: family registry loads with the
-  expected six families + Hekate-Marked bespoke entry; every
-  HUMAN sprite (4 players + 2 NPCs) exposes the full HUMAN
-  part set under `Body/`; Bone Servant still exposes its
-  skeleton-subtype part set unchanged; Shade Wretch + Bog
+  expected six families + Hexacheir bespoke DEMON entry + retained
+  Hekate-Marked legacy entry; every HUMAN sprite (4 players + 2 NPCs)
+  exposes the full HUMAN part set under `Body/`; Bone Servant still
+  exposes its skeleton-subtype part set unchanged; Shade Wretch + Bog
   Caller expose the new wraith-subtype part set; every overlay
   in `EquipmentVisuals.OVERLAYS` resolves to an existing path
   on each HUMAN class; no AnimationPlayer track on a touched
@@ -1594,24 +1597,29 @@ independent of in-world sprite anatomy, so the order is
   UNDEAD parts, and vice versa).
 * \[ ] Stage close-out includes a screenshot pass: idle pose on
   all four classes + both NPCs + both wilderness enemies +
-  Bone Servant + Hekate-Marked, before/after side-by-side
-  for the sprites that changed, attached to the commit.
+  Bone Servant + Hexacheir, before/after side-by-side for the
+  sprites that changed, attached to the commit.
 
-## Stage 18 — Boss demote + final-boss state-machine refactor
+## Stage 18 — Boss state-machine cleanup + legacy rare-routing audit
 
-Hekate-Marked Forsaken Boss demotes to a regular rare-monster
-encounter. `act_1_complete`, `boss_first_kill`, Maw portal gating,
-class-restricted unique drop, and Eurynome's quest completion all
-re-target a new final-boss entity.
+Hexacheir, the God-Spurned is now the current first-demon Act Boss.
+Stage 18 no longer assumes `act_boss.gd` is a Hekate-Marked Forsaken
+entity to demote. Remaining work is state-machine cleanup around
+`act_1_complete`, `boss_first_kill`, Maw portal gating, class-restricted
+unique drops, and Eurynome's quest completion. Any Hekate/Forsaken rare
+conversion must be scoped as separate legacy routing and must leave
+Hexacheir's Act Boss identity intact.
 
-* \[ ] Strip the boss-specific logic from `act_boss.gd`; convert into
-  `forsaken_rare.gd` (a rare-monster spawn in Forsaken Crypt).
-* \[ ] Class-restricted unique drop moves to: rare drop from the new
-  final boss + 5% chance from Forsaken Rare as a vestige.
-* \[ ] `act_1_complete` keys off the new final-boss kill.
-* \[ ] Eurynome's "defeat the boss" quest re-targets the new final
-  boss (Stage 20 places it).
-* \[ ] Maw portal gating (Stage 19) replaces the post-Forsaken-Boss
+* \[ ] Audit legacy Hekate/Forsaken routing; if retained as a rare,
+  create a separate rare scene/script instead of stripping Hexacheir's
+  `act_boss.gd` boss logic.
+* \[ ] Class-restricted unique drop remains tied to the current Act Boss
+  unless a later final-boss entity is explicitly introduced.
+* \[ ] `act_1_complete` keys off the current Act Boss kill or the
+  explicitly introduced replacement final-boss kill.
+* \[ ] Eurynome's "defeat the boss" quest targets the current Act Boss
+  or the explicitly introduced replacement final boss.
+* \[ ] Maw portal gating (Stage 19) replaces the post-Act-Boss
   gate.
 * \[ ] Save schema bump for any new state. Migration zeroes out the
   legacy `boss_first_kill` flag.

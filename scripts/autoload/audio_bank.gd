@@ -212,10 +212,11 @@ func _resolve_sfx(id: StringName) -> AudioStream:
 	return stream
 
 func _warn_once(id: StringName, kind: String) -> void:
+	# Missing audio assets are sanctioned placeholders in this pipeline.
+	# Record the miss so repeated calls stay cheap, but do not warn.
 	if _warned_ids.has(id):
 		return
 	_warned_ids[id] = true
-	push_warning("AudioBank: missing %s for '%s' (placeholder ok)" % [kind, id])
 
 # ---- Verifier hooks -------------------------------------------------------
 

@@ -79,7 +79,7 @@ const STANCES: Dictionary = {
 	},
 }
 
-const DEFAULT_STANCE: StringName = &"diagonal_back_legacy"
+const DEFAULT_STANCE: StringName = &"chest_horizontal_guard"
 
 static func get_stance(id: StringName) -> Dictionary:
 	return STANCES.get(id, STANCES[DEFAULT_STANCE])

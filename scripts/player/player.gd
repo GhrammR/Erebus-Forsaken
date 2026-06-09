@@ -449,6 +449,9 @@ func play_sprite_anim(anim_name: StringName) -> void:
 func is_alive() -> bool:
 	return _life == LifeState.ALIVE
 
+func is_attacking() -> bool:
+	return _combat == CombatState.ATTACKING
+
 ## Stage 9.8 — Hearth Ember channel lock. ConsumableUse owns the
 ## lifecycle: it flips this to true when the channel starts and back
 ## to false on completion / interruption / item-loss. Player just

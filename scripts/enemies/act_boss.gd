@@ -1,5 +1,5 @@
 class_name ActBoss extends Enemy
-## Stage 9 — Act 1 boss. Three HP-threshold phases, guaranteed
+## Hexacheir, the God-Spurned. First demon boss. Three HP-threshold phases, guaranteed
 ## class-aware unique on first kill, sets GameState.act_1_complete on
 ## death. Does not extend WildernessEnemy because the chase/kite ladder
 ## doesn't match a phase-driven encounter — boss owns its own AI.
@@ -21,6 +21,10 @@ class_name ActBoss extends Enemy
 
 const _PROJECTILE_SCENE := preload("res://scenes/vfx/enemy_projectile.tscn")
 const _WRETCH_SCENE := preload("res://scenes/enemies/shade_wretch.tscn")
+
+const BOSS_DISPLAY_NAME: String = "Hexacheir, the God-Spurned"
+const BOSS_LORE_REASON: String = "Six oath-hands, one contempt for every pact the living still believe will protect them."
+const TAUNT_DURATION: float = 1.05
 
 # Class-id → unique-item-id map. First-kill drop picks based on the
 # player's class at the moment the boss dies. Single source of truth
@@ -70,8 +74,11 @@ var _attack_interval: float = P1_ATTACK_INTERVAL
 var _attack_cd: float = 0.0
 var _burst_cd: float = P3_BURST_INTERVAL
 var _aggroed: bool = false
+var _taunt_played: bool = false
+var _taunt_remaining: float = 0.0
 
 func _ready() -> void:
+	display_name = BOSS_DISPLAY_NAME
 	super._ready()
 	# The boss arms its own swing hitbox dynamically rather than using a
 	# permanent HitboxComponent like the wretches — phase transitions
@@ -87,6 +94,12 @@ func _physics_process(delta: float) -> void:
 		return
 	_attack_cd = maxf(_attack_cd - delta, 0.0)
 	_burst_cd = maxf(_burst_cd - delta, 0.0)
+	if _taunt_remaining > 0.0:
+		_taunt_remaining = maxf(_taunt_remaining - delta, 0.0)
+		velocity = Vector2.ZERO
+		_play_anim_if_changed(&"cast")
+		move_and_slide()
+		return
 	var player := _get_target()
 	if player == null:
 		velocity = Vector2.ZERO
@@ -102,6 +115,13 @@ func _physics_process(delta: float) -> void:
 	if not _aggroed:
 		if dist <= AGGRO_RANGE and has_los:
 			_aggroed = true
+			if not _taunt_played:
+				_taunt_played = true
+				_taunt_remaining = TAUNT_DURATION
+				velocity = Vector2.ZERO
+				_play_anim_if_changed(&"cast")
+				move_and_slide()
+				return
 		else:
 			velocity = Vector2.ZERO
 			_play_anim_if_changed(&"idle")
@@ -277,7 +297,11 @@ func _telegraph_transition(tint: Color) -> void:
 	if hurtbox != null and "monitoring" in hurtbox:
 		hurtbox.set_deferred(&"monitoring", false)
 		get_tree().create_timer(TRANSITION_INVULN).timeout.connect(
-				func(): if is_instance_valid(hurtbox): hurtbox.monitoring = true)
+				_restore_transition_hurtbox.bind(hurtbox))
+
+func _restore_transition_hurtbox(hurtbox: Node) -> void:
+	if hurtbox != null and is_instance_valid(hurtbox) and "monitoring" in hurtbox:
+		hurtbox.monitoring = true
 
 func _spawn_phase3_add() -> void:
 	var parent := get_parent()

@@ -21,8 +21,9 @@ tempting to bleed into Act 2 territory. Resist that.
 - **5+ dungeons** scattered through the wilderness chain. Each dungeon
   is optional and yields meaningful loot or quest objective.
 - **One final Act boss** — climactic encounter at the end of the chain.
-  Current Forsaken Boss (Hekate-Marked) demotes to a regular rare-monster
-  encounter (Stage 18).
+  Current Act Boss identity: Hexacheir, the God-Spurned, first demon
+  encounter and six-arm bespoke rig. Hekate-Marked is retained only as
+  legacy/rare routing metadata unless Stage 18 explicitly re-scopes it.
 - **Waypoint system** — themed, persistent, discoverable. Lets players
   fast-travel to previously-visited wilderness zones for revisits.
 - **5+ quests per Act** — semi-related to town/wilderness needs; final

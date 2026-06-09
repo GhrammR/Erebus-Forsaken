@@ -9,6 +9,7 @@ func _ready() -> void:
 	print("--- Stage 7 verify ---")
 
 	fail = _verify_enemy_registry(fail)
+	fail = _verify_bog_caller_strategy_source(fail)
 	fail = _verify_wilderness_drop_table(fail)
 	fail = _verify_corpse_system_basic(fail)
 	fail = _verify_corpse_eviction_to_spill(fail)
@@ -34,6 +35,25 @@ func _verify_enemy_registry(fail: int) -> int:
 	var ok_miss: bool = EnemyRegistry.scene_for(&"nonexistent_mob") == null
 	print("[%s] EnemyRegistry returns null for unknown id" % ("OK  " if ok_miss else "FAIL"))
 	if not ok_miss: fail += 1
+	return fail
+
+func _verify_bog_caller_strategy_source(fail: int) -> int:
+	var src := FileAccess.get_file_as_string("res://scripts/enemies/bog_caller.gd")
+	var checks := {
+		"exports ideal_range": src.contains("@export var ideal_range"),
+		"exports danger_range": src.contains("@export var danger_range"),
+		"exports panic_range": src.contains("@export var panic_range"),
+		"has post-dodge cast delay": src.contains("post_dodge_cast_delay"),
+		"reads player attack commitment": src.contains("_target_is_attacking"),
+		"dodges from committed melee": src.contains("dist < danger_range and _target_is_attacking"),
+		"re-enters offense after bait": src.contains("_cast_at(player)"),
+		"uses explicit dodge vector": src.contains("_start_dodge"),
+	}
+	for label in checks:
+		var ok: bool = bool(checks[label])
+		print("[%s] Bog Caller strategy: %s" % [("OK  " if ok else "FAIL"), label])
+		if not ok:
+			fail += 1
 	return fail
 
 # ---- Wilderness DropTable -------------------------------------------------

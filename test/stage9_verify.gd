@@ -59,6 +59,9 @@ func _verify_boss_scene(fail: int) -> int:
 	print("[%s] boss max_hp tuned for an Act boss (got %d)"
 			% [_ok(ok_hp), inst.max_hp])
 	if not ok_hp: fail += 1
+	var ok_name := inst.display_name == "Hexacheir, the God-Spurned"
+	print("[%s] boss display_name is Hexacheir, the God-Spurned" % _ok(ok_name))
+	if not ok_name: fail += 1
 	# Phase enum is at least 3 values.
 	var ok_phases := ActBoss.Phase.size() >= 3
 	print("[%s] Phase enum exposes >= 3 phases (got %d)"

@@ -177,7 +177,11 @@ func _verify_director_determinism(fail: int) -> int:
 	EndlessRun.begin(424242)
 	var d1 := EndlessDirector.new()
 	var d2 := EndlessDirector.new()
-	add_child(d1); add_child(d2)
+	# Keep these nodes out of the tree: this check only exercises
+	# species RNG determinism, and entering the tree would make
+	# SpawnDirector scan for zone SpawnAnchors it does not need here.
+	d1._rng.seed = EndlessRun.seed
+	d2._rng.seed = EndlessRun.seed
 	# tuning_preview's species are deterministic by definition; instead
 	# force both to read from the same band and call _pick_species().
 	d1.species = d1.tuning_preview(5)["species"]
@@ -190,7 +194,7 @@ func _verify_director_determinism(fail: int) -> int:
 	var ok: bool = picks_1 == picks_2
 	print("[%s] _pick_species deterministic for fixed EndlessRun.seed" % _ok(ok))
 	if not ok: fail += 1
-	d1.queue_free(); d2.queue_free()
+	d1.free(); d2.free()
 	EndlessRun.rollback()
 	return fail
 

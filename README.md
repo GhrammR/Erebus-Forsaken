@@ -101,8 +101,9 @@ Highlights worth a look:
   Cooldown remainders persist across save/load (no quit-and-load reset).
 - Zones: Threshold Camp (town, NPCs, vendor Kallias, quest-giver Eurynome,
   workbench), Blighted Reach (wilderness, finite spawn budget), Forsaken
-  Crypt (multi-room dungeon w/ act boss Hekate-Marked), Forsaken Depths
-  ("The Maw" — endless mode w/ Tower of Ascension milestones).
+  Crypt (multi-room dungeon w/ act boss Hexacheir, the God-Spurned — the
+  first six-armed demon), Forsaken Depths ("The Maw" — endless mode w/
+  Tower of Ascension milestones).
 - Endless mode (Stage 9.7): post-boss portal to The Maw, EndlessDirector
   with wave scaling, milestone rewards at 10/25/50/100, summary modal with
   seed string, EndlessRun.end_run rollback chain.
@@ -110,7 +111,8 @@ Highlights worth a look:
   per-zone state lifecycle (AD-12), corpse persistence across saves.
 - Procedural sprites only (AD-11). All six canonical animation names ship
   on every sprite so the eventual bitmap swap is a node-type change, not
-  a code rewrite.
+  a code rewrite. Player classes, enemies, and NPCs share the same editable
+  runtime surface for pose overrides, stance selection, and click-drag parts.
 - DebugLog autoload (Stage 9.7): flag-gated logging with file mirror,
   12 categories, `--debug=flag1,flag2` CLI for targeted instrumentation.
 - Sprite render pipeline (Stage 17.5/17.6): `--render-sprites` flag
@@ -143,7 +145,11 @@ Highlights worth a look:
   export var. `pose_tuner` gains F3 to cycle candidates and 1-5 keys
   to score the current (stance, anim, phase) into
   `tmp/stance_scores.json` — accumulated scores let future agent runs
-  bias toward patterns you rated highly.
+  bias toward patterns you rated highly. The editor sidebar is fully
+  scrollable, labels rotation/position slider groups with a legend, exposes
+  drag handles for weapons/elbows/hands/claws/fingers, and can launch the
+  current player-class sprite directly into The Maw for manual animation
+  debugging.
 
 ## Running it
 

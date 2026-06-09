@@ -5,6 +5,7 @@ const MotionArchetypes = preload("res://scripts/systems/motion_archetypes.gd")
 const BowStances       = preload("res://scripts/systems/stances/bow_stances.gd")
 const AnatomyValidator = preload("res://scripts/systems/anatomy_validator.gd")
 const SpriteOverrides  = preload("res://scripts/systems/sprite_overrides.gd")
+const StanceSelection  = preload("res://scripts/systems/stance_selection.gd")
 
 # Stage 17.8 — pick a stance from the catalog. Override at runtime
 # (pose_tuner sets this via set_meta(&"stance_id", ...) before _ready
@@ -100,7 +101,9 @@ var _draw_shoulder_path: NodePath = ^"Body/ArmLShoulder"
 
 func _ready() -> void:
 	# Stage 17.8 — apply the selected stance from the catalog before
-	# painting. BowArm position + nock travel come from data.
+	# painting. BowArm position + nock travel come from data. Dev editor
+	# selections are soft: bad/missing data falls back to stance_id.
+	stance_id = StanceSelection.selected_for_class(&"shade_hunter", stance_id, BowStances.all_ids())
 	var stance: Dictionary = BowStances.get_stance(stance_id)
 	_bow_arm.position = stance["bow_arm_pos"]
 	_bow_arm.rotation = stance["bow_arm_rot"]
@@ -117,8 +120,8 @@ func _ready() -> void:
 		_release_frac = float(_attack_action.get("release_frac", _release_frac))
 	# Recommended-stance overrides: if the user has tuned this stance
 	# in pose_tuner and pressed S, tmp/recommended_stances.json contains
-	# their numeric overrides. REST snapshot → bow placement + nock_rest;
-	# STRIKE snapshot → nock_drawn. Layered on top of the catalog so
+	# their numeric overrides. BEGIN snapshot -> bow placement + nock_rest;
+	# MIDDLE snapshot -> nock_drawn. Layered on top of the catalog so
 	# absent fields fall through to defaults.
 	_apply_recommended_overrides()
 	_nock_marker.position = _nock_rest
@@ -190,7 +193,10 @@ func _apply_recommended_overrides() -> void:
 	# Schema can be mixed: keys at this level are either phase names
 	# (REST/STRIKE/... — legacy flat) OR anim names (idle/walk/attack
 	# — new per-variant schema). Split them and load both.
-	var phase_keys: PackedStringArray = ["REST", "STRIKE", "CHARGE", "RECOVERY"]
+	var phase_keys: PackedStringArray = [
+		"REST", "STRIKE", "CHARGE", "RECOVERY",
+		"BEGIN", "MIDDLE", "END",
+	]
 	var legacy_phases: Dictionary = {}
 	var anim_blocks: Dictionary = {}
 	for k in by_stance.keys():
@@ -201,6 +207,9 @@ func _apply_recommended_overrides() -> void:
 			anim_blocks[ks] = by_stance[k]
 	if not legacy_phases.is_empty():
 		_load_anim_config("global", legacy_phases)
+		for legacy_anim in ["idle", "walk", "attack", "cast"]:
+			if not anim_blocks.has(legacy_anim):
+				_load_anim_config(legacy_anim, legacy_phases)
 	for anim_name in anim_blocks:
 		_load_anim_config(String(anim_name), anim_blocks[anim_name])
 	# Apply the FIRST available config so initial render uses tuned
@@ -267,16 +276,23 @@ static func _resolve_phase(phase_value: Variant) -> Dictionary:
 
 func _load_anim_config(anim_name: String, phases: Dictionary) -> void:
 	var cfg: Dictionary = _per_anim_config.get(anim_name, {})
-	var rest: Dictionary = _resolve_phase(phases.get("REST", {}))
-	# New schema (rotations/positions/markers) — load shoulder/elbow
-	# rotations the user manually tuned, plus weapon-arm placement.
-	if rest.has("rotations"):
-		cfg["rest_rotations"] = rest["rotations"]
-	if rest.has("positions"):
-		cfg["rest_positions"] = rest["positions"]
-	if rest.has("markers"):
-		cfg["rest_markers"] = rest["markers"]
-	# Legacy / flat fields — still honored.
+	# BEGIN supersedes REST; MIDDLE supersedes STRIKE; END is new.
+	# Falls back through both aliases so legacy saves still load.
+	var rest: Dictionary = _resolve_phase(
+		phases.get("BEGIN", phases.get("REST", {})))
+	var strike: Dictionary = _resolve_phase(
+		phases.get("MIDDLE", phases.get("STRIKE", {})))
+	var ending: Dictionary = _resolve_phase(
+		phases.get("END", phases.get("REST", rest)))
+	# Rotations / positions / markers — full per-phase capture.
+	if rest.has("rotations"):    cfg["rest_rotations"] = rest["rotations"]
+	if rest.has("positions"):    cfg["rest_positions"] = rest["positions"]
+	if rest.has("markers"):      cfg["rest_markers"] = rest["markers"]
+	if strike.has("rotations"):  cfg["strike_rotations"] = strike["rotations"]
+	if strike.has("positions"):  cfg["strike_positions"] = strike["positions"]
+	if strike.has("markers"):    cfg["strike_markers"] = strike["markers"]
+	if ending.has("rotations"):  cfg["end_rotations"] = ending["rotations"]
+	# Legacy / flat fields — still honored for backward compat.
 	if rest.has("weapon_arm_pos"):
 		var p: Array = rest["weapon_arm_pos"]
 		cfg["bow_pos"] = Vector2(float(p[0]), float(p[1]))
@@ -285,16 +301,11 @@ func _load_anim_config(anim_name: String, phases: Dictionary) -> void:
 	if rest.has("NockMarker"):
 		var nm: Array = rest["NockMarker"]
 		cfg["nock_rest"] = Vector2(float(nm[0]), float(nm[1]))
-	var strike: Dictionary = _resolve_phase(phases.get("STRIKE", {}))
 	if strike.has("NockMarker"):
 		var nd: Array = strike["NockMarker"]
 		cfg["nock_drawn"] = Vector2(float(nd[0]), float(nd[1]))
-	# STRIKE rotations (e.g. drawn-pose shoulder/elbow angles).
-	if strike.has("rotations"):
-		cfg["strike_rotations"] = strike["rotations"]
-	# If any rotation tuning exists for this anim, mark it so IK
-	# defers to the animation tracks instead of stomping them.
-	if rest.has("rotations") or strike.has("rotations"):
+	# Tag as tuned if ANY phase has rotation data.
+	if rest.has("rotations") or strike.has("rotations") or ending.has("rotations"):
 		_tuned_anims[anim_name] = true
 	_per_anim_config[anim_name] = cfg
 

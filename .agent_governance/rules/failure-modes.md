@@ -1202,6 +1202,32 @@ visible and carries the item display name.
 
 ---
 
+## Stage 17.8 — Sprite editor surface drift / stale boss identity docs
+
+**Symptom:** The pose editor appears to save or display a stance, but
+its score/selection/drag/launch surfaces do not line up with the current
+sprite runtime. Separately, docs continue naming a retired boss identity
+(Hekate-Marked) as the active Act Boss after the runtime has moved to a
+new boss (Hexacheir). Future agents then make changes against the wrong
+entity or leave player-facing editor affordances unverified.
+
+**Root cause:** Sprite work changed runtime geometry, editor controls,
+and boss identity in different files, but governance previously only
+required broad headless verification. It did not require a Stage 17.5
+contract update for every new draggable part, editor button, selected
+stance surface, or boss-identity rename.
+
+**Prevention:** Any sprite/editor/stance change must update
+`test/stage17_5_verify.gd` in the same commit to assert the relevant
+editor-facing contract: canonical animations, detailed part nodes,
+drag handles, stance geometry, selected-stance persistence, and launch
+intent. Boss identity changes must sweep README, parking lot, scope lock,
+and act status docs before commit.
+
+**Recovery:** Re-run `rg -n "Hekate|Hekate-Marked|Forsaken Boss|act boss|six-arm" README.md parking_lot.md .agent_governance` and reconcile every hit as active identity, legacy metadata, or future parking-lot scope. Then run Stage 17.5 plus the pose editor headless parse before staging.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

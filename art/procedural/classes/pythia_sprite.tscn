@@ -49,12 +49,9 @@ position = Vector2(0, 10)
 [node name="Forearm" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
 [node name="Hand"    type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
 
-; --- RIGHT ARM: dominant / anchor. StaffArm rides under the right
-;     hand at hip-forward. Per reference-photo grip: R hand grips
-;     the lower portion of the staff (acts as the fulcrum); the L
-;     hand grips the upper portion of the staff at the LeftGrip
-;     cosmetic via IK. Staff at rest extends from R hand (hip-
-;     forward) up-and-back to orb at upper-back-left.
+; --- RIGHT ARM: dominant / anchor. The staff itself is a body-level
+;     object driven by StaffStances; both hands reach marker targets
+;     on that object via IK, so catalog stances alter real geometry.
 [node name="ArmRShoulder" type="Node2D" parent="Body"]
 position = Vector2(9, -44)
 [node name="UpperArm" type="Polygon2D" parent="Body/ArmRShoulder"]
@@ -62,8 +59,8 @@ position = Vector2(9, -44)
 position = Vector2(0, 10)
 [node name="Forearm" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot"]
 [node name="Hand"    type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot"]
-[node name="StaffArm" type="Node2D"   parent="Body/ArmRShoulder/ElbowPivot"]
-position = Vector2(0, 10)
+[node name="StaffArm" type="Node2D"   parent="Body"]
+position = Vector2(0, -38)
 ; Lift the staff above the equipment overlays. EquipmentPaperdoll
 ; instantiates chest / legs overlays as direct children of Body
 ; (later in tree order than the arm chain), so without an explicit
@@ -71,18 +68,20 @@ position = Vector2(0, 10)
 ; it crosses through them. z_index = 2 puts the whole staff subtree
 ; (Shaft / Grip / LeftGrip / Orb) on top of the body overlays.
 z_index = 2
-[node name="Shaft" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/StaffArm"]
-[node name="Grip"  type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/StaffArm"]
+[node name="Shaft" type="Polygon2D" parent="Body/StaffArm"]
+[node name="Grip"  type="Polygon2D" parent="Body/StaffArm"]
+[node name="RightGripMarker" type="Marker2D" parent="Body/StaffArm"]
+position = Vector2(6, 0)
 ; Cosmetic skin-colored "left hand" wrapped around the upper shaft.
 ; Parented to the staff so it rotates with it; the L arm is
 ; IK-pinned to land its hand polygon at this marker every frame.
-[node name="LeftGrip" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/StaffArm"]
+[node name="LeftGrip" type="Polygon2D" parent="Body/StaffArm"]
 ; IK pin target for the L hand. Marker2D at the staff-local position
 ; where the LeftGrip cosmetic centroid sits (+11 along the shaft).
 ; HumanRig.apply_pins reads its global_position each frame.
-[node name="LeftGripMarker" type="Marker2D" parent="Body/ArmRShoulder/ElbowPivot/StaffArm"]
-position = Vector2(11, 0)
-[node name="Orb"   type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/StaffArm"]
+[node name="LeftGripMarker" type="Marker2D" parent="Body/StaffArm"]
+position = Vector2(-6, 0)
+[node name="Orb"   type="Polygon2D" parent="Body/StaffArm"]
 
 ; --- Head/face LAST so hood + face stay readable over arms ---
 [node name="Neck"  type="Polygon2D" parent="Body"]

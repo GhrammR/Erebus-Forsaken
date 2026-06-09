@@ -250,13 +250,12 @@ removed.
   which spawns one shade_wretch reinforcement. Behaviour is
   intentional per Stage 9 scope but it has no visual telegraph,
   so a playtester reads it as a wave bug.
-- **Status (2026-06-04):** likely obsoleted by Stage 18 (the
-  current Hekate-Marked Forsaken Boss demotes to a rare-monster
-  encounter and a new final boss takes the act-climax role).
-  The tell may not apply to the rare-monster form; revisit when
-  Stage 18 lands.
+- **Status (2026-06-09):** still relevant, but no longer tied to
+  Hekate-Marked demotion language. Hexacheir, the God-Spurned is the
+  current six-armed first-demon Act Boss, and its Phase 3 add still
+  needs a readable tell if that add survives balance polish.
 - Earliest revisit: Stage 21 (feel pass at scale), if still
-  applicable to the demoted Forsaken Rare.
+  applicable to Hexacheir's final Phase 3 behavior.
 
 ### potion-belt — Dedicated potion belt UI slot row
 - Why parked: Stage 9.8 ships potions accessible via inventory +
@@ -337,8 +336,9 @@ removed.
   stage; Shade Wretch + Bog Caller rebuilt against it).
   HUMAN family covers 4 player classes + 2 NPCs with mythic
   Greek archetype clothing. Contract-only sidecar bitmap layer
-  (no generation yet). Hekate-Marked Forsaken authored as the
-  first per-unique-boss bespoke anatomy entry.
+  (no generation yet). Hekate-Marked is retained as legacy bespoke
+  routing metadata; Hexacheir, the God-Spurned is the current
+  first-demon bespoke Act Boss with six arms.
 - Earlier framing correction (2026-06-05): the original
   "bone-servant anatomy" name was misleading. The Bone Servant's
   ribcage anatomy belongs to skeletons; it is NOT applied to
@@ -372,3 +372,17 @@ removed.
   gets oversized arms AND green sacs). Avoids invalidating
   the AnimationPlayer tracks because mutations are post-hoc
   transforms on existing parts, not part-set changes.
+
+### six-arm-finger-boss-intro — Bespoke many-limb boss taunt rig [PARTIALLY ADOPTED -> Hexacheir, 2026-06-09]
+- Adopted slice: Hexacheir, the God-Spurned is now the current Act Boss
+  demon with six independently articulated arm chains and a cast-intro
+  taunt that raises all six hands before combat.
+- Still parked: generalized per-finger rigs below the hand level. The
+  current implementation gives Hexacheir explicit middle-finger controls
+  for the taunt, but future bosses with manipulable individual fingers
+  still need an appendage/finger rig that the pose editor can enumerate,
+  score, and save like any other stance part.
+- Earliest revisit: after the shared sprite runtime proves stable across
+  player classes, enemies, and NPCs.
+- Notes: Keep this as a generalized editor/rigging spike, not a new
+  hard-coded boss-only exception.

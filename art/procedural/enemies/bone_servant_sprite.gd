@@ -1,4 +1,4 @@
-extends Node2D
+extends "res://scripts/systems/sprite_runtime_2d.gd"
 ## Procedural bone-servant minion sprite. AD-11 canonical anim names.
 ##
 ## Modular subtree contract (rules/asset-pipeline.md::modular sprites):
@@ -46,12 +46,12 @@ const SHADOW: Color      = Color(0.0, 0.0, 0.05, 0.45)
 @onready var _arm_upper: Polygon2D = $ArmAnchor/ArmUpper
 @onready var _arm_lower: Polygon2D = $ArmAnchor/ArmLower
 @onready var _claw: Polygon2D = $ArmAnchor/Claw
-@onready var _anim: AnimationPlayer = $AnimationPlayer
 
 func _ready() -> void:
+	sprite_id = &"bone_servant"
+	stance_bucket = &"enemies"
 	_paint()
-	_build_animations()
-	_anim.play(&"idle")
+	setup_sprite_runtime()
 
 func _paint() -> void:
 	# Shadow ellipse at feet.
@@ -195,113 +195,5 @@ func _eye_glow(cx: float) -> PackedVector2Array:
 		pts.append(Vector2(cx + 0.9 * cos(t), -44.5 + 0.8 * sin(t)))
 	return pts
 
-# ---- animations ----------------------------------------------------------
-
-func _build_animations() -> void:
-	var lib := AnimationLibrary.new()
-	lib.add_animation(&"idle",   _anim_idle())
-	lib.add_animation(&"walk",   _anim_walk())
-	lib.add_animation(&"attack", _anim_attack())
-	lib.add_animation(&"cast",   _anim_empty())
-	lib.add_animation(&"hit",    _anim_hit())
-	lib.add_animation(&"die",    _anim_die())
-	_anim.add_animation_library(&"", lib)
-
-func _anim_empty() -> Animation:
-	var a := Animation.new()
-	a.length = 0.05
-	return a
-
-func _anim_idle() -> Animation:
-	var a := Animation.new()
-	a.length = 1.6
-	a.loop_mode = Animation.LOOP_LINEAR
-	var ti := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(ti, NodePath("Body:position"))
-	a.track_insert_key(ti, 0.0, Vector2.ZERO)
-	a.track_insert_key(ti, 0.8, Vector2(0, -1))
-	a.track_insert_key(ti, 1.6, Vector2.ZERO)
-	# Subtle head sway so the idle reads as alive.
-	var ts := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(ts, NodePath("Body/Skull:position"))
-	a.track_insert_key(ts, 0.0, Vector2.ZERO)
-	a.track_insert_key(ts, 0.8, Vector2(0.3, 0))
-	a.track_insert_key(ts, 1.6, Vector2.ZERO)
-	return a
-
-func _anim_walk() -> Animation:
-	var a := Animation.new()
-	a.length = 0.36
-	a.loop_mode = Animation.LOOP_LINEAR
-	# Body bob.
-	var ti := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(ti, NodePath("Body:position"))
-	a.track_insert_key(ti, 0.0, Vector2.ZERO)
-	a.track_insert_key(ti, 0.18, Vector2(0, -2))
-	a.track_insert_key(ti, 0.36, Vector2.ZERO)
-	# Legs alternate offset to suggest a stride.
-	var tl := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tl, NodePath("Body/LegL:position"))
-	a.track_insert_key(tl, 0.0, Vector2(0, 0))
-	a.track_insert_key(tl, 0.18, Vector2(0, -2))
-	a.track_insert_key(tl, 0.36, Vector2(0, 0))
-	var tr := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tr, NodePath("Body/LegR:position"))
-	a.track_insert_key(tr, 0.0, Vector2(0, -2))
-	a.track_insert_key(tr, 0.18, Vector2(0, 0))
-	a.track_insert_key(tr, 0.36, Vector2(0, -2))
-	# Cloth sway.
-	var tc := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tc, NodePath("Body/HipCloth:rotation"))
-	a.track_insert_key(tc, 0.0, 0.0)
-	a.track_insert_key(tc, 0.18, 0.06)
-	a.track_insert_key(tc, 0.36, 0.0)
-	return a
-
-func _anim_attack() -> Animation:
-	# Forward swing: ArmAnchor rotates so the claw arcs from up
-	# to forward then back. At default facing (right) the claw
-	# lands in front of the minion. When the script flips
-	# _sprite_anchor.scale.x to -1, the same rotation still arcs
-	# in front because the whole sprite is mirrored.
-	var a := Animation.new()
-	a.length = 0.4
-	a.loop_mode = Animation.LOOP_NONE
-	var ta := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(ta, NodePath("ArmAnchor:rotation"))
-	a.track_insert_key(ta, 0.0, -0.4)
-	a.track_insert_key(ta, 0.12, -1.4)
-	a.track_insert_key(ta, 0.22, 0.3)
-	a.track_insert_key(ta, 0.4, 0.0)
-	# Slight body lean into the swing.
-	var tb := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tb, NodePath("Body:rotation"))
-	a.track_insert_key(tb, 0.0, 0.0)
-	a.track_insert_key(tb, 0.12, -0.08)
-	a.track_insert_key(tb, 0.4, 0.0)
-	return a
-
-func _anim_hit() -> Animation:
-	var a := Animation.new()
-	a.length = 0.15
-	a.loop_mode = Animation.LOOP_NONE
-	var tm := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tm, NodePath(".:modulate"))
-	a.track_insert_key(tm, 0.00, Color(1, 1, 1, 1))
-	a.track_insert_key(tm, 0.05, Color(1.6, 0.4, 0.4, 1))
-	a.track_insert_key(tm, 0.15, Color(1, 1, 1, 1))
-	return a
-
-func _anim_die() -> Animation:
-	var a := Animation.new()
-	a.length = 0.6
-	a.loop_mode = Animation.LOOP_NONE
-	var tr := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tr, NodePath(".:rotation"))
-	a.track_insert_key(tr, 0.0, 0.0)
-	a.track_insert_key(tr, 0.6, PI / 2.0)
-	var tm := a.add_track(Animation.TYPE_VALUE)
-	a.track_set_path(tm, NodePath(".:modulate"))
-	a.track_insert_key(tm, 0.0, Color(1, 1, 1, 1))
-	a.track_insert_key(tm, 0.6, Color(1, 1, 1, 0.0))
-	return a
+# Animations are installed by SpriteRuntime2D so summoned minions share
+# the same stance and pose-tuner override path as enemies/NPCs.

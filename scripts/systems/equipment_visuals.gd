@@ -23,10 +23,9 @@ const WEAPON_ARMS: Dictionary = {
 	# so the strike rotates the arm forward and the spear translates
 	# with the hand instead of arcing around it.
 	&"myrmidon":       &"Body/ArmRShoulder/ElbowPivot/SpearArm",
-	# Stage 17.6 — StaffArm lives under the RIGHT hand at the lower
-	# grip (per reference-photo two-handed quarterstaff stance); the
-	# LEFT arm grips the upper shaft via IK pinning.
-	&"pythia":         &"Body/ArmRShoulder/ElbowPivot/StaffArm",
+	# Stage 17.9 — StaffArm is body-level; both hands grip stance
+	# markers via IK so StaffStances can drive real geometry.
+	&"pythia":         &"Body/StaffArm",
 	&"shade_hunter":   &"Body/BowArm",
 	&"ossuary_priest": &"WandArm",
 }

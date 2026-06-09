@@ -29,6 +29,7 @@ const PHASE_KEYS: PackedStringArray = [
 	"REST", "STRIKE", "CHARGE", "RECOVERY",
 	"BEGIN", "MIDDLE", "END",
 ]
+const BEGIN_HOLD_SECONDS: float = 0.04
 
 ## Resolve { presets: {...}, active: <key> } indirection. Flat dicts
 ## pass through unchanged so legacy data still applies.
@@ -94,54 +95,105 @@ static func _build_cfg(phases: Dictionary) -> Dictionary:
 	if strike.has("positions"):  cfg["strike_positions"] = strike["positions"]
 	if strike.has("markers"):    cfg["strike_markers"] = strike["markers"]
 	if ending.has("rotations"):  cfg["end_rotations"] = ending["rotations"]
+	if ending.has("positions"):  cfg["end_positions"] = ending["positions"]
+	if ending.has("markers"):    cfg["end_markers"] = ending["markers"]
 	for k in ["weapon_arm_pos", "weapon_arm_rot", "NockMarker", "RiserMarker"]:
 		if rest.has(k):    cfg["rest_" + k] = rest[k]
 		if strike.has(k):  cfg["strike_" + k] = strike[k]
 	return cfg
 
-## True if the given config has any rotation tuning that should
-## suppress the runtime IK pin pass during this anim.
+## True if the given config has any transform tuning that should
+## suppress runtime pin/IK passes during this anim.
 static func is_tuned(cfg: Dictionary) -> bool:
-	return cfg.has("rest_rotations") or cfg.has("strike_rotations") \
-			or cfg.has("end_rotations")
+	return cfg.has("rest_rotations") or cfg.has("strike_rotations") 			or cfg.has("end_rotations") or cfg.has("rest_positions") 			or cfg.has("strike_positions") or cfg.has("end_positions")
 
-## Inject value tracks into `anim` for every tuned joint in `cfg`.
-## Three phases drive interpolation:
-##   t=0          → BEGIN pose (rest_rotations)
-##   t=mid_frac   → MIDDLE pose (strike_rotations), held to release_frac
-##   t=length     → END pose (end_rotations, fallback to BEGIN)
-## LINEAR interpolation is used so the joint doesn't overshoot past
-## the saved values between keyframes (cubic-bezier overshoot was
-## producing the visible elbow flick at the end of the swing).
-## Existing tracks on the same path are REMOVED first so caller-built
-## tracks don't fight the override.
+## Back-compat entry point. It now injects all saved transforms, not
+## only rotations, so older sprite call sites gain position playback.
 static func inject_tuned_rotations(anim: Animation, cfg: Dictionary,
+		draw_frac: float = 0.30, release_frac: float = 0.75) -> void:
+	inject_tuned_transforms(anim, cfg, draw_frac, release_frac)
+
+## Inject value tracks into `anim` for every tuned transform in `cfg`.
+## Three phases drive interpolation:
+##   t=0          -> BEGIN pose
+##   t=mid_frac   -> MIDDLE pose, held to release_frac
+##   t=length     -> END pose, fallback to BEGIN
+## LINEAR interpolation is used so joints do not overshoot saved values.
+static func inject_tuned_transforms(anim: Animation, cfg: Dictionary,
 		draw_frac: float = 0.30, release_frac: float = 0.75) -> void:
 	if anim == null:
 		return
-	var rest_r: Dictionary = cfg.get("rest_rotations", {})
-	var strike_r: Dictionary = cfg.get("strike_rotations", {})
-	var end_r: Dictionary = cfg.get("end_rotations", {})
-	if rest_r.is_empty() and strike_r.is_empty() and end_r.is_empty():
+	_inject_float_property(anim, cfg, "rotations", "rotation", 0.0,
+			draw_frac, release_frac)
+	_inject_vec2_property(anim, cfg, "positions", "position", Vector2.ZERO,
+			draw_frac, release_frac)
+
+static func _inject_float_property(anim: Animation, cfg: Dictionary,
+		key_suffix: String, property: String, fallback: float,
+		draw_frac: float, release_frac: float) -> void:
+	var rest: Dictionary = cfg.get("rest_" + key_suffix, {})
+	var strike: Dictionary = cfg.get("strike_" + key_suffix, {})
+	var ending: Dictionary = cfg.get("end_" + key_suffix, {})
+	if rest.is_empty() and strike.is_empty() and ending.is_empty():
 		return
 	var paths: Dictionary = {}
-	for p in rest_r.keys(): paths[p] = true
-	for p in strike_r.keys(): paths[p] = true
-	for p in end_r.keys(): paths[p] = true
+	for p in rest.keys(): paths[p] = true
+	for p in strike.keys(): paths[p] = true
+	for p in ending.keys(): paths[p] = true
 	for path in paths.keys():
-		var prop_path: NodePath = NodePath(String(path) + ":rotation")
+		var prop_path := NodePath(String(path) + ":" + property)
 		_remove_existing_track(anim, prop_path)
-		var ti: int = anim.add_track(Animation.TYPE_VALUE)
+		var ti := anim.add_track(Animation.TYPE_VALUE)
 		anim.track_set_path(ti, prop_path)
 		anim.track_set_interpolation_type(ti, Animation.INTERPOLATION_LINEAR)
-		var r0: float = float(rest_r.get(path, 0.0))
-		var rn: float = float(end_r.get(path, r0))
+		var r0 := float(rest.get(path, fallback))
+		var rn := float(ending.get(path, r0))
 		anim.track_insert_key(ti, 0.0, r0)
-		if strike_r.has(path):
-			var rs: float = float(strike_r[path])
+		var begin_hold := minf(BEGIN_HOLD_SECONDS, anim.length * 0.20)
+		if begin_hold > 0.0:
+			anim.track_insert_key(ti, begin_hold, r0)
+		if strike.has(path):
+			var rs := float(strike[path])
 			anim.track_insert_key(ti, anim.length * draw_frac, rs)
 			anim.track_insert_key(ti, anim.length * release_frac, rs)
 		anim.track_insert_key(ti, anim.length, rn)
+
+static func _inject_vec2_property(anim: Animation, cfg: Dictionary,
+		key_suffix: String, property: String, fallback: Vector2,
+		draw_frac: float, release_frac: float) -> void:
+	var rest: Dictionary = cfg.get("rest_" + key_suffix, {})
+	var strike: Dictionary = cfg.get("strike_" + key_suffix, {})
+	var ending: Dictionary = cfg.get("end_" + key_suffix, {})
+	if rest.is_empty() and strike.is_empty() and ending.is_empty():
+		return
+	var paths: Dictionary = {}
+	for p in rest.keys(): paths[p] = true
+	for p in strike.keys(): paths[p] = true
+	for p in ending.keys(): paths[p] = true
+	for path in paths.keys():
+		var prop_path := NodePath(String(path) + ":" + property)
+		_remove_existing_track(anim, prop_path)
+		var ti := anim.add_track(Animation.TYPE_VALUE)
+		anim.track_set_path(ti, prop_path)
+		anim.track_set_interpolation_type(ti, Animation.INTERPOLATION_LINEAR)
+		var r0 := _vec2_from_variant(rest.get(path, fallback), fallback)
+		var rn := _vec2_from_variant(ending.get(path, r0), r0)
+		anim.track_insert_key(ti, 0.0, r0)
+		var begin_hold := minf(BEGIN_HOLD_SECONDS, anim.length * 0.20)
+		if begin_hold > 0.0:
+			anim.track_insert_key(ti, begin_hold, r0)
+		if strike.has(path):
+			var rs := _vec2_from_variant(strike[path], r0)
+			anim.track_insert_key(ti, anim.length * draw_frac, rs)
+			anim.track_insert_key(ti, anim.length * release_frac, rs)
+		anim.track_insert_key(ti, anim.length, rn)
+
+static func _vec2_from_variant(v: Variant, fallback: Vector2) -> Vector2:
+	if v is Vector2:
+		return v
+	if v is Array and (v as Array).size() >= 2:
+		return Vector2(float((v as Array)[0]), float((v as Array)[1]))
+	return fallback
 
 static func _remove_existing_track(anim: Animation, prop_path: NodePath) -> void:
 	for ti in range(anim.get_track_count() - 1, -1, -1):

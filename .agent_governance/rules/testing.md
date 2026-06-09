@@ -88,6 +88,22 @@ through them. If one genuinely does not apply (e.g., a pure data-only
 class with no runtime state has no DebugLog flag), say so explicitly
 in the stage closure rather than silently skipping it.
 
+## Sprite/editor parity rule
+
+Every sprite-system change touching a player class, enemy, NPC, stance
+catalog, or pose-editor affordance MUST update the Stage 17.5 verifier
+contract in the same commit. The verifier must cover the behavior the
+editor depends on, not just resource existence: canonical animations,
+Body/Eye nodes, arm counts, hands/claws, elbow pivots, boss-specific
+appendage controls, stance-driven geometry, selected-stance persistence,
+and editor launch/drag affordances when those surfaces change.
+
+Boss identity changes also require a stale-doc sweep across `README.md`,
+`parking_lot.md`, `rules/scope-lock.md`, and `commands/act1-status.md`.
+If a previous boss identity is retained as legacy/rare routing metadata,
+the docs must say that explicitly instead of leaving contradictory active
+boss language behind.
+
 ## Parse-time smoke test (every commit)
 
 Before staging any commit that touches `.gd` files, run the headless

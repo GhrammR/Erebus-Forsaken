@@ -100,7 +100,14 @@ const ENTRIES: Dictionary = {
 	# UNDEAD — wraith subtype (new anatomy this stage)
 	&"shade_wretch":   { "family": Family.UNDEAD, "subtype": UndeadSubtype.WRAITH },
 	&"bog_caller":     { "family": Family.UNDEAD, "subtype": UndeadSubtype.WRAITH },
-	# Per-unique-boss bespoke entries
+	# DEMON — first Act-boss demon, bespoke six-arm rig.
+	&"act_boss": {
+		"family": Family.DEMON,
+		"bespoke": true,
+		"display_name": "Hexacheir, the God-Spurned",
+		"identity_note": "Six oath-hands, one contempt for every pact the living still believe will protect them.",
+	},
+	# Per-unique-boss bespoke entries retained for non-final rare/unique routing.
 	&"hekate_marked":  {
 		"bespoke": true,
 		"display_name": "Hekate-Marked Forsaken",

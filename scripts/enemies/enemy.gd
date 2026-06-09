@@ -4,6 +4,7 @@ class_name Enemy extends CharacterBody2D
 ## the sprite scene assigned in the subclass's .tscn.
 
 @export var enemy_id: StringName = &""  ## Stage 7 — save persistence key
+@export var display_name: String = ""
 @export var max_hp: int = 100
 @export var defense_value: int = 0
 @export var attack_rating_value: int = 0
