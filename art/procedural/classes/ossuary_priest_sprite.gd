@@ -21,9 +21,12 @@ const WandStances = preload("res://scripts/systems/stances/wand_stances.gd")
 @onready var _shoulder_r: Polygon2D = $Body/ShoulderRight
 @onready var _head: Polygon2D = $Body/Head
 @onready var _hood: Polygon2D = $Body/Hood
+@onready var _eye_l: Polygon2D = $Body/EyeL
+@onready var _eye_r: Polygon2D = $Body/EyeR
 @onready var _wand_arm: Node2D = $WandArm
 @onready var _wand_shaft: Polygon2D = $WandArm/Shaft
 @onready var _wand_glow: Polygon2D = $WandArm/Glow
+@onready var _wand_hand: Polygon2D = $WandArm/GripHand
 @onready var _anim: AnimationPlayer = $AnimationPlayer
 
 var _wand_attack_apex_rot: float = -0.45
@@ -86,6 +89,8 @@ func _paint() -> void:
 		sh.append(Vector2(14.0 * cos(t), 2.0 + 4.0 * sin(t)))
 	_shadow.color = SHADOW
 	_shadow.polygon = sh
+	_paint_robed_leg(^"Body/LegLHip", -1.0)
+	_paint_robed_leg(^"Body/LegRHip", 1.0)
 
 	_robe.color = ROBE_DARK
 	_robe.polygon = PackedVector2Array([
@@ -110,6 +115,16 @@ func _paint() -> void:
 		var t := TAU * i / nh
 		hd.append(Vector2(5.0 * cos(t), -48.0 + 5.0 * sin(t)))
 	_head.polygon = hd
+	_eye_l.color = SICKLY_GREEN
+	_eye_l.polygon = PackedVector2Array([
+		Vector2(-1.3, -0.8), Vector2(1.3, -0.8),
+		Vector2(1.6, 0.7), Vector2(-1.6, 0.7),
+	])
+	_eye_r.color = SICKLY_GREEN
+	_eye_r.polygon = PackedVector2Array([
+		Vector2(-1.3, -0.8), Vector2(1.3, -0.8),
+		Vector2(1.6, 0.7), Vector2(-1.6, 0.7),
+	])
 	_hood.color = ROBE_DARK
 	_hood.polygon = PackedVector2Array([
 		Vector2(-7, -42), Vector2(7, -42), Vector2(6, -52),
@@ -127,6 +142,49 @@ func _paint() -> void:
 		var t := TAU * i / ng
 		glow.append(Vector2(2.5 * cos(t), -25.0 + 2.5 * sin(t)))
 	_wand_glow.polygon = glow
+	_wand_hand.color = BONE
+	_wand_hand.polygon = PackedVector2Array([
+		Vector2(-3.0, -2.0), Vector2(3.0, -2.0),
+		Vector2(3.0, 2.0), Vector2(-3.0, 2.0),
+	])
+
+func _paint_robed_leg(root_path: NodePath, side: float) -> void:
+	var hip := get_node_or_null(root_path) as Node2D
+	if hip == null:
+		return
+	var thigh := hip.get_node_or_null(^"Thigh") as Polygon2D
+	var knee := hip.get_node_or_null(^"KneePivot") as Node2D
+	if thigh != null:
+		thigh.color = ROBE_DARK.darkened(0.24)
+		thigh.polygon = PackedVector2Array([
+			Vector2(-2.5, -1), Vector2(2.5, -1),
+			Vector2(2.0, 10), Vector2(-2.0, 10),
+		])
+	if knee == null:
+		return
+	var shin := knee.get_node_or_null(^"Shin") as Polygon2D
+	var foot := knee.get_node_or_null(^"FootL") as Polygon2D
+	if foot == null:
+		foot = knee.get_node_or_null(^"FootR") as Polygon2D
+	if shin != null:
+		shin.color = ROBE_DARK.darkened(0.38)
+		shin.polygon = PackedVector2Array([
+			Vector2(-2.0, -1), Vector2(2.0, -1),
+			Vector2(2.0, 11), Vector2(-2.0, 11),
+		])
+	if foot != null:
+		foot.color = BONE_DARK.darkened(0.35)
+		foot.position = Vector2(side, 12)
+		if side < 0.0:
+			foot.polygon = PackedVector2Array([
+				Vector2(1, -2), Vector2(-5, -2),
+				Vector2(-6, 1.5), Vector2(1, 2),
+			])
+		else:
+			foot.polygon = PackedVector2Array([
+				Vector2(-1, -2), Vector2(5, -2),
+				Vector2(6, 1.5), Vector2(-1, 2),
+			])
 
 func _build_animations() -> void:
 	var lib := AnimationLibrary.new()
@@ -158,6 +216,19 @@ func _anim_idle() -> Animation:
 	a.track_insert_key(ti, 0.0, Vector2.ZERO)
 	a.track_insert_key(ti, 0.7, Vector2(0, -1))
 	a.track_insert_key(ti, 1.4, Vector2.ZERO)
+	for path in [
+		NodePath("Body/LegLHip:rotation"),
+		NodePath("Body/LegRHip:rotation"),
+		NodePath("Body/LegLHip/KneePivot:rotation"),
+		NodePath("Body/LegRHip/KneePivot:rotation"),
+	]:
+		var tr := _track(a, path)
+		a.track_insert_key(tr, 0.0, 0.0)
+		a.track_insert_key(tr, 1.4, 0.0)
+	var tsh := _track(a, NodePath("Shadow:scale"))
+	a.track_insert_key(tsh, 0.0, Vector2.ONE)
+	a.track_insert_key(tsh, 0.7, Vector2(0.92, 0.82))
+	a.track_insert_key(tsh, 1.4, Vector2.ONE)
 	var twp := _track(a, NodePath("WandArm:position"))
 	a.track_insert_key(twp, 0.0, _wand_arm.position)
 	a.track_insert_key(twp, 1.4, _wand_arm.position)
@@ -178,6 +249,26 @@ func _anim_walk() -> Animation:
 	a.track_insert_key(tr, 0.0, 0.0)
 	a.track_insert_key(tr, 0.23, 0.035)
 	a.track_insert_key(tr, 0.46, 0.0)
+	var lhip := _track(a, NodePath("Body/LegLHip:rotation"))
+	a.track_insert_key(lhip, 0.0, 0.10)
+	a.track_insert_key(lhip, 0.23, -0.12)
+	a.track_insert_key(lhip, 0.46, 0.10)
+	var rhip := _track(a, NodePath("Body/LegRHip:rotation"))
+	a.track_insert_key(rhip, 0.0, -0.12)
+	a.track_insert_key(rhip, 0.23, 0.10)
+	a.track_insert_key(rhip, 0.46, -0.12)
+	var lknee := _track(a, NodePath("Body/LegLHip/KneePivot:rotation"))
+	a.track_insert_key(lknee, 0.0, 0.14)
+	a.track_insert_key(lknee, 0.23, -0.05)
+	a.track_insert_key(lknee, 0.46, 0.14)
+	var rknee := _track(a, NodePath("Body/LegRHip/KneePivot:rotation"))
+	a.track_insert_key(rknee, 0.0, -0.05)
+	a.track_insert_key(rknee, 0.23, 0.14)
+	a.track_insert_key(rknee, 0.46, -0.05)
+	var tsh := _track(a, NodePath("Shadow:scale"))
+	a.track_insert_key(tsh, 0.0, Vector2.ONE)
+	a.track_insert_key(tsh, 0.23, Vector2(0.94, 0.82))
+	a.track_insert_key(tsh, 0.46, Vector2.ONE)
 	var twp := _track(a, NodePath("WandArm:position"))
 	a.track_insert_key(twp, 0.0, _wand_arm.position)
 	a.track_insert_key(twp, 0.46, _wand_arm.position)

@@ -167,3 +167,16 @@ static func get_stance(id: StringName) -> Dictionary:
 ## All stance ids in declaration order — used by pose_tuner F3 cycle.
 static func all_ids() -> Array:
 	return STANCES.keys()
+
+static func ids_for_anim(anim_name: StringName) -> Array:
+	match anim_name:
+		&"attack":
+			return [&"forward_high_ready_quickshot", &"forward_high_ready_heavy", &"high_aim"]
+		&"walk":
+			return [&"low_ready_diag", &"forward_high_ready", &"high_aim"]
+		&"cast":
+			return [&"high_aim", &"forward_high_ready", &"low_ready_diag"]
+		&"die":
+			return [&"low_ready_diag", &"forward_high_ready_RH", &"forward_high_ready"]
+		_:
+			return [&"forward_high_ready", &"low_ready_diag", &"high_aim"]

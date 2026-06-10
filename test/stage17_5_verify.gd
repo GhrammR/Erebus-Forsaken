@@ -21,6 +21,7 @@ const BESPOKE_SPRITES: Array[StringName] = [
 ]
 
 const StaffStances = preload("res://scripts/systems/stances/staff_stances.gd")
+const BowStances = preload("res://scripts/systems/stances/bow_stances.gd")
 const SpearStances = preload("res://scripts/systems/stances/spear_stances.gd")
 const StanceSelection = preload("res://scripts/systems/stance_selection.gd")
 const WandStances = preload("res://scripts/systems/stances/wand_stances.gd")
@@ -39,6 +40,7 @@ func _ready() -> void:
 	_verify_equipment_overlays_target_human_parts()
 	_verify_sidecar_path_contract()
 	await _verify_stance_catalog_geometry_drives_sprites()
+	_verify_stance_catalog_filters()
 	await _verify_current_sprite_animation_surface()
 	await _verify_sprite_detail_contract()
 	_verify_pose_editor_authoring_contract()
@@ -167,6 +169,29 @@ func _verify_stance_catalog_geometry_drives_sprites() -> void:
 			"Myrmidon exports spear rest_pos metadata for WeaponProfiles")
 	myrmidon.queue_free()
 
+func _verify_stance_catalog_filters() -> void:
+	for anim_name in [&"idle", &"walk", &"attack", &"cast", &"die"]:
+		_expect(BowStances.ids_for_anim(anim_name).size() >= 3,
+				"BowStances exposes >=3 %s stance variants" % anim_name)
+		_expect(StaffStances.ids_for_anim(anim_name).size() >= 3,
+				"StaffStances exposes >=3 %s stance variants" % anim_name)
+		_expect(SpearStances.ids_for_anim(anim_name).size() >= 3,
+				"SpearStances exposes >=3 %s stance variants" % anim_name)
+		_expect(WandStances.ids_for_anim(anim_name).size() >= 3,
+				"WandStances exposes >=3 %s stance variants" % anim_name)
+		var enemy_ids := SpriteMotionStances.ids_for_context(&"enemies", &"bog_caller", anim_name)
+		var npc_ids := SpriteMotionStances.ids_for_context(&"npcs", &"kallias", anim_name)
+		_expect(enemy_ids.size() >= 3 and _ids_have_prefix(enemy_ids, "enemy_"),
+				"enemy motion catalog exposes role-specific %s variants" % anim_name)
+		_expect(npc_ids.size() >= 3 and _ids_have_prefix(npc_ids, "npc_"),
+				"npc motion catalog exposes role-specific %s variants" % anim_name)
+
+func _ids_have_prefix(ids: Array, prefix: String) -> bool:
+	for id in ids:
+		if not String(id).begins_with(prefix):
+			return false
+	return true
+
 func _verify_current_sprite_animation_surface() -> void:
 	var sprites: Array = [
 		{ "id": &"pythia", "path": "res://art/procedural/classes/pythia_sprite.tscn", "stance": StaffStances.DEFAULT_STANCE, "bucket": &"classes" },
@@ -196,6 +221,8 @@ func _verify_current_sprite_animation_surface() -> void:
 			sprite.stance_bucket = rec["bucket"]
 		add_child(sprite)
 		await get_tree().process_frame
+		_expect(sprite.get_node_or_null(^"Shadow") != null,
+				"%s has ground shadow" % rec["id"])
 		var anim := sprite.get_node_or_null(^"AnimationPlayer") as AnimationPlayer
 		_expect(anim != null, "%s exposes AnimationPlayer" % rec["id"])
 		if anim != null:
@@ -206,12 +233,13 @@ func _verify_current_sprite_animation_surface() -> void:
 
 func _verify_sprite_detail_contract() -> void:
 	var detail_sprites: Array = [
-		{ "id": &"training_dummy", "path": "res://art/procedural/enemies/dummy_sprite.tscn", "eyes": true, "arms": 2 },
-		{ "id": &"shade_wretch", "path": "res://art/procedural/enemies/shade_wretch_sprite.tscn", "eyes": true, "arms": 2 },
-		{ "id": &"bog_caller", "path": "res://art/procedural/enemies/bog_caller_sprite.tscn", "eyes": true, "arms": 2 },
-		{ "id": &"act_boss", "path": "res://art/procedural/enemies/act_boss_sprite.tscn", "eyes": true, "arms": 6 },
-		{ "id": &"kallias", "path": "res://art/procedural/npcs/kallias_sprite.tscn", "eyes": true, "arms": 2 },
-		{ "id": &"eurynome", "path": "res://art/procedural/npcs/eurynome_sprite.tscn", "eyes": true, "arms": 2 },
+		{ "id": &"training_dummy", "path": "res://art/procedural/enemies/dummy_sprite.tscn", "eyes": true, "arms": 2, "shadow": true },
+		{ "id": &"shade_wretch", "path": "res://art/procedural/enemies/shade_wretch_sprite.tscn", "eyes": true, "arms": 2, "shadow": true },
+		{ "id": &"bog_caller", "path": "res://art/procedural/enemies/bog_caller_sprite.tscn", "eyes": true, "arms": 2, "shadow": true },
+		{ "id": &"act_boss", "path": "res://art/procedural/enemies/act_boss_sprite.tscn", "eyes": true, "arms": 6, "shadow": true },
+		{ "id": &"ossuary_priest", "path": "res://art/procedural/classes/ossuary_priest_sprite.tscn", "eyes": true, "legs": true, "shadow": true },
+		{ "id": &"kallias", "path": "res://art/procedural/npcs/kallias_sprite.tscn", "eyes": true, "arms": 2, "legs": true, "shadow": true },
+		{ "id": &"eurynome", "path": "res://art/procedural/npcs/eurynome_sprite.tscn", "eyes": true, "arms": 2, "legs": true, "shadow": true },
 	]
 	for rec_v in detail_sprites:
 		var rec: Dictionary = rec_v
@@ -224,10 +252,12 @@ func _verify_sprite_detail_contract() -> void:
 		await get_tree().process_frame
 		var body := sprite.get_node_or_null(^"Body")
 		_expect(body != null, "%s has Body node" % rec["id"])
+		if bool(rec.get("shadow", false)):
+			_expect(sprite.get_node_or_null(^"Shadow") != null, "%s has Shadow" % rec["id"])
 		if bool(rec.get("eyes", false)):
 			_expect(sprite.get_node_or_null(^"Body/EyeL") != null, "%s has EyeL" % rec["id"])
 			_expect(sprite.get_node_or_null(^"Body/EyeR") != null, "%s has EyeR" % rec["id"])
-		var counts := { "arms": 0, "hands": 0, "elbows": 0, "fingers": 0 }
+		var counts := { "arms": 0, "hands": 0, "elbows": 0, "fingers": 0, "legs": 0, "knees": 0, "feet": 0, "shadows": 0 }
 		_count_pose_parts(sprite, counts)
 		_expect(int(counts["arms"]) >= int(rec.get("arms", 0)),
 				"%s has >= %d arm roots (got %d)" % [rec["id"], int(rec.get("arms", 0)), int(counts["arms"])])
@@ -235,6 +265,13 @@ func _verify_sprite_detail_contract() -> void:
 				"%s has draggable hands/claws (got %d)" % [rec["id"], int(counts["hands"])])
 		_expect(int(counts["elbows"]) >= mini(2, int(rec.get("arms", 0))),
 				"%s has elbow pivots" % rec["id"])
+		if bool(rec.get("legs", false)):
+			_expect(int(counts["legs"]) >= 2,
+					"%s has left/right leg hip controls" % rec["id"])
+			_expect(int(counts["knees"]) >= 2,
+					"%s has knee pivots" % rec["id"])
+			_expect(int(counts["feet"]) >= 2,
+					"%s has visible feet under robe" % rec["id"])
 		if rec["id"] == &"act_boss":
 			_expect(int(counts["fingers"]) >= 6,
 					"act_boss has six middle-finger taunt controls")
@@ -244,12 +281,20 @@ func _count_pose_parts(node: Node, counts: Dictionary) -> void:
 	for child in node.get_children():
 		var n := String(child.name)
 		if child is Node2D:
+			if n == "Shadow":
+				counts["shadows"] = int(counts["shadows"]) + 1
 			if n.contains("ArmL") or n.contains("ArmR"):
 				counts["arms"] = int(counts["arms"]) + 1
 			if n.contains("Hand") or n.contains("Claw"):
 				counts["hands"] = int(counts["hands"]) + 1
 			if n.ends_with("ElbowPivot"):
 				counts["elbows"] = int(counts["elbows"]) + 1
+			if n.contains("LegLHip") or n.contains("LegRHip"):
+				counts["legs"] = int(counts["legs"]) + 1
+			if n.ends_with("KneePivot"):
+				counts["knees"] = int(counts["knees"]) + 1
+			if n.contains("Foot"):
+				counts["feet"] = int(counts["feet"]) + 1
 			if n.contains("Finger"):
 				counts["fingers"] = int(counts["fingers"]) + 1
 		_count_pose_parts(child, counts)
@@ -271,3 +316,16 @@ func _verify_pose_editor_authoring_contract() -> void:
 			and src.contains("HandL")
 			and src.contains("ElbowPivot"),
 			"pose_tuner enumerates hands, elbows, and weapon parts for click-drag")
+	_expect(src.contains("input_lock_until_click"),
+			"pose_tuner launch requests game-input lock")
+	_expect(src.contains("ids_for_anim") and src.contains("ids_for_context"),
+			"pose_tuner filters stances by variant animation")
+	_expect(src.contains("RichTextLabel") and src.contains("[b]") and src.contains("_color_for_path"),
+			"pose_tuner uses color-coded rich slider labels")
+	_expect(src.contains("controls[2].set_value_no_signal")
+			and src.contains("controls[3].set_value_no_signal"),
+			"pose_tuner syncs drag edits back into numeric slider fields")
+	_expect(src.contains("player_pythia_idle_oracle_staff")
+			and src.contains("enemy_bog_caller_walk_swamp_drift")
+			and src.contains("npc_kallias_idle_merchant_watch"),
+			"pose_tuner variants are role-specific and pre-authored")

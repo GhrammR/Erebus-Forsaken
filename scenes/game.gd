@@ -211,8 +211,10 @@ func _apply_editor_launch(launch: Dictionary) -> void:
 	if not EndlessRun.active:
 		EndlessRun.begin(randi())
 	GameState.act_1_complete = true
+	if bool(launch.get("input_lock_until_click", true)):
+		_player.get_input().lock_gameplay_until_mouse_click()
 	_do_transit.call_deferred(zone_id, true, arrival, true)
-	_set_status("Editor launch: %s in The Maw." % String(launch.get("class_id", DEFAULT_CLASS)), true)
+	_set_status("Editor launch: %s in The Maw. Click the game window to unlock combat input." % String(launch.get("class_id", DEFAULT_CLASS)), true)
 
 func _maybe_show_tutorial() -> void:
 	# First-launch only: skip if the player has already dismissed it

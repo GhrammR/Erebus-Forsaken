@@ -386,3 +386,9 @@ removed.
   player classes, enemies, and NPCs.
 - Notes: Keep this as a generalized editor/rigging spike, not a new
   hard-coded boss-only exception.
+
+
+### generalized-finger-rig — Shared articulated fingers for humanoids, demons, and beasts
+- Why parked: 2026-06-09. The current six-arm demon has bespoke middle-finger taunt controls, but that is not a reusable hand rig. A real system needs per-hand finger bones, default fist/open/gesture poses, editor drag handles, save/load schema, and verifier coverage across humanoids, demons, and any beasts that actually have five-finger hands. Claw, hoof, and tendril creatures should not inherit human fingers by accident.
+- Earliest revisit: after the shared sprite editor stabilizes for all current player, NPC, and enemy rigs.
+- Notes: Design as an optional anatomy module keyed by family/subtype. Hands expose Thumb, Index, Middle, Ring, Pinky chains with curl/spread controls and gesture presets. The editor should show fingers only when the active sprite declares the module.

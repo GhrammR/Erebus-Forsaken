@@ -142,12 +142,14 @@ static func _inject_float_property(anim: Animation, cfg: Dictionary,
 	for p in ending.keys(): paths[p] = true
 	for path in paths.keys():
 		var prop_path := NodePath(String(path) + ":" + property)
+		var existing_start := float(_existing_track_value(anim, prop_path, 0.0, fallback))
+		var existing_end := float(_existing_track_value(anim, prop_path, anim.length, existing_start))
 		_remove_existing_track(anim, prop_path)
 		var ti := anim.add_track(Animation.TYPE_VALUE)
 		anim.track_set_path(ti, prop_path)
 		anim.track_set_interpolation_type(ti, Animation.INTERPOLATION_LINEAR)
-		var r0 := float(rest.get(path, fallback))
-		var rn := float(ending.get(path, r0))
+		var r0 := float(rest.get(path, existing_start))
+		var rn := float(ending.get(path, existing_end))
 		anim.track_insert_key(ti, 0.0, r0)
 		var begin_hold := minf(BEGIN_HOLD_SECONDS, anim.length * 0.20)
 		if begin_hold > 0.0:
@@ -172,12 +174,16 @@ static func _inject_vec2_property(anim: Animation, cfg: Dictionary,
 	for p in ending.keys(): paths[p] = true
 	for path in paths.keys():
 		var prop_path := NodePath(String(path) + ":" + property)
+		var existing_start := _vec2_from_variant(
+				_existing_track_value(anim, prop_path, 0.0, fallback), fallback)
+		var existing_end := _vec2_from_variant(
+				_existing_track_value(anim, prop_path, anim.length, existing_start), existing_start)
 		_remove_existing_track(anim, prop_path)
 		var ti := anim.add_track(Animation.TYPE_VALUE)
 		anim.track_set_path(ti, prop_path)
 		anim.track_set_interpolation_type(ti, Animation.INTERPOLATION_LINEAR)
-		var r0 := _vec2_from_variant(rest.get(path, fallback), fallback)
-		var rn := _vec2_from_variant(ending.get(path, r0), r0)
+		var r0 := _vec2_from_variant(rest.get(path, existing_start), existing_start)
+		var rn := _vec2_from_variant(ending.get(path, existing_end), existing_end)
 		anim.track_insert_key(ti, 0.0, r0)
 		var begin_hold := minf(BEGIN_HOLD_SECONDS, anim.length * 0.20)
 		if begin_hold > 0.0:
@@ -187,6 +193,34 @@ static func _inject_vec2_property(anim: Animation, cfg: Dictionary,
 			anim.track_insert_key(ti, anim.length * draw_frac, rs)
 			anim.track_insert_key(ti, anim.length * release_frac, rs)
 		anim.track_insert_key(ti, anim.length, rn)
+
+static func _existing_track_value(anim: Animation, prop_path: NodePath,
+		time: float, fallback: Variant) -> Variant:
+	for ti in range(anim.get_track_count()):
+		if anim.track_get_path(ti) != prop_path:
+			continue
+		var count := anim.track_get_key_count(ti)
+		if count <= 0:
+			return fallback
+		if time <= anim.track_get_key_time(ti, 0):
+			return anim.track_get_key_value(ti, 0)
+		if time >= anim.track_get_key_time(ti, count - 1):
+			return anim.track_get_key_value(ti, count - 1)
+		for ki in range(1, count):
+			var t0 := anim.track_get_key_time(ti, ki - 1)
+			var t1 := anim.track_get_key_time(ti, ki)
+			if time <= t1:
+				var v0: Variant = anim.track_get_key_value(ti, ki - 1)
+				var v1: Variant = anim.track_get_key_value(ti, ki)
+				var f := 0.0 if is_equal_approx(t0, t1) else clampf((time - t0) / (t1 - t0), 0.0, 1.0)
+				if (v0 is float or v0 is int) and (v1 is float or v1 is int):
+					return lerpf(float(v0), float(v1), f)
+				if v0 is Vector2 and v1 is Vector2:
+					var vv0 := v0 as Vector2
+					var vv1 := v1 as Vector2
+					return vv0.lerp(vv1, f)
+				return v0
+	return fallback
 
 static func _vec2_from_variant(v: Variant, fallback: Vector2) -> Vector2:
 	if v is Vector2:

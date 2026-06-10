@@ -37,10 +37,11 @@ const CLASSES: Array = [
 		"bucket": &"classes",
 		"scene": "res://art/procedural/classes/pythia_sprite.tscn",
 		"variants": [
-			{ "name": "idle_staff",   "anim": &"idle",   "equip": { "weapon": &"pythia_staff_starter" } },
-			{ "name": "walk_staff",   "anim": &"walk",   "equip": { "weapon": &"pythia_staff_starter" } },
-			{ "name": "attack_staff", "anim": &"attack", "equip": { "weapon": &"pythia_staff_starter" } },
-			{ "name": "cast_staff",   "anim": &"cast",   "equip": { "weapon": &"pythia_staff_starter" } },
+			{ "name": "player_pythia_idle_oracle_staff", "anim": &"idle", "equip": { "weapon": &"pythia_staff_starter" } },
+			{ "name": "player_pythia_walk_procession_staff", "anim": &"walk", "equip": { "weapon": &"pythia_staff_starter" } },
+			{ "name": "player_pythia_attack_staff_sweep", "anim": &"attack", "equip": { "weapon": &"pythia_staff_starter" } },
+			{ "name": "player_pythia_cast_oracle_channel", "anim": &"cast", "equip": { "weapon": &"pythia_staff_starter" } },
+			{ "name": "player_pythia_die_vision_collapse", "anim": &"die", "equip": { "weapon": &"pythia_staff_starter" } },
 		],
 	},
 	{
@@ -48,8 +49,11 @@ const CLASSES: Array = [
 		"bucket": &"classes",
 		"scene": "res://art/procedural/classes/myrmidon_sprite.tscn",
 		"variants": [
-			{ "name": "idle_bare",   "anim": &"idle",   "equip": {} },
-			{ "name": "attack_spear", "anim": &"attack", "equip": { "weapon": &"myrmidon_spear_starter" } },
+			{ "name": "player_myrmidon_idle_hoplite_spear", "anim": &"idle", "equip": { "weapon": &"myrmidon_spear_starter" } },
+			{ "name": "player_myrmidon_walk_shield_advance", "anim": &"walk", "equip": { "weapon": &"myrmidon_spear_starter" } },
+			{ "name": "player_myrmidon_attack_spear_thrust", "anim": &"attack", "equip": { "weapon": &"myrmidon_spear_starter" } },
+			{ "name": "player_myrmidon_cast_battle_order", "anim": &"cast", "equip": { "weapon": &"myrmidon_spear_starter" } },
+			{ "name": "player_myrmidon_die_hoplite_fall", "anim": &"die", "equip": { "weapon": &"myrmidon_spear_starter" } },
 		],
 	},
 	{
@@ -57,14 +61,11 @@ const CLASSES: Array = [
 		"bucket": &"classes",
 		"scene": "res://art/procedural/classes/shade_hunter_sprite.tscn",
 		"variants": [
-			# Equipped (bow visible) — primary scoring path.
-			{ "name": "idle_bow",   "anim": &"idle",   "equip": {}, "show_bow": true },
-			{ "name": "walk_bow",   "anim": &"walk",   "equip": {}, "show_bow": true },
-			{ "name": "attack_bow", "anim": &"attack", "equip": {}, "show_bow": true },
-			# Bare (bow stowed) — for off-stance tuning.
-			{ "name": "idle_bare",   "anim": &"idle",   "equip": {}, "show_bow": false },
-			{ "name": "walk_bare",   "anim": &"walk",   "equip": {}, "show_bow": false },
-			{ "name": "attack_bare", "anim": &"attack", "equip": {}, "show_bow": false },
+			{ "name": "player_shade_hunter_idle_bow_ready", "anim": &"idle", "equip": {}, "show_bow": true },
+			{ "name": "player_shade_hunter_walk_stalking_bow", "anim": &"walk", "equip": {}, "show_bow": true },
+			{ "name": "player_shade_hunter_attack_bow_release", "anim": &"attack", "equip": {}, "show_bow": true },
+			{ "name": "player_shade_hunter_cast_shadow_mark", "anim": &"cast", "equip": {}, "show_bow": true },
+			{ "name": "player_shade_hunter_die_cloak_drop", "anim": &"die", "equip": {}, "show_bow": true },
 		],
 	},
 	{
@@ -72,10 +73,11 @@ const CLASSES: Array = [
 		"bucket": &"classes",
 		"scene": "res://art/procedural/classes/ossuary_priest_sprite.tscn",
 		"variants": [
-			{ "name": "idle_wand",   "anim": &"idle",   "equip": { "weapon": &"ossuary_wand_starter" } },
-			{ "name": "walk_wand",   "anim": &"walk",   "equip": { "weapon": &"ossuary_wand_starter" } },
-			{ "name": "attack_wand", "anim": &"attack", "equip": { "weapon": &"ossuary_wand_starter" } },
-			{ "name": "cast_wand",   "anim": &"cast",   "equip": { "weapon": &"ossuary_wand_starter" } },
+			{ "name": "player_ossuary_priest_idle_wand_vigil", "anim": &"idle", "equip": { "weapon": &"ossuary_wand_starter" } },
+			{ "name": "player_ossuary_priest_walk_robed_step", "anim": &"walk", "equip": { "weapon": &"ossuary_wand_starter" } },
+			{ "name": "player_ossuary_priest_attack_bone_wand", "anim": &"attack", "equip": { "weapon": &"ossuary_wand_starter" } },
+			{ "name": "player_ossuary_priest_cast_grave_rite", "anim": &"cast", "equip": { "weapon": &"ossuary_wand_starter" } },
+			{ "name": "player_ossuary_priest_die_robed_sink", "anim": &"die", "equip": { "weapon": &"ossuary_wand_starter" } },
 		],
 	},
 	{
@@ -83,9 +85,11 @@ const CLASSES: Array = [
 		"bucket": &"enemies",
 		"scene": "res://art/procedural/enemies/dummy_sprite.tscn",
 		"variants": [
-			{ "name": "idle", "anim": &"idle", "equip": {} },
-			{ "name": "hit", "anim": &"hit", "equip": {} },
-			{ "name": "die", "anim": &"die", "equip": {} },
+			{ "name": "enemy_training_dummy_idle_watch", "anim": &"idle", "equip": {} },
+			{ "name": "enemy_training_dummy_walk_sway", "anim": &"walk", "equip": {} },
+			{ "name": "enemy_training_dummy_attack_counter_swing", "anim": &"attack", "equip": {} },
+			{ "name": "enemy_training_dummy_cast_target_flash", "anim": &"cast", "equip": {} },
+			{ "name": "enemy_training_dummy_die_post_snap", "anim": &"die", "equip": {} },
 		],
 	},
 	{
@@ -93,9 +97,11 @@ const CLASSES: Array = [
 		"bucket": &"enemies",
 		"scene": "res://art/procedural/enemies/bone_servant_sprite.tscn",
 		"variants": [
-			{ "name": "idle", "anim": &"idle", "equip": {} },
-			{ "name": "walk", "anim": &"walk", "equip": {} },
-			{ "name": "attack", "anim": &"attack", "equip": {} },
+			{ "name": "enemy_bone_servant_idle_rattle", "anim": &"idle", "equip": {} },
+			{ "name": "enemy_bone_servant_walk_clatter", "anim": &"walk", "equip": {} },
+			{ "name": "enemy_bone_servant_attack_claw_rake", "anim": &"attack", "equip": {} },
+			{ "name": "enemy_bone_servant_cast_bone_shiver", "anim": &"cast", "equip": {} },
+			{ "name": "enemy_bone_servant_die_bone_scatter", "anim": &"die", "equip": {} },
 		],
 	},
 	{
@@ -103,10 +109,11 @@ const CLASSES: Array = [
 		"bucket": &"enemies",
 		"scene": "res://art/procedural/enemies/shade_wretch_sprite.tscn",
 		"variants": [
-			{ "name": "idle", "anim": &"idle", "equip": {} },
-			{ "name": "walk", "anim": &"walk", "equip": {} },
-			{ "name": "attack", "anim": &"attack", "equip": {} },
-			{ "name": "cast", "anim": &"cast", "equip": {} },
+			{ "name": "enemy_shade_wretch_idle_void_hover", "anim": &"idle", "equip": {} },
+			{ "name": "enemy_shade_wretch_walk_haunting_drift", "anim": &"walk", "equip": {} },
+			{ "name": "enemy_shade_wretch_attack_spectral_lunge", "anim": &"attack", "equip": {} },
+			{ "name": "enemy_shade_wretch_cast_grave_chill", "anim": &"cast", "equip": {} },
+			{ "name": "enemy_shade_wretch_die_smoke_unravel", "anim": &"die", "equip": {} },
 		],
 	},
 	{
@@ -114,10 +121,11 @@ const CLASSES: Array = [
 		"bucket": &"enemies",
 		"scene": "res://art/procedural/enemies/bog_caller_sprite.tscn",
 		"variants": [
-			{ "name": "idle", "anim": &"idle", "equip": {} },
-			{ "name": "walk", "anim": &"walk", "equip": {} },
-			{ "name": "attack", "anim": &"attack", "equip": {} },
-			{ "name": "cast", "anim": &"cast", "equip": {} },
+			{ "name": "enemy_bog_caller_idle_mire_hover", "anim": &"idle", "equip": {} },
+			{ "name": "enemy_bog_caller_walk_swamp_drift", "anim": &"walk", "equip": {} },
+			{ "name": "enemy_bog_caller_attack_orb_spit", "anim": &"attack", "equip": {} },
+			{ "name": "enemy_bog_caller_cast_bog_channel", "anim": &"cast", "equip": {} },
+			{ "name": "enemy_bog_caller_die_mire_collapse", "anim": &"die", "equip": {} },
 		],
 	},
 	{
@@ -125,10 +133,11 @@ const CLASSES: Array = [
 		"bucket": &"enemies",
 		"scene": "res://art/procedural/enemies/act_boss_sprite.tscn",
 		"variants": [
-			{ "name": "idle", "anim": &"idle", "equip": {} },
-			{ "name": "walk", "anim": &"walk", "equip": {} },
-			{ "name": "attack", "anim": &"attack", "equip": {} },
-			{ "name": "cast", "anim": &"cast", "equip": {} },
+			{ "name": "enemy_hexacheir_idle_throne_breath", "anim": &"idle", "equip": {} },
+			{ "name": "enemy_hexacheir_walk_six_arm_stalk", "anim": &"walk", "equip": {} },
+			{ "name": "enemy_hexacheir_attack_six_hand_smite", "anim": &"attack", "equip": {} },
+			{ "name": "enemy_hexacheir_cast_oath_taunt", "anim": &"cast", "equip": {} },
+			{ "name": "enemy_hexacheir_die_demon_slump", "anim": &"die", "equip": {} },
 		],
 	},
 	{
@@ -136,9 +145,11 @@ const CLASSES: Array = [
 		"bucket": &"npcs",
 		"scene": "res://art/procedural/npcs/kallias_sprite.tscn",
 		"variants": [
-			{ "name": "idle", "anim": &"idle", "equip": {} },
-			{ "name": "walk", "anim": &"walk", "equip": {} },
-			{ "name": "gesture", "anim": &"cast", "equip": {} },
+			{ "name": "npc_kallias_idle_merchant_watch", "anim": &"idle", "equip": {} },
+			{ "name": "npc_kallias_walk_market_step", "anim": &"walk", "equip": {} },
+			{ "name": "npc_kallias_attack_panic_swing", "anim": &"attack", "equip": {} },
+			{ "name": "npc_kallias_cast_trade_gesture", "anim": &"cast", "equip": {} },
+			{ "name": "npc_kallias_die_old_man_fall", "anim": &"die", "equip": {} },
 		],
 	},
 	{
@@ -146,9 +157,11 @@ const CLASSES: Array = [
 		"bucket": &"npcs",
 		"scene": "res://art/procedural/npcs/eurynome_sprite.tscn",
 		"variants": [
-			{ "name": "idle", "anim": &"idle", "equip": {} },
-			{ "name": "walk", "anim": &"walk", "equip": {} },
-			{ "name": "gesture", "anim": &"cast", "equip": {} },
+			{ "name": "npc_eurynome_idle_oracle_vigil", "anim": &"idle", "equip": {} },
+			{ "name": "npc_eurynome_walk_ceremonial_step", "anim": &"walk", "equip": {} },
+			{ "name": "npc_eurynome_attack_sea_spirit_rebuke", "anim": &"attack", "equip": {} },
+			{ "name": "npc_eurynome_cast_quest_omen", "anim": &"cast", "equip": {} },
+			{ "name": "npc_eurynome_die_veil_collapse", "anim": &"die", "equip": {} },
 		],
 	},
 ]
@@ -320,7 +333,7 @@ func _build_ui() -> void:
 	side.add_child(hint)
 	var legend := Label.new()
 	legend.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	legend.text = "Legend: ROT sliders turn joints/weapons. POS X/Y sliders move bodies, hands, weapons, and markers. Yellow dots are click-drag handles; elbow dots rotate the parent limb."
+	legend.text = "Legend: colored labels match drag dots. ROT uses degrees around the joint; POS uses local X/Y pixels. Weapon POS is grip/body placement, not an elbow pivot. Hands and claws rotate their parent joint so limbs stay attached."
 	side.add_child(legend)
 	_slider_box = VBoxContainer.new()
 	_slider_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -350,6 +363,22 @@ func _build_ui() -> void:
 # Sprite loading
 # =========================================================================
 
+func _stance_ids_for(cls: Dictionary, variant: Dictionary) -> Array:
+	var catalog: StringName = STANCE_CATALOGS.get(cls["id"], &"")
+	var anim_name := StringName(variant.get("anim", &"idle"))
+	if catalog == &"bow":
+		return BowStances.ids_for_anim(anim_name)
+	if catalog == &"staff":
+		return StaffStances.ids_for_anim(anim_name)
+	if catalog == &"spear":
+		return SpearStances.ids_for_anim(anim_name)
+	if catalog == &"wand":
+		return WandStances.ids_for_anim(anim_name)
+	if catalog == &"motion":
+		return SpriteMotionStances.ids_for_context(
+				cls.get("bucket", &"classes"), cls["id"], anim_name)
+	return []
+
 func _load_current(scrub_time: float = 0.0) -> void:
 	# Tear down prior sprite.
 	if _sprite != null:
@@ -363,19 +392,11 @@ func _load_current(scrub_time: float = 0.0) -> void:
 	_slider_entries.clear()
 	var cls: Dictionary = CLASSES[_class_idx]
 	var variant: Dictionary = cls["variants"][_variant_idx]
-	# Populate stance ids for this class's weapon catalog.
-	_stance_ids = []
-	var catalog: StringName = STANCE_CATALOGS.get(cls["id"], &"")
-	if catalog == &"bow":
-		_stance_ids = BowStances.all_ids()
-	elif catalog == &"staff":
-		_stance_ids = StaffStances.all_ids()
-	elif catalog == &"spear":
-		_stance_ids = SpearStances.all_ids()
-	elif catalog == &"wand":
-		_stance_ids = WandStances.all_ids()
-	elif catalog == &"motion":
-		_stance_ids = SpriteMotionStances.all_ids()
+	# Populate stance ids for this exact sprite + variant animation.
+	# Idle variants receive idle-safe stances, attacks receive attack
+	# stances, NPCs never receive enemy rows, and enemies never receive
+	# merchant rows.
+	_stance_ids = _stance_ids_for(cls, variant)
 	if _stance_idx >= _stance_ids.size():
 		_stance_idx = 0
 	_refresh_picker_options()
@@ -470,7 +491,7 @@ func _spawn_drag_dots() -> void:
 			continue
 		var dot := Polygon2D.new()
 		dot.name = "_DragDot"
-		dot.color = DRAG_DOT_COLOR
+		dot.color = _color_for_path(_path_for(n))
 		dot.z_index = 100
 		# Dot radius is in PARENT-local units, so divide by sprite scale
 		# to render a screen-constant size regardless of zoom. With
@@ -559,11 +580,7 @@ func _wants_position_slider(n: StringName) -> bool:
 
 func _add_rotation_slider(n: Node2D, path: String) -> void:
 	var row := HBoxContainer.new()
-	var label := Label.new()
-	label.text = "%s.rot°" % path
-	label.custom_minimum_size = Vector2(180, 0)
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_slider_box.add_child(label)
+	_add_slider_caption(path, "rot")
 	_slider_box.add_child(row)
 	var s := HSlider.new()
 	s.min_value = -180.0
@@ -586,16 +603,14 @@ func _add_rotation_slider(n: Node2D, path: String) -> void:
 	box.value_changed.connect(func(v):
 		n.rotation = deg_to_rad(v)
 		s.set_value_no_signal(v))
-	_slider_entries.append({ "kind": "rot", "path": path, "controls": [s] })
+	_slider_entries.append({ "kind": "rot", "path": path, "controls": [s, box] })
 
 func _add_arm_position_sliders(n: Node2D, path: String) -> void:
 	_add_xy_pair("%s.pos" % path, n, Vector2(-50, -70), Vector2(50, 20), 0.5, path)
 
-func _add_xy_pair(label_text: String, n: Node2D,
+func _add_xy_pair(_label_text: String, n: Node2D,
 		mins: Vector2, maxs: Vector2, step: float, entry_path: String) -> void:
-	var label := Label.new()
-	label.text = label_text
-	_slider_box.add_child(label)
+	_add_slider_caption(entry_path, "pos")
 	var sx := HSlider.new()
 	sx.min_value = mins.x; sx.max_value = maxs.x; sx.step = step
 	sx.value = n.position.x
@@ -609,10 +624,14 @@ func _add_xy_pair(label_text: String, n: Node2D,
 	_slider_box.add_child(rx)
 	sx.value_changed.connect(func(v):
 		n.position.x = v
-		bx.set_value_no_signal(v))
+		bx.set_value_no_signal(v)
+		if n is Marker2D:
+			_force_pin_pass())
 	bx.value_changed.connect(func(v):
 		n.position.x = v
-		sx.set_value_no_signal(v))
+		sx.set_value_no_signal(v)
+		if n is Marker2D:
+			_force_pin_pass())
 	var sy := HSlider.new()
 	sy.min_value = mins.y; sy.max_value = maxs.y; sy.step = step
 	sy.value = n.position.y
@@ -626,14 +645,87 @@ func _add_xy_pair(label_text: String, n: Node2D,
 	_slider_box.add_child(ry)
 	sy.value_changed.connect(func(v):
 		n.position.y = v
-		by.set_value_no_signal(v))
+		by.set_value_no_signal(v)
+		if n is Marker2D:
+			_force_pin_pass())
 	by.value_changed.connect(func(v):
 		n.position.y = v
-		sy.set_value_no_signal(v))
-	_slider_entries.append({ "kind": "pos", "path": entry_path, "controls": [sx, sy] })
+		sy.set_value_no_signal(v)
+		if n is Marker2D:
+			_force_pin_pass())
+	_slider_entries.append({ "kind": "pos", "path": entry_path, "controls": [sx, sy, bx, by] })
 
 func _add_marker_sliders(m: Marker2D, path: String) -> void:
 	_add_xy_pair("%s.pos" % path, m, Vector2(-60, -60), Vector2(60, 60), 0.1, path)
+
+func _add_slider_caption(path: String, kind: String) -> void:
+	var label := RichTextLabel.new()
+	label.bbcode_enabled = true
+	label.fit_content = true
+	label.scroll_active = false
+	label.custom_minimum_size = Vector2(0, 32)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var color_hex := _color_for_path(path).to_html(false)
+	label.text = "[color=#%s][b]%s[/b][/color] (%s)" % [
+		color_hex, _slider_title(path, kind), _slider_note(path, kind)]
+	_slider_box.add_child(label)
+
+func _slider_title(path: String, kind: String) -> String:
+	var leaf := _slider_leaf(path)
+	var side := ""
+	if path.contains("ArmL") or path.contains("HandL") or path.contains("ClawL") or path.contains("LegL"):
+		side = "Left "
+	elif path.contains("ArmR") or path.contains("HandR") or path.contains("ClawR") or path.contains("LegR"):
+		side = "Right "
+	if _is_weapon_path(path):
+		return "Weapon %s" % ("rotation" if kind == "rot" else "position")
+	if leaf.ends_with("ElbowPivot"):
+		return "%selbow angle" % side
+	if leaf.ends_with("KneePivot"):
+		return "%sknee angle" % side
+	if leaf.contains("Hand"):
+		return "%shand %s" % [side, "angle" if kind == "rot" else "position"]
+	if leaf.contains("Claw"):
+		return "%sclaw %s" % [side, "angle" if kind == "rot" else "position"]
+	if leaf.contains("Finger"):
+		return "%sfinger %s" % [side, "angle" if kind == "rot" else "position"]
+	if leaf == "Body":
+		return "Body %s" % ("tilt" if kind == "rot" else "position")
+	return "%s %s" % [leaf, "rotation" if kind == "rot" else "position"]
+
+func _slider_note(path: String, kind: String) -> String:
+	if _is_weapon_path(path):
+		return "grip/body-local weapon placement" if kind == "pos" else "weapon angle in degrees"
+	if kind == "rot":
+		return "degrees around this pivot"
+	return "local X/Y pixels; child parts remain attached"
+
+func _slider_leaf(path: String) -> String:
+	var parts := path.split("/")
+	if parts.size() == 0:
+		return path
+	return String(parts[parts.size() - 1])
+
+func _is_weapon_path(path: String) -> bool:
+	return path.contains("BowArm") or path.contains("StaffArm") \
+			or path.contains("SpearArm") or path.contains("WandArm") \
+			or path.contains("GripMarker") or path.contains("NockMarker") \
+			or path.contains("RiserMarker") or path.ends_with("Staff")
+
+func _color_for_path(path: String) -> Color:
+	if _is_weapon_path(path):
+		return Color(0.95, 0.72, 0.25, 0.95)
+	if path.contains("ArmL") or path.contains("HandL") or path.contains("ClawL"):
+		return Color(0.35, 0.78, 0.95, 0.95)
+	if path.contains("ArmR") or path.contains("HandR") or path.contains("ClawR"):
+		return Color(0.95, 0.42, 0.36, 0.95)
+	if path.contains("LegL") or path.contains("LegR") or path.contains("Foot"):
+		return Color(0.45, 0.86, 0.48, 0.95)
+	if path.contains("Head") or path.contains("Eye") or path.contains("Face"):
+		return Color(0.82, 0.55, 0.95, 0.95)
+	if path == "Body" or path.contains("Torso") or path.contains("Robe") or path.contains("Cloak"):
+		return Color(0.55, 0.68, 0.95, 0.95)
+	return DRAG_DOT_COLOR
 
 # =========================================================================
 # Time scrubbing
@@ -806,6 +898,7 @@ func _on_variant_selected(index: int) -> void:
 	if index < 0 or index >= variants.size():
 		return
 	_variant_idx = index
+	_stance_idx = 0
 	_load_current()
 
 func _on_stance_selected(index: int) -> void:
@@ -873,6 +966,7 @@ func _required_phases_for_variant(variant: Dictionary) -> Array[String]:
 func _coverage_for_stance(stance_id: String) -> Dictionary:
 	var class_key: String = _current_class_key()
 	var variants: Array = CLASSES[_class_idx]["variants"]
+	var current_anim: String = String((CLASSES[_class_idx]["variants"][_variant_idx] as Dictionary).get("anim", &"idle"))
 	var lines: Array[String] = []
 	var missing: Array[String] = []
 	var required: Array[String] = []
@@ -880,6 +974,8 @@ func _coverage_for_stance(stance_id: String) -> Dictionary:
 	var total: int = 0
 	for variant_v in variants:
 		var variant: Dictionary = variant_v
+		if String(variant.get("anim", &"idle")) != current_anim:
+			continue
 		var variant_name: String = String(variant["name"])
 		var parts: Array[String] = []
 		for phase in _required_phases_for_variant(variant):
@@ -1011,6 +1107,7 @@ func _on_launch_game_pressed() -> void:
 		"zone_id": "forsaken_depths",
 		"arrival_marker": "DepthsEntry",
 		"source": "pose_tuner",
+		"input_lock_until_click": true,
 		"timestamp": Time.get_datetime_string_from_system(),
 	})
 	var exe := OS.get_executable_path()
@@ -1055,32 +1152,43 @@ func _on_viewport_input(event: InputEvent) -> void:
 		var mm: InputEventMouseMotion = event
 		_drag_last_mouse = mm.position
 		var drag_node_name: String = String(_drag_node.name)
+		var should_force_pin := _drag_node is Marker2D
 		if drag_node_name.ends_with("ElbowPivot") or drag_node_name.ends_with("KneePivot"):
-			# Dragging a joint pivot rotates the PARENT so the joint
-			# lands at the cursor. Math:
-			#   parent_pos = parent.global_position (viewport coords)
-			#   cursor_dir = (mouse - parent_pos) / SPRITE_SCALE  (sprite-local)
-			#   angle = atan2(-cursor_dir.x, cursor_dir.y)
-			# (Godot convention: rotation 0 points along +y in
-			# parent-local; angle is measured from that axis.)
-			var parent_node: Node2D = _drag_node.get_parent() as Node2D
-			if parent_node == null:
-				return
-			var to_cursor: Vector2 = (mm.position - parent_node.global_position) / SPRITE_SCALE
-			if to_cursor.length() > 0.01:
-				parent_node.rotation = atan2(-to_cursor.x, to_cursor.y)
-				_sync_sliders_for(parent_node)
+			_rotate_joint_parent_toward_mouse(_drag_node, mm.position)
+		elif _is_terminal_drag_part(_drag_node):
+			var rot_node: Node2D = _drag_node
+			if not drag_node_name.contains("Finger"):
+				rot_node = _drag_node.get_parent() as Node2D
+			if rot_node != null:
+				_rotate_node_toward_mouse(rot_node, mm.position)
 		else:
-			# Marker / *Arm — translate in parent-local space.
+			# Marker / weapon-arm / body node — translate in parent-local space.
 			var delta_screen: Vector2 = mm.position - _drag_last_mouse_prev
 			var local_delta: Vector2 = delta_screen / SPRITE_SCALE
 			_drag_node.position += local_delta
 			_sync_sliders_for(_drag_node)
 		_drag_last_mouse_prev = mm.position
-		# Force a one-shot IK pass so arms visibly follow the dragged
-		# marker even when ik_enabled is false. Otherwise dragging a
-		# RiserMarker / NockMarker looks like nothing happens.
-		_force_pin_pass()
+		if should_force_pin:
+			_force_pin_pass()
+
+func _rotate_joint_parent_toward_mouse(joint_node: Node2D, mouse_pos: Vector2) -> void:
+	var parent_node: Node2D = joint_node.get_parent() as Node2D
+	if parent_node == null:
+		return
+	var to_cursor: Vector2 = (mouse_pos - parent_node.global_position) / SPRITE_SCALE
+	if to_cursor.length() > 0.01:
+		parent_node.rotation = atan2(-to_cursor.x, to_cursor.y)
+		_sync_sliders_for(parent_node)
+
+func _rotate_node_toward_mouse(rot_node: Node2D, mouse_pos: Vector2) -> void:
+	var to_cursor: Vector2 = (mouse_pos - rot_node.global_position) / SPRITE_SCALE
+	if to_cursor.length() > 0.01:
+		rot_node.rotation = atan2(-to_cursor.x, to_cursor.y)
+		_sync_sliders_for(rot_node)
+
+func _is_terminal_drag_part(n: Node2D) -> bool:
+	var s := String(n.name)
+	return s.contains("Hand") or s.contains("Claw") or s.contains("Finger")
 
 func _force_pin_pass() -> void:
 	if _sprite == null:
@@ -1139,9 +1247,16 @@ func _sync_sliders_for(n: Node2D) -> void:
 				controls[0].set_value_no_signal(n.position.x)
 			if controls.size() >= 2:
 				controls[1].set_value_no_signal(n.position.y)
+			if controls.size() >= 3:
+				controls[2].set_value_no_signal(n.position.x)
+			if controls.size() >= 4:
+				controls[3].set_value_no_signal(n.position.y)
 		elif entry["kind"] == "rot":
+			var deg := rad_to_deg(n.rotation)
 			if controls.size() >= 1:
-				controls[0].set_value_no_signal(rad_to_deg(n.rotation))
+				controls[0].set_value_no_signal(deg)
+			if controls.size() >= 2:
+				controls[1].set_value_no_signal(deg)
 		return
 
 func _path_for(n: Node) -> String:
@@ -1267,7 +1382,6 @@ func _score_current(score: int) -> void:
 func _save_recommended() -> void:
 	if _sprite == null:
 		return
-	var reload_time: float = _scrub_time
 	var cls: Dictionary = CLASSES[_class_idx]
 	var stance_label: String = "default"
 	if _stance_ids.size() > 0:
@@ -1370,9 +1484,10 @@ func _save_recommended() -> void:
 	print("[pose_tuner] %s" % msg)
 	if _label_score != null:
 		_label_score.text = "Recommended " + msg
-	# The current sprite loaded its animation tracks before this write.
-	# Reload at the same scrub time so Play consumes the saved phase now.
-	_load_current(reload_time)
+	# Keep the current edited sprite intact. Reloading here discards the
+	# in-progress pose and makes a single-phase save feel destructive.
+	_refresh_picker_options()
+	_refresh_score_panel()
 
 # Walk the sprite tree looking for the first Node2D whose name ends in
 # StaffArm/SpearArm/BowArm — the weapon-arm convention used by all

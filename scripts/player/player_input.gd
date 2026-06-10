@@ -35,11 +35,24 @@ var _has_click_target: bool = false
 var _last_intent: Vector2 = Vector2.ZERO
 var _stuck_frames: int = 0
 var _prev_pos: Vector2 = Vector2.ZERO
+var _gameplay_input_locked_until_click: bool = false
+
+func lock_gameplay_until_mouse_click() -> void:
+	_gameplay_input_locked_until_click = true
+	clear_click_target()
+
+func is_gameplay_input_locked() -> bool:
+	return _gameplay_input_locked_until_click
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and owner_body != null:
+			if _gameplay_input_locked_until_click:
+				_gameplay_input_locked_until_click = false
+				DebugLog.write(&"input", "editor debug input unlocked by mouse click")
+				get_viewport().set_input_as_handled()
+				return
 			_click_target = owner_body.get_global_mouse_position()
 			_has_click_target = true
 			click_target_set.emit(_click_target)
@@ -48,6 +61,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey:
 		var ke := event as InputEventKey
 		if not ke.pressed or ke.echo:
+			return
+		if _gameplay_input_locked_until_click and ke.keycode in [KEY_SPACE, KEY_1, KEY_2, KEY_3]:
+			DebugLog.write(&"input", "editor debug input locked -> ignored key %d" % ke.keycode)
+			get_viewport().set_input_as_handled()
 			return
 		if ke.keycode == KEY_ESCAPE:
 			pause_pressed.emit()

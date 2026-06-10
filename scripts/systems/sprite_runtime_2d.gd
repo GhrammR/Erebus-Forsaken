@@ -84,6 +84,11 @@ func _anim_idle() -> Animation:
 			[Vector2.ZERO, Vector2(0, float(_motion.get("idle_bob", -1.2))), Vector2.ZERO])
 	_key_float(a, NodePath("%s:rotation" % body), [0.0, a.length * 0.5, a.length],
 			[0.0, float(_motion.get("idle_sway", 0.015)), 0.0])
+	for path in _shadow_paths():
+		_key_vec2(a, NodePath("%s:scale" % path), [0.0, a.length * 0.5, a.length],
+				[Vector2.ONE, Vector2(0.90, 0.78), Vector2.ONE])
+		_key_color(a, NodePath("%s:modulate" % path), [0.0, a.length * 0.5, a.length],
+				[Color(1, 1, 1, 1), Color(1, 1, 1, 0.72), Color(1, 1, 1, 1)])
 	for path in _glow_paths():
 		_key_color(a, NodePath("%s:modulate" % path), [0.0, a.length * 0.5, a.length],
 				[Color(1, 1, 1, 1), Color(1.25, 1.35, 1.15, 1), Color(1, 1, 1, 1)])
@@ -94,16 +99,50 @@ func _anim_walk() -> Animation:
 	a.length = float(_motion.get("walk_len", 0.55))
 	a.loop_mode = Animation.LOOP_LINEAR
 	var body := _body_path()
+	if _is_wraith_sprite():
+		var bob := float(_motion.get("walk_bob", -2.8))
+		var sway := float(_motion.get("walk_sway", 0.12))
+		_key_vec2(a, NodePath("%s:position" % body),
+				[0.0, a.length * 0.25, a.length * 0.5, a.length * 0.75, a.length],
+				[Vector2.ZERO, Vector2(2, bob), Vector2(0, bob * 0.35), Vector2(-2, bob), Vector2.ZERO])
+		_key_float(a, NodePath("%s:rotation" % body),
+				[0.0, a.length * 0.25, a.length * 0.5, a.length * 0.75, a.length],
+				[0.0, sway, 0.0, -sway, 0.0])
+		for path in _paths_matching(["TatteredHem", "CloakInner", "Cloak", "Robe"]):
+			_key_vec2(a, NodePath("%s:position" % path),
+					[0.0, a.length * 0.5, a.length],
+					[Vector2.ZERO, Vector2(0, 1.8), Vector2.ZERO])
+			_key_float(a, NodePath("%s:rotation" % path),
+					[0.0, a.length * 0.5, a.length],
+					[0.0, -sway * 0.45, 0.0])
+		for path in _shadow_paths():
+			_key_vec2(a, NodePath("%s:scale" % path),
+					[0.0, a.length * 0.25, a.length * 0.5, a.length * 0.75, a.length],
+					[Vector2(1.05, 0.88), Vector2(0.82, 0.66), Vector2(1.12, 0.92), Vector2(0.82, 0.66), Vector2(1.05, 0.88)])
+			_key_color(a, NodePath("%s:modulate" % path),
+					[0.0, a.length * 0.25, a.length * 0.5, a.length * 0.75, a.length],
+					[Color(1, 1, 1, 0.95), Color(1, 1, 1, 0.58), Color(1, 1, 1, 0.90), Color(1, 1, 1, 0.58), Color(1, 1, 1, 0.95)])
+		return a
 	_key_vec2(a, NodePath("%s:position" % body), [0.0, a.length * 0.5, a.length],
 			[Vector2.ZERO, Vector2(0, float(_motion.get("walk_bob", -2.0))), Vector2.ZERO])
 	_key_float(a, NodePath("%s:rotation" % body), [0.0, a.length * 0.25, a.length * 0.5, a.length * 0.75, a.length],
 			[0.0, float(_motion.get("walk_sway", 0.06)), 0.0, -float(_motion.get("walk_sway", 0.06)), 0.0])
-	for path in _paths_matching(["LegL"]):
-		_key_vec2(a, NodePath("%s:position" % path), [0.0, a.length * 0.5, a.length],
-				[Vector2.ZERO, Vector2(0, -2), Vector2.ZERO])
-	for path in _paths_matching(["LegR"]):
-		_key_vec2(a, NodePath("%s:position" % path), [0.0, a.length * 0.5, a.length],
-				[Vector2(0, -2), Vector2.ZERO, Vector2(0, -2)])
+	for path in _paths_matching(["LegLHip"]):
+		_key_float(a, NodePath("%s:rotation" % path), [0.0, a.length * 0.5, a.length],
+				[0.10, -0.12, 0.10])
+	for path in _paths_matching(["LegRHip"]):
+		_key_float(a, NodePath("%s:rotation" % path), [0.0, a.length * 0.5, a.length],
+				[-0.12, 0.10, -0.12])
+	for path in _paths_matching(["KneePivot"]):
+		if String(path).contains("LegL"):
+			_key_float(a, NodePath("%s:rotation" % path), [0.0, a.length * 0.5, a.length],
+					[0.14, -0.06, 0.14])
+		else:
+			_key_float(a, NodePath("%s:rotation" % path), [0.0, a.length * 0.5, a.length],
+					[-0.06, 0.14, -0.06])
+	for path in _shadow_paths():
+		_key_vec2(a, NodePath("%s:scale" % path), [0.0, a.length * 0.5, a.length],
+				[Vector2.ONE, Vector2(0.94, 0.82), Vector2.ONE])
 	return a
 
 func _anim_attack() -> Animation:
@@ -204,6 +243,16 @@ func _glow_paths() -> Array[String]:
 		for path in _paths_matching([token]):
 			if not paths.has(path):
 				paths.append(path)
+	return paths
+
+func _is_wraith_sprite() -> bool:
+	return sprite_id == &"shade_wretch" or sprite_id == &"bog_caller" or has_node(^"Body/TatteredHem")
+
+func _shadow_paths() -> Array[String]:
+	var paths: Array[String] = []
+	for path in _paths_matching(["Shadow"]):
+		if not paths.has(path):
+			paths.append(path)
 	return paths
 
 func _paths_matching(tokens: Array[String]) -> Array[String]:

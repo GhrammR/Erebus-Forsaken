@@ -42,3 +42,16 @@ static func get_stance(id: StringName) -> Dictionary:
 
 static func all_ids() -> Array:
 	return STANCES.keys()
+
+static func ids_for_anim(anim_name: StringName) -> Array:
+	match anim_name:
+		&"attack":
+			return [&"cross_body_ward", &"low_wand_guard", &"raised_wand_channel"]
+		&"cast":
+			return [&"raised_wand_channel", &"cross_body_ward", &"low_wand_guard"]
+		&"walk":
+			return [&"low_wand_guard", &"cross_body_ward", &"raised_wand_channel"]
+		&"die":
+			return [&"low_wand_guard", &"raised_wand_channel", &"cross_body_ward"]
+		_:
+			return [&"low_wand_guard", &"raised_wand_channel", &"cross_body_ward"]
