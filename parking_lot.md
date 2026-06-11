@@ -250,12 +250,13 @@ removed.
   which spawns one shade_wretch reinforcement. Behaviour is
   intentional per Stage 9 scope but it has no visual telegraph,
   so a playtester reads it as a wave bug.
-- **Status (2026-06-09):** still relevant, but no longer tied to
-  Hekate-Marked demotion language. Hexacheir, the God-Spurned is the
-  current six-armed first-demon Act Boss, and its Phase 3 add still
-  needs a readable tell if that add survives balance polish.
-- Earliest revisit: Stage 21 (feel pass at scale), if still
-  applicable to Hexacheir's final Phase 3 behavior.
+- **Status (2026-06-11):** still relevant, but no longer tied to
+  any current bespoke Act Boss sprite. The active Act Boss now uses
+  the shared white Myrmidon-derived baseline sprite while bespoke
+  demon work remains archived under
+  `art/procedural/archive/baseline_reset_2026_06_11`.
+- Earliest revisit: Stage 21 (feel pass at scale), after a new
+  bespoke Act Boss rig is deliberately reintroduced.
 
 ### potion-belt — Dedicated potion belt UI slot row
 - Why parked: Stage 9.8 ships potions accessible via inventory +
@@ -334,11 +335,12 @@ removed.
   entries. UNDEAD has two subtypes: skeleton (Bone Servant
   anchor, kept as-is) and wraith (new anatomy authored this
   stage; Shade Wretch + Bog Caller rebuilt against it).
-  HUMAN family covers 4 player classes + 2 NPCs with mythic
-  Greek archetype clothing. Contract-only sidecar bitmap layer
-  (no generation yet). Hekate-Marked is retained as legacy bespoke
-  routing metadata; Hexacheir, the God-Spurned is the current
-  first-demon bespoke Act Boss with six arms.
+  HUMAN family covers 4 player classes + 2 NPCs. Contract-only
+  sidecar bitmap layer (no generation yet). As of the 2026-06-11
+  baseline reset, all active player, NPC, and enemy sprite scenes use
+  the same white Myrmidon-derived anatomy rig; previous bespoke
+  clothing, facial features, and multi-arm demon work are archived
+  under `art/procedural/archive/baseline_reset_2026_06_11`.
 - Earlier framing correction (2026-06-05): the original
   "bone-servant anatomy" name was misleading. The Bone Servant's
   ribcage anatomy belongs to skeletons; it is NOT applied to
@@ -373,22 +375,21 @@ removed.
   the AnimationPlayer tracks because mutations are post-hoc
   transforms on existing parts, not part-set changes.
 
-### six-arm-finger-boss-intro — Bespoke many-limb boss taunt rig [PARTIALLY ADOPTED -> Hexacheir, 2026-06-09]
-- Adopted slice: Hexacheir, the God-Spurned is now the current Act Boss
-  demon with six independently articulated arm chains and a cast-intro
-  taunt that raises all six hands before combat.
-- Still parked: generalized per-finger rigs below the hand level. The
-  current implementation gives Hexacheir explicit middle-finger controls
-  for the taunt, but future bosses with manipulable individual fingers
-  still need an appendage/finger rig that the pose editor can enumerate,
-  score, and save like any other stance part.
-- Earliest revisit: after the shared sprite runtime proves stable across
-  player classes, enemies, and NPCs.
+### six-arm-finger-boss-intro — Bespoke many-limb boss taunt rig [PARKED -> archived reference, 2026-06-11]
+- Archived slice: Hexacheir, the God-Spurned and the six-arm Act Boss
+  work are retained only as reference material in the 2026-06-11
+  baseline reset archive. They are not active game sprites.
+- Still parked: generalized per-finger rigs below the hand level. Future
+  bosses with manipulable individual fingers still need an appendage/finger
+  rig that the pose editor can enumerate, score, and save like any other
+  stance part.
+- Earliest revisit: after the single baseline sprite/editing loop is stable
+  and a bespoke boss rig is intentionally reintroduced.
 - Notes: Keep this as a generalized editor/rigging spike, not a new
   hard-coded boss-only exception.
 
 
 ### generalized-finger-rig — Shared articulated fingers for humanoids, demons, and beasts
-- Why parked: 2026-06-09. The current six-arm demon has bespoke middle-finger taunt controls, but that is not a reusable hand rig. A real system needs per-hand finger bones, default fist/open/gesture poses, editor drag handles, save/load schema, and verifier coverage across humanoids, demons, and any beasts that actually have five-finger hands. Claw, hoof, and tendril creatures should not inherit human fingers by accident.
+- Why parked: 2026-06-09. The archived six-arm demon had bespoke middle-finger taunt controls, but that is not a reusable hand rig. A real system needs per-hand finger bones, default fist/open/gesture poses, editor drag handles, save/load schema, and verifier coverage across humanoids, demons, and any beasts that actually have five-finger hands. Claw, hoof, and tendril creatures should not inherit human fingers by accident.
 - Earliest revisit: after the shared sprite editor stabilizes for all current player, NPC, and enemy rigs.
 - Notes: Design as an optional anatomy module keyed by family/subtype. Hands expose Thumb, Index, Middle, Ring, Pinky chains with curl/spread controls and gesture presets. The editor should show fingers only when the active sprite declares the module.

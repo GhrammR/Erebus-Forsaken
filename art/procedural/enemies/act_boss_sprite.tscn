@@ -1,241 +1,119 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/systems/sprite_runtime_2d.gd" id="1_rt"]
+[ext_resource type="Script" path="res://art/procedural/baseline_white_sprite.gd" id="1_base"]
 
-[node name="HexacheirSprite" type="Node2D"]
-script = ExtResource("1_rt")
+[node name="ActBossSprite" type="Node2D"]
+script = ExtResource("1_base")
 sprite_id = &"act_boss"
 stance_bucket = &"enemies"
-stance_id = &"boss_command"
 
 [node name="Shadow" type="Polygon2D" parent="."]
 z_index = -1
-modulate = Color(0, 0, 0, 0.68)
-position = Vector2(0, 7)
-polygon = PackedVector2Array(-30, -6, -18, -12, 18, -12, 30, -6, 22, 6, -22, 6)
 
 [node name="Body" type="Node2D" parent="."]
 
-[node name="WingAnchorL" type="Polygon2D" parent="Body"]
-z_index = -1
-position = Vector2(-18, -45)
-polygon = PackedVector2Array(0, -4, -30, -18, -22, 4, -7, 10)
-color = Color(0.07, 0.04, 0.09, 1)
+[node name="LegLHip" type="Node2D" parent="Body"]
+position = Vector2(-3.5, -22)
 
-[node name="WingAnchorR" type="Polygon2D" parent="Body"]
-z_index = -1
-position = Vector2(18, -45)
-polygon = PackedVector2Array(0, -4, 30, -18, 22, 4, 7, 10)
-color = Color(0.07, 0.04, 0.09, 1)
+[node name="Thigh" type="Polygon2D" parent="Body/LegLHip"]
 
-[node name="Robe" type="Polygon2D" parent="Body"]
-polygon = PackedVector2Array(-25, -8, -20, -54, -12, -66, 12, -66, 20, -54, 25, -8, 16, 3, 7, -2, 0, 6, -7, -2, -16, 3)
-color = Color(0.10, 0.07, 0.15, 1)
+[node name="KneePivot" type="Node2D" parent="Body/LegLHip"]
+position = Vector2(0, 10)
 
-[node name="Torso" type="Polygon2D" parent="Body"]
-polygon = PackedVector2Array(-14, -21, -11, -53, 11, -53, 14, -21, 8, -12, -8, -12)
-color = Color(0.14, 0.09, 0.18, 1)
+[node name="Shin" type="Polygon2D" parent="Body/LegLHip/KneePivot"]
 
-[node name="Trim" type="Polygon2D" parent="Body"]
-position = Vector2(0, -11)
-polygon = PackedVector2Array(-23, -2, -14, 2, 14, 2, 23, -2, 19, -5, -19, -5)
-color = Color(0.58, 0.42, 0.18, 1)
+[node name="Foot" type="Polygon2D" parent="Body/LegLHip/KneePivot"]
+
+[node name="LegRHip" type="Node2D" parent="Body"]
+position = Vector2(3.5, -22)
+
+[node name="Thigh" type="Polygon2D" parent="Body/LegRHip"]
+
+[node name="KneePivot" type="Node2D" parent="Body/LegRHip"]
+position = Vector2(0, 10)
+
+[node name="Shin" type="Polygon2D" parent="Body/LegRHip/KneePivot"]
+
+[node name="Foot" type="Polygon2D" parent="Body/LegRHip/KneePivot"]
 
 [node name="Hips" type="Polygon2D" parent="Body"]
-position = Vector2(0, -12)
-polygon = PackedVector2Array(-12, -4, 12, -4, 9, 5, -9, 5)
-color = Color(0.07, 0.045, 0.10, 1)
+
+[node name="Torso" type="Polygon2D" parent="Body"]
+
+[node name="ArmLShoulder" type="Node2D" parent="Body"]
+position = Vector2(-9, -44)
+
+[node name="UpperArm" type="Polygon2D" parent="Body/ArmLShoulder"]
+
+[node name="ElbowPivot" type="Node2D" parent="Body/ArmLShoulder"]
+position = Vector2(0, 10)
+
+[node name="Forearm" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
+
+[node name="Hand" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
+
+[node name="Buckler" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
+visible = false
+
+[node name="ArmRShoulder" type="Node2D" parent="Body"]
+position = Vector2(9, -44)
+
+[node name="UpperArm" type="Polygon2D" parent="Body/ArmRShoulder"]
+
+[node name="ElbowPivot" type="Node2D" parent="Body/ArmRShoulder"]
+position = Vector2(0, 10)
+
+[node name="Forearm" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot"]
+
+[node name="Hand" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot"]
+
+[node name="SpearArm" type="Node2D" parent="Body/ArmRShoulder/ElbowPivot"]
+visible = false
+position = Vector2(0, 10)
+
+[node name="Shaft" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/SpearArm"]
+
+[node name="Grip" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/SpearArm"]
+
+[node name="Tip" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/SpearArm"]
+
+[node name="StaffArm" type="Node2D" parent="Body"]
+visible = false
+
+[node name="Shaft" type="Polygon2D" parent="Body/StaffArm"]
+
+[node name="Grip" type="Polygon2D" parent="Body/StaffArm"]
+
+[node name="RightGripMarker" type="Marker2D" parent="Body/StaffArm"]
+
+[node name="LeftGripMarker" type="Marker2D" parent="Body/StaffArm"]
+
+[node name="Orb" type="Polygon2D" parent="Body/StaffArm"]
+
+[node name="BowArm" type="Node2D" parent="Body"]
+visible = false
+
+[node name="Bow" type="Polygon2D" parent="Body/BowArm"]
+
+[node name="Bowstring" type="Line2D" parent="Body/BowArm"]
+
+[node name="RiserMarker" type="Marker2D" parent="Body/BowArm"]
+
+[node name="NockMarker" type="Marker2D" parent="Body/BowArm"]
+
+[node name="BowTipTop" type="Marker2D" parent="Body/BowArm"]
+
+[node name="BowTipBot" type="Marker2D" parent="Body/BowArm"]
+
+[node name="Neck" type="Polygon2D" parent="Body"]
 
 [node name="Head" type="Polygon2D" parent="Body"]
-position = Vector2(0, -72)
-polygon = PackedVector2Array(-11, -9, 11, -9, 14, -1, 9, 10, -9, 10, -14, -1)
-color = Color(0.08, 0.055, 0.10, 1)
 
-[node name="Hood" type="Polygon2D" parent="Body"]
-polygon = PackedVector2Array(-16, -63, -11, -84, 11, -84, 16, -63, 8, -58, -8, -58)
-color = Color(0.045, 0.035, 0.08, 1)
+[node name="WandArm" type="Node2D" parent="."]
+visible = false
 
-[node name="HornL" type="Polygon2D" parent="Body"]
-polygon = PackedVector2Array(-8, -81, -18, -99, -17, -86, -11, -76)
-color = Color(0.16, 0.12, 0.15, 1)
+[node name="Shaft" type="Polygon2D" parent="WandArm"]
 
-[node name="HornR" type="Polygon2D" parent="Body"]
-polygon = PackedVector2Array(8, -81, 18, -99, 17, -86, 11, -76)
-color = Color(0.16, 0.12, 0.15, 1)
-
-[node name="FaceVoid" type="Polygon2D" parent="Body"]
-polygon = PackedVector2Array(-8, -75, 8, -75, 6, -63, -6, -63)
-color = Color(0.015, 0.012, 0.025, 1)
-
-[node name="EyeL" type="Polygon2D" parent="Body"]
-position = Vector2(-4, -70)
-polygon = PackedVector2Array(-2, -1.5, 2, -1.5, 2, 1.5, -2, 1.5)
-color = Color(0.75, 0.22, 1.0, 1)
-
-[node name="EyeR" type="Polygon2D" parent="Body"]
-position = Vector2(4, -70)
-polygon = PackedVector2Array(-2, -1.5, 2, -1.5, 2, 1.5, -2, 1.5)
-color = Color(0.75, 0.22, 1.0, 1)
-
-[node name="Mouth" type="Polygon2D" parent="Body"]
-position = Vector2(0, -64)
-polygon = PackedVector2Array(-4, -1, 4, -1, 3, 2, -3, 2)
-color = Color(0.75, 0.18, 0.20, 1)
-
-[node name="ArmLTop" type="Node2D" parent="Body"]
-position = Vector2(-16, -52)
-rotation = -0.45
-
-[node name="UpperArm" type="Polygon2D" parent="Body/ArmLTop"]
-polygon = PackedVector2Array(0, -3, -16, -2, -18, 4, 0, 4)
-color = Color(0.16, 0.10, 0.18, 1)
-
-[node name="ElbowPivot" type="Node2D" parent="Body/ArmLTop"]
-position = Vector2(-17, 1)
-rotation = -0.35
-
-[node name="Forearm" type="Polygon2D" parent="Body/ArmLTop/ElbowPivot"]
-polygon = PackedVector2Array(0, -3, -15, -1, -17, 4, 0, 4)
-color = Color(0.19, 0.12, 0.21, 1)
-
-[node name="HandLTop" type="Polygon2D" parent="Body/ArmLTop/ElbowPivot"]
-position = Vector2(-17, 1)
-polygon = PackedVector2Array(0, -5, -6, -4, -7, 5, 1, 5)
-color = Color(0.12, 0.08, 0.14, 1)
-
-[node name="MiddleFinger" type="Polygon2D" parent="Body/ArmLTop/ElbowPivot"]
-position = Vector2(-22, -5)
-polygon = PackedVector2Array(-1, -10, 1, -10, 2, 3, -2, 3)
-color = Color(0.18, 0.11, 0.20, 1)
-
-[node name="ArmRTop" type="Node2D" parent="Body"]
-position = Vector2(16, -52)
-rotation = 0.45
-
-[node name="UpperArm" type="Polygon2D" parent="Body/ArmRTop"]
-polygon = PackedVector2Array(0, -3, 16, -2, 18, 4, 0, 4)
-color = Color(0.16, 0.10, 0.18, 1)
-
-[node name="ElbowPivot" type="Node2D" parent="Body/ArmRTop"]
-position = Vector2(17, 1)
-rotation = 0.35
-
-[node name="Forearm" type="Polygon2D" parent="Body/ArmRTop/ElbowPivot"]
-polygon = PackedVector2Array(0, -3, 15, -1, 17, 4, 0, 4)
-color = Color(0.19, 0.12, 0.21, 1)
-
-[node name="HandRTop" type="Polygon2D" parent="Body/ArmRTop/ElbowPivot"]
-position = Vector2(17, 1)
-polygon = PackedVector2Array(0, -5, 6, -4, 7, 5, -1, 5)
-color = Color(0.12, 0.08, 0.14, 1)
-
-[node name="MiddleFinger" type="Polygon2D" parent="Body/ArmRTop/ElbowPivot"]
-position = Vector2(22, -5)
-polygon = PackedVector2Array(-1, -10, 1, -10, 2, 3, -2, 3)
-color = Color(0.18, 0.11, 0.20, 1)
-
-[node name="ArmLMid" type="Node2D" parent="Body"]
-position = Vector2(-18, -39)
-rotation = -0.15
-
-[node name="UpperArm" type="Polygon2D" parent="Body/ArmLMid"]
-polygon = PackedVector2Array(0, -3, -17, -1, -18, 4, 0, 4)
-color = Color(0.15, 0.09, 0.17, 1)
-
-[node name="ElbowPivot" type="Node2D" parent="Body/ArmLMid"]
-position = Vector2(-17, 1)
-rotation = -0.15
-
-[node name="Forearm" type="Polygon2D" parent="Body/ArmLMid/ElbowPivot"]
-polygon = PackedVector2Array(0, -3, -16, -1, -17, 4, 0, 4)
-color = Color(0.18, 0.11, 0.20, 1)
-
-[node name="HandLMid" type="Polygon2D" parent="Body/ArmLMid/ElbowPivot"]
-position = Vector2(-17, 1)
-polygon = PackedVector2Array(0, -5, -6, -4, -7, 5, 1, 5)
-color = Color(0.12, 0.08, 0.14, 1)
-
-[node name="MiddleFinger" type="Polygon2D" parent="Body/ArmLMid/ElbowPivot"]
-position = Vector2(-22, -5)
-polygon = PackedVector2Array(-1, -10, 1, -10, 2, 3, -2, 3)
-color = Color(0.18, 0.11, 0.20, 1)
-
-[node name="ArmRMid" type="Node2D" parent="Body"]
-position = Vector2(18, -39)
-rotation = 0.15
-
-[node name="UpperArm" type="Polygon2D" parent="Body/ArmRMid"]
-polygon = PackedVector2Array(0, -3, 17, -1, 18, 4, 0, 4)
-color = Color(0.15, 0.09, 0.17, 1)
-
-[node name="ElbowPivot" type="Node2D" parent="Body/ArmRMid"]
-position = Vector2(17, 1)
-rotation = 0.15
-
-[node name="Forearm" type="Polygon2D" parent="Body/ArmRMid/ElbowPivot"]
-polygon = PackedVector2Array(0, -3, 16, -1, 17, 4, 0, 4)
-color = Color(0.18, 0.11, 0.20, 1)
-
-[node name="HandRMid" type="Polygon2D" parent="Body/ArmRMid/ElbowPivot"]
-position = Vector2(17, 1)
-polygon = PackedVector2Array(0, -5, 6, -4, 7, 5, -1, 5)
-color = Color(0.12, 0.08, 0.14, 1)
-
-[node name="MiddleFinger" type="Polygon2D" parent="Body/ArmRMid/ElbowPivot"]
-position = Vector2(22, -5)
-polygon = PackedVector2Array(-1, -10, 1, -10, 2, 3, -2, 3)
-color = Color(0.18, 0.11, 0.20, 1)
-
-[node name="ArmLLow" type="Node2D" parent="Body"]
-position = Vector2(-17, -27)
-rotation = 0.20
-
-[node name="UpperArm" type="Polygon2D" parent="Body/ArmLLow"]
-polygon = PackedVector2Array(0, -3, -15, 0, -16, 5, 0, 4)
-color = Color(0.14, 0.085, 0.16, 1)
-
-[node name="ElbowPivot" type="Node2D" parent="Body/ArmLLow"]
-position = Vector2(-15, 2)
-rotation = 0.38
-
-[node name="Forearm" type="Polygon2D" parent="Body/ArmLLow/ElbowPivot"]
-polygon = PackedVector2Array(0, -3, -14, 0, -15, 5, 0, 4)
-color = Color(0.17, 0.10, 0.19, 1)
-
-[node name="HandLLow" type="Polygon2D" parent="Body/ArmLLow/ElbowPivot"]
-position = Vector2(-15, 2)
-polygon = PackedVector2Array(0, -5, -6, -4, -7, 5, 1, 5)
-color = Color(0.12, 0.08, 0.14, 1)
-
-[node name="MiddleFinger" type="Polygon2D" parent="Body/ArmLLow/ElbowPivot"]
-position = Vector2(-20, -5)
-polygon = PackedVector2Array(-1, -10, 1, -10, 2, 3, -2, 3)
-color = Color(0.18, 0.11, 0.20, 1)
-
-[node name="ArmRLow" type="Node2D" parent="Body"]
-position = Vector2(17, -27)
-rotation = -0.20
-
-[node name="UpperArm" type="Polygon2D" parent="Body/ArmRLow"]
-polygon = PackedVector2Array(0, -3, 15, 0, 16, 5, 0, 4)
-color = Color(0.14, 0.085, 0.16, 1)
-
-[node name="ElbowPivot" type="Node2D" parent="Body/ArmRLow"]
-position = Vector2(15, 2)
-rotation = -0.38
-
-[node name="Forearm" type="Polygon2D" parent="Body/ArmRLow/ElbowPivot"]
-polygon = PackedVector2Array(0, -3, 14, 0, 15, 5, 0, 4)
-color = Color(0.17, 0.10, 0.19, 1)
-
-[node name="HandRLow" type="Polygon2D" parent="Body/ArmRLow/ElbowPivot"]
-position = Vector2(15, 2)
-polygon = PackedVector2Array(0, -5, 6, -4, 7, 5, -1, 5)
-color = Color(0.12, 0.08, 0.14, 1)
-
-[node name="MiddleFinger" type="Polygon2D" parent="Body/ArmRLow/ElbowPivot"]
-position = Vector2(20, -5)
-polygon = PackedVector2Array(-1, -10, 1, -10, 2, 3, -2, 3)
-color = Color(0.18, 0.11, 0.20, 1)
+[node name="Glow" type="Polygon2D" parent="WandArm"]
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
