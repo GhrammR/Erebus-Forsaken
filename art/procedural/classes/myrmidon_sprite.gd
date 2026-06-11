@@ -52,6 +52,7 @@ const StanceSelection = preload("res://scripts/systems/stance_selection.gd")
 
 # Stage 17.8 — per-anim tuned rotations loaded from tmp/recommended_stances.json.
 @export var stance_id: StringName = &"hip_spear_shield_legacy"
+@export var show_spear: bool = true
 var _per_anim_config: Dictionary = {}
 var _tuned_anims: Dictionary = {}
 var _replaying_for_injection: bool = false
@@ -71,6 +72,8 @@ func _ready() -> void:
 	_paint_armor()
 	_apply_spear_stance()
 	_paint_spear()
+	if not show_spear:
+		_spear_arm.visible = false
 	_build_animations()
 	SpriteSidecar.apply(self, &"myrmidon")
 	# Stage 17.8 — wire tuned-rotation overrides for tuned anims.

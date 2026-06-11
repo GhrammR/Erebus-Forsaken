@@ -90,12 +90,15 @@ static func _build_cfg(phases: Dictionary) -> Dictionary:
 	var ending: Dictionary = resolve_phase(phases.get("END", phases.get("REST", rest)))
 	if rest.has("rotations"):    cfg["rest_rotations"] = rest["rotations"]
 	if rest.has("positions"):    cfg["rest_positions"] = rest["positions"]
+	if rest.has("scales"):       cfg["rest_scales"] = rest["scales"]
 	if rest.has("markers"):      cfg["rest_markers"] = rest["markers"]
 	if strike.has("rotations"):  cfg["strike_rotations"] = strike["rotations"]
 	if strike.has("positions"):  cfg["strike_positions"] = strike["positions"]
+	if strike.has("scales"):     cfg["strike_scales"] = strike["scales"]
 	if strike.has("markers"):    cfg["strike_markers"] = strike["markers"]
 	if ending.has("rotations"):  cfg["end_rotations"] = ending["rotations"]
 	if ending.has("positions"):  cfg["end_positions"] = ending["positions"]
+	if ending.has("scales"):     cfg["end_scales"] = ending["scales"]
 	if ending.has("markers"):    cfg["end_markers"] = ending["markers"]
 	for k in ["weapon_arm_pos", "weapon_arm_rot", "NockMarker", "RiserMarker"]:
 		if rest.has(k):    cfg["rest_" + k] = rest[k]
@@ -105,7 +108,7 @@ static func _build_cfg(phases: Dictionary) -> Dictionary:
 ## True if the given config has any transform tuning that should
 ## suppress runtime pin/IK passes during this anim.
 static func is_tuned(cfg: Dictionary) -> bool:
-	return cfg.has("rest_rotations") or cfg.has("strike_rotations") 			or cfg.has("end_rotations") or cfg.has("rest_positions") 			or cfg.has("strike_positions") or cfg.has("end_positions")
+	return cfg.has("rest_rotations") or cfg.has("strike_rotations") 			or cfg.has("end_rotations") or cfg.has("rest_positions") 			or cfg.has("strike_positions") or cfg.has("end_positions") 			or cfg.has("rest_scales") or cfg.has("strike_scales") 			or cfg.has("end_scales")
 
 ## Back-compat entry point. It now injects all saved transforms, not
 ## only rotations, so older sprite call sites gain position playback.
@@ -126,6 +129,8 @@ static func inject_tuned_transforms(anim: Animation, cfg: Dictionary,
 	_inject_float_property(anim, cfg, "rotations", "rotation", 0.0,
 			draw_frac, release_frac)
 	_inject_vec2_property(anim, cfg, "positions", "position", Vector2.ZERO,
+			draw_frac, release_frac)
+	_inject_vec2_property(anim, cfg, "scales", "scale", Vector2.ONE,
 			draw_frac, release_frac)
 
 static func _inject_float_property(anim: Animation, cfg: Dictionary,

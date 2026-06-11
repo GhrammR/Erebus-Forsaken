@@ -24,6 +24,7 @@ func _ready() -> void:
 func setup_sprite_runtime() -> void:
 	if sprite_id == &"":
 		sprite_id = _infer_sprite_id()
+	_ensure_standard_leg_anatomy()
 	if stance_bucket != &"":
 		stance_id = StanceSelection.selected_for_entity(
 				stance_bucket, sprite_id, stance_id, SpriteMotionStances.all_ids())
@@ -39,6 +40,63 @@ func setup_sprite_runtime() -> void:
 		_anim.animation_started.connect(_on_anim_started)
 	if auto_play_idle and _anim.has_animation(&"idle"):
 		_anim.play(&"idle")
+
+
+func _ensure_standard_leg_anatomy() -> void:
+	if not _uses_standard_leg_anatomy():
+		return
+	var body := get_node_or_null(^"Body") as Node2D
+	if body == null:
+		return
+	var leg_color := _standard_leg_color()
+	_ensure_leg_chain(body, "LegLHip", HumanRig.LEG_L_HIP, leg_color)
+	_ensure_leg_chain(body, "LegRHip", HumanRig.LEG_R_HIP, leg_color)
+
+func _uses_standard_leg_anatomy() -> bool:
+	if sprite_id == &"training_dummy" or _is_wraith_sprite():
+		return false
+	return has_node(^"Body")
+
+func _standard_leg_color() -> Color:
+	match sprite_id:
+		&"act_boss":
+			return Color(0.12, 0.075, 0.15, 1.0)
+		&"bone_servant":
+			return Color(0.86, 0.82, 0.68, 1.0)
+		&"eurynome":
+			return Color(0.16, 0.18, 0.25, 1.0)
+		&"kallias":
+			return Color(0.22, 0.16, 0.11, 1.0)
+		_:
+			return Color(0.34, 0.28, 0.24, 1.0)
+
+func _ensure_leg_chain(body: Node2D, hip_name: String, hip_pos: Vector2, color: Color) -> void:
+	var hip := body.get_node_or_null(NodePath(hip_name)) as Node2D
+	if hip == null:
+		hip = Node2D.new()
+		hip.name = hip_name
+		body.add_child(hip)
+	hip.position = hip_pos
+	hip.z_index = -1
+	if hip.get_node_or_null(^"Thigh") == null:
+		var thigh := Polygon2D.new()
+		thigh.name = "Thigh"
+		hip.add_child(thigh)
+	var knee := hip.get_node_or_null(^"KneePivot") as Node2D
+	if knee == null:
+		knee = Node2D.new()
+		knee.name = "KneePivot"
+		hip.add_child(knee)
+	knee.position = Vector2(0, 10)
+	if knee.get_node_or_null(^"Shin") == null:
+		var shin := Polygon2D.new()
+		shin.name = "Shin"
+		knee.add_child(shin)
+	if knee.get_node_or_null(^"Foot") == null:
+		var foot := Polygon2D.new()
+		foot.name = "Foot"
+		knee.add_child(foot)
+	HumanRig.paint_leg(hip, color)
 
 func _ensure_animation_player() -> AnimationPlayer:
 	var existing := get_node_or_null(^"AnimationPlayer") as AnimationPlayer

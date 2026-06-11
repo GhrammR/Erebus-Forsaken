@@ -50,6 +50,7 @@ const SHADOW: Color         = Color(0.0, 0.0, 0.05, 0.45)
 
 # Stage 17.8 — pose_tuner sets this false for manual arm tuning.
 @export var ik_enabled: bool = true
+@export var show_staff: bool = true
 @export var stance_id: StringName = &"chest_horizontal_guard"
 
 const SpriteOverrides = preload("res://scripts/systems/sprite_overrides.gd")
@@ -79,6 +80,9 @@ func _ready() -> void:
 	_paint_face()
 	_paint_robe()
 	_paint_staff()
+	if not show_staff:
+		_staff_arm.visible = false
+		_pin_table.clear()
 	_build_animations()
 	SpriteSidecar.apply(self, &"pythia")
 	# Stage 17.8 — load per-anim tuning configs and rebuild any

@@ -37,11 +37,16 @@ const CLASSES: Array = [
 		"bucket": &"classes",
 		"scene": "res://art/procedural/classes/pythia_sprite.tscn",
 		"variants": [
-			{ "name": "player_pythia_idle_oracle_staff", "anim": &"idle", "equip": { "weapon": &"pythia_staff_starter" } },
-			{ "name": "player_pythia_walk_procession_staff", "anim": &"walk", "equip": { "weapon": &"pythia_staff_starter" } },
-			{ "name": "player_pythia_attack_staff_sweep", "anim": &"attack", "equip": { "weapon": &"pythia_staff_starter" } },
-			{ "name": "player_pythia_cast_oracle_channel", "anim": &"cast", "equip": { "weapon": &"pythia_staff_starter" } },
-			{ "name": "player_pythia_die_vision_collapse", "anim": &"die", "equip": { "weapon": &"pythia_staff_starter" } },
+			{ "name": "Idle", "anim": &"idle", "equip": { "weapon": &"pythia_staff_starter" }, "show_staff": true },
+			{ "name": "Walk", "anim": &"walk", "equip": { "weapon": &"pythia_staff_starter" }, "show_staff": true },
+			{ "name": "Attack", "anim": &"attack", "equip": { "weapon": &"pythia_staff_starter" }, "show_staff": true },
+			{ "name": "Cast", "anim": &"cast", "equip": { "weapon": &"pythia_staff_starter" }, "show_staff": true },
+			{ "name": "Death", "anim": &"die", "equip": { "weapon": &"pythia_staff_starter" }, "show_staff": true },
+			{ "name": "Idle Unarmed", "anim": &"idle", "equip": {}, "show_staff": false, "unarmed": true },
+			{ "name": "Walk Unarmed", "anim": &"walk", "equip": {}, "show_staff": false, "unarmed": true },
+			{ "name": "Strike Unarmed", "anim": &"attack", "equip": {}, "show_staff": false, "unarmed": true },
+			{ "name": "Cast Unarmed", "anim": &"cast", "equip": {}, "show_staff": false, "unarmed": true },
+			{ "name": "Dying Unarmed", "anim": &"die", "equip": {}, "show_staff": false, "unarmed": true },
 		],
 	},
 	{
@@ -49,11 +54,16 @@ const CLASSES: Array = [
 		"bucket": &"classes",
 		"scene": "res://art/procedural/classes/myrmidon_sprite.tscn",
 		"variants": [
-			{ "name": "player_myrmidon_idle_hoplite_spear", "anim": &"idle", "equip": { "weapon": &"myrmidon_spear_starter" } },
-			{ "name": "player_myrmidon_walk_shield_advance", "anim": &"walk", "equip": { "weapon": &"myrmidon_spear_starter" } },
-			{ "name": "player_myrmidon_attack_spear_thrust", "anim": &"attack", "equip": { "weapon": &"myrmidon_spear_starter" } },
-			{ "name": "player_myrmidon_cast_battle_order", "anim": &"cast", "equip": { "weapon": &"myrmidon_spear_starter" } },
-			{ "name": "player_myrmidon_die_hoplite_fall", "anim": &"die", "equip": { "weapon": &"myrmidon_spear_starter" } },
+			{ "name": "Idle", "anim": &"idle", "equip": { "weapon": &"myrmidon_spear_starter" }, "show_spear": true },
+			{ "name": "Walk", "anim": &"walk", "equip": { "weapon": &"myrmidon_spear_starter" }, "show_spear": true },
+			{ "name": "Attack", "anim": &"attack", "equip": { "weapon": &"myrmidon_spear_starter" }, "show_spear": true },
+			{ "name": "Cast", "anim": &"cast", "equip": { "weapon": &"myrmidon_spear_starter" }, "show_spear": true },
+			{ "name": "Death", "anim": &"die", "equip": { "weapon": &"myrmidon_spear_starter" }, "show_spear": true },
+			{ "name": "Idle Unarmed", "anim": &"idle", "equip": {}, "show_spear": false, "unarmed": true },
+			{ "name": "Walk Unarmed", "anim": &"walk", "equip": {}, "show_spear": false, "unarmed": true },
+			{ "name": "Strike Unarmed", "anim": &"attack", "equip": {}, "show_spear": false, "unarmed": true },
+			{ "name": "Cast Unarmed", "anim": &"cast", "equip": {}, "show_spear": false, "unarmed": true },
+			{ "name": "Dying Unarmed", "anim": &"die", "equip": {}, "show_spear": false, "unarmed": true },
 		],
 	},
 	{
@@ -61,11 +71,16 @@ const CLASSES: Array = [
 		"bucket": &"classes",
 		"scene": "res://art/procedural/classes/shade_hunter_sprite.tscn",
 		"variants": [
-			{ "name": "player_shade_hunter_idle_bow_ready", "anim": &"idle", "equip": {}, "show_bow": true },
-			{ "name": "player_shade_hunter_walk_stalking_bow", "anim": &"walk", "equip": {}, "show_bow": true },
-			{ "name": "player_shade_hunter_attack_bow_release", "anim": &"attack", "equip": {}, "show_bow": true },
-			{ "name": "player_shade_hunter_cast_shadow_mark", "anim": &"cast", "equip": {}, "show_bow": true },
-			{ "name": "player_shade_hunter_die_cloak_drop", "anim": &"die", "equip": {}, "show_bow": true },
+			{ "name": "Idle", "anim": &"idle", "equip": {}, "show_bow": true },
+			{ "name": "Walk", "anim": &"walk", "equip": {}, "show_bow": true },
+			{ "name": "Attack", "anim": &"attack", "equip": {}, "show_bow": true },
+			{ "name": "Cast", "anim": &"cast", "equip": {}, "show_bow": true },
+			{ "name": "Death", "anim": &"die", "equip": {}, "show_bow": true },
+			{ "name": "Idle Unarmed", "anim": &"idle", "equip": {}, "show_bow": false, "unarmed": true },
+			{ "name": "Walk Unarmed", "anim": &"walk", "equip": {}, "show_bow": false, "unarmed": true },
+			{ "name": "Strike Unarmed", "anim": &"attack", "equip": {}, "show_bow": false, "unarmed": true },
+			{ "name": "Cast Unarmed", "anim": &"cast", "equip": {}, "show_bow": false, "unarmed": true },
+			{ "name": "Dying Unarmed", "anim": &"die", "equip": {}, "show_bow": false, "unarmed": true },
 		],
 	},
 	{
@@ -73,11 +88,16 @@ const CLASSES: Array = [
 		"bucket": &"classes",
 		"scene": "res://art/procedural/classes/ossuary_priest_sprite.tscn",
 		"variants": [
-			{ "name": "player_ossuary_priest_idle_wand_vigil", "anim": &"idle", "equip": { "weapon": &"ossuary_wand_starter" } },
-			{ "name": "player_ossuary_priest_walk_robed_step", "anim": &"walk", "equip": { "weapon": &"ossuary_wand_starter" } },
-			{ "name": "player_ossuary_priest_attack_bone_wand", "anim": &"attack", "equip": { "weapon": &"ossuary_wand_starter" } },
-			{ "name": "player_ossuary_priest_cast_grave_rite", "anim": &"cast", "equip": { "weapon": &"ossuary_wand_starter" } },
-			{ "name": "player_ossuary_priest_die_robed_sink", "anim": &"die", "equip": { "weapon": &"ossuary_wand_starter" } },
+			{ "name": "Idle", "anim": &"idle", "equip": { "weapon": &"ossuary_wand_starter" }, "show_wand": true },
+			{ "name": "Walk", "anim": &"walk", "equip": { "weapon": &"ossuary_wand_starter" }, "show_wand": true },
+			{ "name": "Attack", "anim": &"attack", "equip": { "weapon": &"ossuary_wand_starter" }, "show_wand": true },
+			{ "name": "Cast", "anim": &"cast", "equip": { "weapon": &"ossuary_wand_starter" }, "show_wand": true },
+			{ "name": "Death", "anim": &"die", "equip": { "weapon": &"ossuary_wand_starter" }, "show_wand": true },
+			{ "name": "Idle Unarmed", "anim": &"idle", "equip": {}, "show_wand": false, "unarmed": true },
+			{ "name": "Walk Unarmed", "anim": &"walk", "equip": {}, "show_wand": false, "unarmed": true },
+			{ "name": "Strike Unarmed", "anim": &"attack", "equip": {}, "show_wand": false, "unarmed": true },
+			{ "name": "Cast Unarmed", "anim": &"cast", "equip": {}, "show_wand": false, "unarmed": true },
+			{ "name": "Dying Unarmed", "anim": &"die", "equip": {}, "show_wand": false, "unarmed": true },
 		],
 	},
 	{
@@ -85,11 +105,11 @@ const CLASSES: Array = [
 		"bucket": &"enemies",
 		"scene": "res://art/procedural/enemies/dummy_sprite.tscn",
 		"variants": [
-			{ "name": "enemy_training_dummy_idle_watch", "anim": &"idle", "equip": {} },
-			{ "name": "enemy_training_dummy_walk_sway", "anim": &"walk", "equip": {} },
-			{ "name": "enemy_training_dummy_attack_counter_swing", "anim": &"attack", "equip": {} },
-			{ "name": "enemy_training_dummy_cast_target_flash", "anim": &"cast", "equip": {} },
-			{ "name": "enemy_training_dummy_die_post_snap", "anim": &"die", "equip": {} },
+			{ "name": "Idle", "anim": &"idle", "equip": {} },
+			{ "name": "Walk", "anim": &"walk", "equip": {} },
+			{ "name": "Attack", "anim": &"attack", "equip": {} },
+			{ "name": "Cast", "anim": &"cast", "equip": {} },
+			{ "name": "Death", "anim": &"die", "equip": {} },
 		],
 	},
 	{
@@ -97,11 +117,11 @@ const CLASSES: Array = [
 		"bucket": &"enemies",
 		"scene": "res://art/procedural/enemies/bone_servant_sprite.tscn",
 		"variants": [
-			{ "name": "enemy_bone_servant_idle_rattle", "anim": &"idle", "equip": {} },
-			{ "name": "enemy_bone_servant_walk_clatter", "anim": &"walk", "equip": {} },
-			{ "name": "enemy_bone_servant_attack_claw_rake", "anim": &"attack", "equip": {} },
-			{ "name": "enemy_bone_servant_cast_bone_shiver", "anim": &"cast", "equip": {} },
-			{ "name": "enemy_bone_servant_die_bone_scatter", "anim": &"die", "equip": {} },
+			{ "name": "Idle", "anim": &"idle", "equip": {} },
+			{ "name": "Walk", "anim": &"walk", "equip": {} },
+			{ "name": "Rake", "anim": &"attack", "equip": {} },
+			{ "name": "Shiver", "anim": &"cast", "equip": {} },
+			{ "name": "Scatter", "anim": &"die", "equip": {} },
 		],
 	},
 	{
@@ -109,11 +129,11 @@ const CLASSES: Array = [
 		"bucket": &"enemies",
 		"scene": "res://art/procedural/enemies/shade_wretch_sprite.tscn",
 		"variants": [
-			{ "name": "enemy_shade_wretch_idle_void_hover", "anim": &"idle", "equip": {} },
-			{ "name": "enemy_shade_wretch_walk_haunting_drift", "anim": &"walk", "equip": {} },
-			{ "name": "enemy_shade_wretch_attack_spectral_lunge", "anim": &"attack", "equip": {} },
-			{ "name": "enemy_shade_wretch_cast_grave_chill", "anim": &"cast", "equip": {} },
-			{ "name": "enemy_shade_wretch_die_smoke_unravel", "anim": &"die", "equip": {} },
+			{ "name": "Hover", "anim": &"idle", "equip": {} },
+			{ "name": "Drift", "anim": &"walk", "equip": {} },
+			{ "name": "Lunge", "anim": &"attack", "equip": {} },
+			{ "name": "Chill", "anim": &"cast", "equip": {} },
+			{ "name": "Dissolve", "anim": &"die", "equip": {} },
 		],
 	},
 	{
@@ -121,11 +141,11 @@ const CLASSES: Array = [
 		"bucket": &"enemies",
 		"scene": "res://art/procedural/enemies/bog_caller_sprite.tscn",
 		"variants": [
-			{ "name": "enemy_bog_caller_idle_mire_hover", "anim": &"idle", "equip": {} },
-			{ "name": "enemy_bog_caller_walk_swamp_drift", "anim": &"walk", "equip": {} },
-			{ "name": "enemy_bog_caller_attack_orb_spit", "anim": &"attack", "equip": {} },
-			{ "name": "enemy_bog_caller_cast_bog_channel", "anim": &"cast", "equip": {} },
-			{ "name": "enemy_bog_caller_die_mire_collapse", "anim": &"die", "equip": {} },
+			{ "name": "Hover", "anim": &"idle", "equip": {} },
+			{ "name": "Drift", "anim": &"walk", "equip": {} },
+			{ "name": "Spit", "anim": &"attack", "equip": {} },
+			{ "name": "Channel", "anim": &"cast", "equip": {} },
+			{ "name": "Collapse", "anim": &"die", "equip": {} },
 		],
 	},
 	{
@@ -133,11 +153,11 @@ const CLASSES: Array = [
 		"bucket": &"enemies",
 		"scene": "res://art/procedural/enemies/act_boss_sprite.tscn",
 		"variants": [
-			{ "name": "enemy_hexacheir_idle_throne_breath", "anim": &"idle", "equip": {} },
-			{ "name": "enemy_hexacheir_walk_six_arm_stalk", "anim": &"walk", "equip": {} },
-			{ "name": "enemy_hexacheir_attack_six_hand_smite", "anim": &"attack", "equip": {} },
-			{ "name": "enemy_hexacheir_cast_oath_taunt", "anim": &"cast", "equip": {} },
-			{ "name": "enemy_hexacheir_die_demon_slump", "anim": &"die", "equip": {} },
+			{ "name": "Breathe", "anim": &"idle", "equip": {} },
+			{ "name": "Stalk", "anim": &"walk", "equip": {} },
+			{ "name": "Smite", "anim": &"attack", "equip": {} },
+			{ "name": "Taunt", "anim": &"cast", "equip": {} },
+			{ "name": "Slump", "anim": &"die", "equip": {} },
 		],
 	},
 	{
@@ -145,11 +165,11 @@ const CLASSES: Array = [
 		"bucket": &"npcs",
 		"scene": "res://art/procedural/npcs/kallias_sprite.tscn",
 		"variants": [
-			{ "name": "npc_kallias_idle_merchant_watch", "anim": &"idle", "equip": {} },
-			{ "name": "npc_kallias_walk_market_step", "anim": &"walk", "equip": {} },
-			{ "name": "npc_kallias_attack_panic_swing", "anim": &"attack", "equip": {} },
-			{ "name": "npc_kallias_cast_trade_gesture", "anim": &"cast", "equip": {} },
-			{ "name": "npc_kallias_die_old_man_fall", "anim": &"die", "equip": {} },
+			{ "name": "Idle", "anim": &"idle", "equip": {} },
+			{ "name": "Walk", "anim": &"walk", "equip": {} },
+			{ "name": "Panic", "anim": &"attack", "equip": {} },
+			{ "name": "Gesture", "anim": &"cast", "equip": {} },
+			{ "name": "Fall", "anim": &"die", "equip": {} },
 		],
 	},
 	{
@@ -157,11 +177,11 @@ const CLASSES: Array = [
 		"bucket": &"npcs",
 		"scene": "res://art/procedural/npcs/eurynome_sprite.tscn",
 		"variants": [
-			{ "name": "npc_eurynome_idle_oracle_vigil", "anim": &"idle", "equip": {} },
-			{ "name": "npc_eurynome_walk_ceremonial_step", "anim": &"walk", "equip": {} },
-			{ "name": "npc_eurynome_attack_sea_spirit_rebuke", "anim": &"attack", "equip": {} },
-			{ "name": "npc_eurynome_cast_quest_omen", "anim": &"cast", "equip": {} },
-			{ "name": "npc_eurynome_die_veil_collapse", "anim": &"die", "equip": {} },
+			{ "name": "Vigil", "anim": &"idle", "equip": {} },
+			{ "name": "Step", "anim": &"walk", "equip": {} },
+			{ "name": "Rebuke", "anim": &"attack", "equip": {} },
+			{ "name": "Omen", "anim": &"cast", "equip": {} },
+			{ "name": "Collapse", "anim": &"die", "equip": {} },
 		],
 	},
 ]
@@ -175,6 +195,7 @@ const SpriteMotionStances = preload("res://scripts/systems/stances/sprite_motion
 const SCORE_FILE: String = "res://tmp/stance_scores.json"
 const SELECTED_STANCES_FILE: String = "res://tmp/selected_stances.json"
 const LAUNCH_FILE: String = "res://tmp/pose_tuner_launch.json"
+const CUSTOM_STANCES_FILE: String = "res://tmp/custom_stances.json"
 
 # Per-class stance catalog. Maps class id → catalog tag used in
 # _load_current to populate _stance_ids from the right catalog.
@@ -217,17 +238,23 @@ var _scrub_time: float = 0.0
 var _label_class: Label
 var _label_variant: Label
 var _label_time: Label
+var _score_card: RichTextLabel
 var _label_score: Label
 var _label_completion: Label
 var _class_select: OptionButton
 var _variant_select: OptionButton
 var _stance_select: OptionButton
 var _use_stance_button: Button
+var _save_stance_button: Button
+var _delete_stance_button: Button
 var _time_slider: HSlider
 var _slider_box: VBoxContainer
 var _ui_syncing: bool = false
 var _scores: Dictionary = {}
 var _selected_stances: Dictionary = {}
+var _custom_stances: Dictionary = {}
+var _undo_stack: Array = []
+var _restoring_undo: bool = false
 # Per-node slider references for the "Dump Pose" extractor.
 # Each entry: { "kind": "rot"|"pos", "node_path": String, "controls": [Range...] }
 var _slider_entries: Array = []
@@ -235,8 +262,96 @@ var _slider_entries: Array = []
 func _ready() -> void:
 	_load_scores_from_disk()
 	_load_selected_stances_from_disk()
+	_load_custom_stances_from_disk()
 	_build_ui()
 	_load_current()
+
+func _ellipse_points(center: Vector2, rx: float, ry: float, samples: int = 20) -> PackedVector2Array:
+	var pts: PackedVector2Array = []
+	for i in samples:
+		var t := TAU * float(i) / float(samples)
+		pts.append(center + Vector2(rx * cos(t), ry * sin(t)))
+	return pts
+
+func _boost_editor_shadows() -> void:
+	if _sprite == null:
+		return
+	for path in _paths_matching(_sprite, ["Shadow"]):
+		var shadow := _sprite.get_node_or_null(NodePath(path))
+		if shadow is Polygon2D:
+			(shadow as Polygon2D).color = Color(0.0, 0.0, 0.02, 0.72)
+			(shadow as Polygon2D).z_index = -5
+
+func _paths_matching(root: Node, tokens: Array[String]) -> Array[String]:
+	var out: Array[String] = []
+	_collect_paths_matching(root, "", tokens, out)
+	return out
+
+func _collect_paths_matching(node: Node, prefix: String, tokens: Array[String], out: Array[String]) -> void:
+	for child in node.get_children():
+		if String(child.name).begins_with("_"):
+			continue
+		var path := (prefix + "/" + String(child.name)) if prefix != "" else String(child.name)
+		for token in tokens:
+			if String(child.name).contains(token):
+				out.append(path)
+				break
+		_collect_paths_matching(child, path, tokens, out)
+
+func _push_undo() -> void:
+	if _sprite == null or _restoring_undo:
+		return
+	var snap := _snapshot_pose()
+	if snap.is_empty():
+		return
+	_undo_stack.append(snap)
+	if _undo_stack.size() > 60:
+		_undo_stack.pop_front()
+
+func _snapshot_pose() -> Dictionary:
+	var snap := { "rotations": {}, "positions": {}, "scales": {} }
+	for entry_v in _slider_entries:
+		var entry: Dictionary = entry_v
+		var path := String(entry.get("path", ""))
+		if path == "":
+			continue
+		var n := _sprite.get_node_or_null(NodePath(path)) as Node2D
+		if n == null:
+			continue
+		match String(entry.get("kind", "")):
+			"rot": snap["rotations"][path] = n.rotation
+			"pos": snap["positions"][path] = [n.position.x, n.position.y]
+			"scale": snap["scales"][path] = [n.scale.x, n.scale.y]
+	return snap
+
+func _undo_pose() -> void:
+	if _undo_stack.is_empty() or _sprite == null:
+		return
+	_restore_pose_snapshot(_undo_stack.pop_back())
+
+func _restore_pose_snapshot(snap: Dictionary) -> void:
+	_restoring_undo = true
+	for path in snap.get("rotations", {}).keys():
+		var n := _sprite.get_node_or_null(NodePath(String(path))) as Node2D
+		if n != null:
+			n.rotation = float(snap["rotations"][path])
+	for path in snap.get("positions", {}).keys():
+		var n := _sprite.get_node_or_null(NodePath(String(path))) as Node2D
+		if n != null:
+			var v: Array = snap["positions"][path]
+			n.position = Vector2(float(v[0]), float(v[1]))
+	for path in snap.get("scales", {}).keys():
+		var n := _sprite.get_node_or_null(NodePath(String(path))) as Node2D
+		if n != null:
+			var v: Array = snap["scales"][path]
+			n.scale = Vector2(float(v[0]), float(v[1]))
+	_restoring_undo = false
+	for entry_v in _slider_entries:
+		var entry: Dictionary = entry_v
+		var n := _sprite.get_node_or_null(NodePath(String(entry.get("path", "")))) as Node2D
+		if n != null:
+			_sync_sliders_for(n)
+	_force_pin_pass()
 
 # =========================================================================
 # UI scaffolding
@@ -289,10 +404,27 @@ func _build_ui() -> void:
 	_stance_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_stance_select.item_selected.connect(_on_stance_selected)
 	stance_row.add_child(_stance_select)
+	var stance_actions := HBoxContainer.new()
+	side.add_child(stance_actions)
 	_use_stance_button = Button.new()
 	_use_stance_button.text = "Use Stance"
 	_use_stance_button.pressed.connect(_on_use_stance_pressed)
-	side.add_child(_use_stance_button)
+	stance_actions.add_child(_use_stance_button)
+	_save_stance_button = Button.new()
+	_save_stance_button.text = "Save Stance"
+	_save_stance_button.pressed.connect(_on_save_stance_pressed)
+	stance_actions.add_child(_save_stance_button)
+	_delete_stance_button = Button.new()
+	_delete_stance_button.text = "Delete Stance"
+	_delete_stance_button.pressed.connect(_on_delete_stance_pressed)
+	stance_actions.add_child(_delete_stance_button)
+	_score_card = RichTextLabel.new()
+	_score_card.bbcode_enabled = true
+	_score_card.fit_content = true
+	_score_card.scroll_active = false
+	_score_card.custom_minimum_size = Vector2(0, 58)
+	_score_card.text = "[color=#ff3333][b]GRADE: UNSCORED[/b][/color]"
+	side.add_child(_score_card)
 	_label_class = Label.new(); side.add_child(_label_class)
 	_label_variant = Label.new(); side.add_child(_label_variant)
 	_label_time = Label.new(); side.add_child(_label_time)
@@ -357,6 +489,13 @@ func _build_ui() -> void:
 	bg.color = Color(0.12, 0.10, 0.14)
 	bg.size = VIEW_SIZE
 	_vp.add_child(bg)
+	var floor := Polygon2D.new()
+	floor.name = "_EditorShadowGuide"
+	floor.position = FEET_POS + Vector2(0, 4)
+	floor.polygon = _ellipse_points(Vector2.ZERO, 58.0, 13.0, 28)
+	floor.color = Color(0.02, 0.015, 0.025, 0.72)
+	floor.z_index = -20
+	_vp.add_child(floor)
 	vp_container.add_child(_vp)
 
 # =========================================================================
@@ -366,18 +505,93 @@ func _build_ui() -> void:
 func _stance_ids_for(cls: Dictionary, variant: Dictionary) -> Array:
 	var catalog: StringName = STANCE_CATALOGS.get(cls["id"], &"")
 	var anim_name := StringName(variant.get("anim", &"idle"))
-	if catalog == &"bow":
-		return BowStances.ids_for_anim(anim_name)
-	if catalog == &"staff":
-		return StaffStances.ids_for_anim(anim_name)
-	if catalog == &"spear":
-		return SpearStances.ids_for_anim(anim_name)
-	if catalog == &"wand":
-		return WandStances.ids_for_anim(anim_name)
-	if catalog == &"motion":
-		return SpriteMotionStances.ids_for_context(
+	var ids: Array = []
+	if _variant_uses_motion_stances(variant):
+		ids = SpriteMotionStances.ids_for_context(
 				cls.get("bucket", &"classes"), cls["id"], anim_name)
-	return []
+	elif catalog == &"bow":
+		ids = BowStances.ids_for_anim(anim_name)
+	elif catalog == &"staff":
+		ids = StaffStances.ids_for_anim(anim_name)
+	elif catalog == &"spear":
+		ids = SpearStances.ids_for_anim(anim_name)
+	elif catalog == &"wand":
+		ids = WandStances.ids_for_anim(anim_name)
+	elif catalog == &"motion":
+		ids = SpriteMotionStances.ids_for_context(
+				cls.get("bucket", &"classes"), cls["id"], anim_name)
+	ids.append_array(_custom_stance_ids_for(String(cls["id"]), String(anim_name)))
+	return ids
+
+func _variant_uses_motion_stances(variant: Dictionary) -> bool:
+	return bool(variant.get("unarmed", false)) \
+			or variant.get("show_bow", true) == false \
+			or variant.get("show_staff", true) == false \
+			or variant.get("show_spear", true) == false \
+			or variant.get("show_wand", true) == false
+
+func _custom_stance_ids_for(class_key: String, anim_name: String) -> Array:
+	var out: Array = []
+	for owner in _custom_stances.keys():
+		var class_block_v: Variant = _custom_stances[owner]
+		if typeof(class_block_v) != TYPE_DICTIONARY:
+			continue
+		var class_block: Dictionary = class_block_v
+		for stance_id in class_block.keys():
+			var rec_v: Variant = class_block[stance_id]
+			if typeof(rec_v) != TYPE_DICTIONARY:
+				continue
+			var rec: Dictionary = rec_v
+			if String(rec.get("anim", "")) != anim_name:
+				continue
+			if String(owner) == class_key or bool(rec.get("shareable", true)):
+				out.append(StringName(String(stance_id)))
+	return out
+
+func _custom_stance_record(stance_id: String) -> Dictionary:
+	var current_block_v: Variant = _custom_stances.get(_current_class_key(), {})
+	if typeof(current_block_v) == TYPE_DICTIONARY and (current_block_v as Dictionary).has(stance_id):
+		return (current_block_v as Dictionary)[stance_id]
+	for owner in _custom_stances.keys():
+		var class_block_v: Variant = _custom_stances[owner]
+		if typeof(class_block_v) == TYPE_DICTIONARY and (class_block_v as Dictionary).has(stance_id):
+			return (class_block_v as Dictionary)[stance_id]
+	return {}
+
+func _custom_stance_owner(stance_id: String) -> String:
+	var current_block_v: Variant = _custom_stances.get(_current_class_key(), {})
+	if typeof(current_block_v) == TYPE_DICTIONARY and (current_block_v as Dictionary).has(stance_id):
+		return _current_class_key()
+	for owner in _custom_stances.keys():
+		var class_block_v: Variant = _custom_stances[owner]
+		if typeof(class_block_v) == TYPE_DICTIONARY and (class_block_v as Dictionary).has(stance_id):
+			return String(owner)
+	return ""
+
+func _is_custom_stance_id(stance_id: String) -> bool:
+	return not _custom_stance_record(stance_id).is_empty()
+
+func _is_local_custom_stance_id(stance_id: String) -> bool:
+	return _custom_stance_owner(stance_id) == _current_class_key()
+
+func _custom_import_warning(stance_id: String) -> String:
+	if not _is_custom_stance_id(stance_id):
+		return ""
+	var owner := _custom_stance_owner(stance_id)
+	if owner == "" or owner == _current_class_key():
+		return ""
+	var weapon := _weapon_hint_for_class(owner)
+	if weapon == "":
+		return "WARNING: importing %s stance from %s; missing target nodes are skipped." % [stance_id, owner]
+	return "WARNING: importing %s %s stance from %s; this will attempt to replicate grip/attack transforms, and missing weapon nodes are soft-skipped." % [weapon, stance_id, owner]
+
+func _weapon_hint_for_class(class_key: String) -> String:
+	match class_key:
+		"shade_hunter": return "bow"
+		"pythia": return "staff"
+		"myrmidon": return "spear"
+		"ossuary_priest": return "wand"
+		_: return ""
 
 func _load_current(scrub_time: float = 0.0) -> void:
 	# Tear down prior sprite.
@@ -390,6 +604,7 @@ func _load_current(scrub_time: float = 0.0) -> void:
 	for c in _slider_box.get_children():
 		c.queue_free()
 	_slider_entries.clear()
+	_undo_stack.clear()
 	var cls: Dictionary = CLASSES[_class_idx]
 	var variant: Dictionary = cls["variants"][_variant_idx]
 	# Populate stance ids for this exact sprite + variant animation.
@@ -427,9 +642,10 @@ func _load_current(scrub_time: float = 0.0) -> void:
 		_sprite.sprite_id = cls["id"]
 	if &"stance_bucket" in _sprite:
 		_sprite.stance_bucket = bucket
-	# show_bow toggle (ShadeHunter bare/equipped variants).
-	if variant.has("show_bow") and &"show_bow" in _sprite:
-		_sprite.show_bow = bool(variant["show_bow"])
+	# Weapon visibility toggles let the same sprite be edited armed or unarmed.
+	for prop in ["show_bow", "show_staff", "show_spear", "show_wand"]:
+		if variant.has(prop) and StringName(prop) in _sprite:
+			_sprite.set(prop, bool(variant[prop]))
 	# IK starts OFF on a fresh load (sprite paused -> tuning mode).
 	# Pressing Space flips both at once via _apply_auto_ik.
 	if &"ik_enabled" in _sprite:
@@ -439,6 +655,7 @@ func _load_current(scrub_time: float = 0.0) -> void:
 	_sprite.position = FEET_POS
 	_sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
 	_vp.add_child(_sprite)
+	_boost_editor_shadows()
 	if bucket == &"classes":
 		_paperdoll = EquipmentPaperdoll.new()
 		add_child(_paperdoll)
@@ -531,10 +748,13 @@ func _walk_for_sliders_filtered(node: Node, prefix: String,
 		if should_add:
 			if child is Marker2D:
 				_add_marker_sliders(child, path)
-			elif child is Node2D and _wants_rotation_slider(child.name):
-				_add_rotation_slider(child, path)
-				if _wants_position_slider(child.name):
-					_add_arm_position_sliders(child, path)
+			elif child is Node2D:
+				if _wants_rotation_slider(child.name):
+					_add_rotation_slider(child, path)
+					if _wants_position_slider(child.name):
+						_add_arm_position_sliders(child, path)
+				if _wants_scale_slider(child, path):
+					_add_scale_sliders(child, path)
 		_walk_for_sliders_filtered(child, path, arms_only)
 
 func _walk_for_sliders(node: Node, prefix: String) -> void:
@@ -542,10 +762,13 @@ func _walk_for_sliders(node: Node, prefix: String) -> void:
 		var path: String = (prefix + "/" + String(child.name)) if prefix != "" else String(child.name)
 		if child is Marker2D:
 			_add_marker_sliders(child, path)
-		elif child is Node2D and _wants_rotation_slider(child.name):
-			_add_rotation_slider(child, path)
-			if _wants_position_slider(child.name):
-				_add_arm_position_sliders(child, path)
+		elif child is Node2D:
+			if _wants_rotation_slider(child.name):
+				_add_rotation_slider(child, path)
+				if _wants_position_slider(child.name):
+					_add_arm_position_sliders(child, path)
+			if _wants_scale_slider(child, path):
+				_add_scale_sliders(child, path)
 		_walk_for_sliders(child, path)
 
 func _is_arm_weapon_or_hand_path(path: String) -> bool:
@@ -578,6 +801,17 @@ func _wants_position_slider(n: StringName) -> bool:
 			or s.ends_with("StaffArm") or s.ends_with("SpearArm") \
 			or s.ends_with("BowArm") or s.ends_with("WandArm")
 
+func _wants_scale_slider(node: Node, path: String) -> bool:
+	if String(node.name).begins_with("_") or node is Marker2D:
+		return false
+	if node is Polygon2D or node is Line2D:
+		return true
+	var s := String(node.name)
+	return s == "Body" or s == "Face" or s.contains("Arm") \
+			or s.contains("Hand") or s.contains("Claw") \
+			or s.contains("Leg") or s.contains("Foot") \
+			or s.contains("Eye") or _is_weapon_path(path)
+
 func _add_rotation_slider(n: Node2D, path: String) -> void:
 	var row := HBoxContainer.new()
 	_add_slider_caption(path, "rot")
@@ -597,10 +831,12 @@ func _add_rotation_slider(n: Node2D, path: String) -> void:
 	box.value = rad_to_deg(n.rotation)
 	box.custom_minimum_size = Vector2(70, 0)
 	row.add_child(box)
+	s.drag_started.connect(_push_undo)
 	s.value_changed.connect(func(v):
 		n.rotation = deg_to_rad(v)
 		box.set_value_no_signal(v))
 	box.value_changed.connect(func(v):
+		_push_undo()
 		n.rotation = deg_to_rad(v)
 		s.set_value_no_signal(v))
 	_slider_entries.append({ "kind": "rot", "path": path, "controls": [s, box] })
@@ -622,12 +858,14 @@ func _add_xy_pair(_label_text: String, n: Node2D,
 	var rx := HBoxContainer.new()
 	rx.add_child(sx); rx.add_child(bx)
 	_slider_box.add_child(rx)
+	sx.drag_started.connect(_push_undo)
 	sx.value_changed.connect(func(v):
 		n.position.x = v
 		bx.set_value_no_signal(v)
 		if n is Marker2D:
 			_force_pin_pass())
 	bx.value_changed.connect(func(v):
+		_push_undo()
 		n.position.x = v
 		sx.set_value_no_signal(v)
 		if n is Marker2D:
@@ -643,12 +881,14 @@ func _add_xy_pair(_label_text: String, n: Node2D,
 	var ry := HBoxContainer.new()
 	ry.add_child(sy); ry.add_child(by)
 	_slider_box.add_child(ry)
+	sy.drag_started.connect(_push_undo)
 	sy.value_changed.connect(func(v):
 		n.position.y = v
 		by.set_value_no_signal(v)
 		if n is Marker2D:
 			_force_pin_pass())
 	by.value_changed.connect(func(v):
+		_push_undo()
 		n.position.y = v
 		sy.set_value_no_signal(v)
 		if n is Marker2D:
@@ -657,6 +897,48 @@ func _add_xy_pair(_label_text: String, n: Node2D,
 
 func _add_marker_sliders(m: Marker2D, path: String) -> void:
 	_add_xy_pair("%s.pos" % path, m, Vector2(-60, -60), Vector2(60, 60), 0.1, path)
+
+func _add_scale_sliders(n: Node2D, path: String) -> void:
+	_add_slider_caption(path, "scale")
+	var sx := HSlider.new()
+	sx.min_value = 0.20; sx.max_value = 3.00; sx.step = 0.02
+	sx.value = n.scale.x
+	sx.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var bx := SpinBox.new()
+	bx.min_value = 0.20; bx.max_value = 3.00; bx.step = 0.02
+	bx.value = n.scale.x
+	bx.custom_minimum_size = Vector2(70, 0)
+	var rx := HBoxContainer.new()
+	rx.add_child(sx); rx.add_child(bx)
+	_slider_box.add_child(rx)
+	sx.drag_started.connect(_push_undo)
+	sx.value_changed.connect(func(v):
+		n.scale.x = v
+		bx.set_value_no_signal(v))
+	bx.value_changed.connect(func(v):
+		_push_undo()
+		n.scale.x = v
+		sx.set_value_no_signal(v))
+	var sy := HSlider.new()
+	sy.min_value = 0.20; sy.max_value = 3.00; sy.step = 0.02
+	sy.value = n.scale.y
+	sy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var by := SpinBox.new()
+	by.min_value = 0.20; by.max_value = 3.00; by.step = 0.02
+	by.value = n.scale.y
+	by.custom_minimum_size = Vector2(70, 0)
+	var ry := HBoxContainer.new()
+	ry.add_child(sy); ry.add_child(by)
+	_slider_box.add_child(ry)
+	sy.drag_started.connect(_push_undo)
+	sy.value_changed.connect(func(v):
+		n.scale.y = v
+		by.set_value_no_signal(v))
+	by.value_changed.connect(func(v):
+		_push_undo()
+		n.scale.y = v
+		sy.set_value_no_signal(v))
+	_slider_entries.append({ "kind": "scale", "path": path, "controls": [sx, sy, bx, by] })
 
 func _add_slider_caption(path: String, kind: String) -> void:
 	var label := RichTextLabel.new()
@@ -678,6 +960,8 @@ func _slider_title(path: String, kind: String) -> String:
 	elif path.contains("ArmR") or path.contains("HandR") or path.contains("ClawR") or path.contains("LegR"):
 		side = "Right "
 	if _is_weapon_path(path):
+		if kind == "scale":
+			return "Weapon size / shape"
 		return "Weapon %s" % ("rotation" if kind == "rot" else "position")
 	if leaf.ends_with("ElbowPivot"):
 		return "%selbow angle" % side
@@ -690,12 +974,18 @@ func _slider_title(path: String, kind: String) -> String:
 	if leaf.contains("Finger"):
 		return "%sfinger %s" % [side, "angle" if kind == "rot" else "position"]
 	if leaf == "Body":
-		return "Body %s" % ("tilt" if kind == "rot" else "position")
+		return "Body %s" % ("tilt" if kind == "rot" else ("size / shape" if kind == "scale" else "position"))
+	if kind == "scale":
+		return "%s size / shape" % leaf
 	return "%s %s" % [leaf, "rotation" if kind == "rot" else "position"]
 
 func _slider_note(path: String, kind: String) -> String:
 	if _is_weapon_path(path):
+		if kind == "scale":
+			return "local X/Y scale for weapon thickness and length"
 		return "grip/body-local weapon placement" if kind == "pos" else "weapon angle in degrees"
+	if kind == "scale":
+		return "local X/Y scale; edits layer size without tearing the rig"
 	if kind == "rot":
 		return "degrees around this pivot"
 	return "local X/Y pixels; child parts remain attached"
@@ -810,6 +1100,9 @@ func _on_dump_pressed() -> void:
 			var v_deg: float = entry["controls"][0].value
 			lines.append("#   %s.rotation = %.4f  # (%.1f°)" % [
 				entry["path"], deg_to_rad(v_deg), v_deg])
+		elif entry["kind"] == "scale":
+			lines.append("#   %s.scale     = Vector2(%.2f, %.2f)" % [
+				entry["path"], entry["controls"][0].value, entry["controls"][1].value])
 		else:
 			lines.append("#   %s.position  = Vector2(%.2f, %.2f)" % [
 				entry["path"], entry["controls"][0].value, entry["controls"][1].value])
@@ -875,6 +1168,9 @@ func _refresh_picker_options() -> void:
 				int(coverage.get("completed", 0)),
 				int(coverage.get("total", 0)),
 			]
+			var owner := _custom_stance_owner(stance_id)
+			if owner != "" and owner != _current_class_key():
+				label += "  IMPORT:%s" % owner
 			if stance_id == selected:
 				label += "  ACTIVE"
 			_stance_select.add_item(label)
@@ -915,6 +1211,9 @@ func _load_scores_from_disk() -> void:
 func _load_selected_stances_from_disk() -> void:
 	_selected_stances = _read_json_dict(SELECTED_STANCES_FILE)
 
+func _load_custom_stances_from_disk() -> void:
+	_custom_stances = _read_json_dict(CUSTOM_STANCES_FILE)
+
 func _read_json_dict(path: String) -> Dictionary:
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
@@ -943,12 +1242,12 @@ func _current_stance_key() -> String:
 		return "default"
 	return String(_stance_ids[_stance_idx])
 
-func _score_key(stance_id: String, variant_name: String, phase: String) -> String:
-	return "%s/%s/%s" % [stance_id, variant_name, phase]
+func _score_key(class_key: String, stance_id: String, variant_name: String, phase: String) -> String:
+	return "%s/%s/%s/%s" % [class_key, stance_id, variant_name, phase]
 
 func _score_record_for(class_key: String, stance_id: String,
 		variant_name: String, phase: String) -> Dictionary:
-	var rec_v: Variant = _scores.get(_score_key(stance_id, variant_name, phase), {})
+	var rec_v: Variant = _scores.get(_score_key(class_key, stance_id, variant_name, phase), {})
 	if typeof(rec_v) != TYPE_DICTIONARY:
 		return {}
 	var rec: Dictionary = rec_v
@@ -1024,8 +1323,13 @@ func _refresh_score_panel() -> void:
 	var phase: String = String(_current_phase())
 	var rec: Dictionary = _score_record_for(class_key, stance_id, variant_name, phase)
 	var current_score: String = "unscored"
+	var grade_text: String = "UNSCORED"
 	if not rec.is_empty():
+		grade_text = "%d / 5" % int(rec.get("score", 0))
 		current_score = "%d at %.2fs" % [int(rec.get("score", 0)), float(rec.get("t", 0.0))]
+	if _score_card != null:
+		_score_card.text = "[color=#ff3333][font_size=28][b]GRADE: %s[/b][/font_size][/color]\n[b]%s[/b]  %s  %s" % [
+			grade_text, variant_name, stance_id, phase]
 	_label_score.text = "Current: %s / %s / %s / %s    Score: %s" % [
 		class_key, stance_id, variant_name, phase, current_score]
 	var coverage: Dictionary = _coverage_for_stance(stance_id)
@@ -1043,6 +1347,9 @@ func _refresh_score_panel() -> void:
 		text += "\nMissing: %s" % ", ".join(missing.slice(0, 8))
 		if missing.size() > 8:
 			text += " ..."
+	var import_warning := _custom_import_warning(stance_id)
+	if import_warning != "":
+		text += "\n" + import_warning
 	_label_completion.text = text
 	if _use_stance_button != null:
 		_use_stance_button.disabled = _stance_ids.is_empty()
@@ -1050,6 +1357,76 @@ func _refresh_score_panel() -> void:
 			int(coverage.get("completed", 0)),
 			int(coverage.get("total", 0)),
 		]
+	if _save_stance_button != null:
+		_save_stance_button.disabled = _stance_ids.is_empty()
+	if _delete_stance_button != null:
+		_delete_stance_button.disabled = not _is_local_custom_stance_id(stance_id)
+
+func _on_save_stance_pressed() -> void:
+	if _stance_ids.is_empty():
+		return
+	var class_key := _current_class_key()
+	var variant: Dictionary = CLASSES[_class_idx]["variants"][_variant_idx]
+	var anim_name := String(variant.get("anim", &"idle"))
+	var stance_id := _current_stance_key()
+	if not _is_local_custom_stance_id(stance_id):
+		var source_owner := _custom_stance_owner(stance_id)
+		var source_stance := stance_id
+		var class_block_v: Variant = _custom_stances.get(class_key, {})
+		if typeof(class_block_v) != TYPE_DICTIONARY:
+			class_block_v = {}
+		var class_block: Dictionary = class_block_v
+		var base := "%s_%s_%d" % [class_key, anim_name, int(Time.get_unix_time_from_system())]
+		var new_stance_id := "custom_" + base.replace(" ", "_")
+		class_block[new_stance_id] = {
+			"class": class_key,
+			"bucket": String(_current_bucket()),
+			"anim": anim_name,
+			"source_class": source_owner if source_owner != "" else class_key,
+			"source_stance": source_stance,
+			"variant": String(variant.get("name", "")),
+			"shareable": true,
+			"created": Time.get_datetime_string_from_system(),
+		}
+		_custom_stances[class_key] = class_block
+		_write_json_dict(CUSTOM_STANCES_FILE, _custom_stances)
+		if source_owner != "":
+			_copy_recommended_stance(source_owner, source_stance, class_key, new_stance_id)
+		stance_id = new_stance_id
+		_stance_ids.append(StringName(stance_id))
+		_stance_idx = _stance_ids.size() - 1
+		_refresh_picker_options()
+	_save_recommended()
+
+func _on_delete_stance_pressed() -> void:
+	var stance_id := _current_stance_key()
+	if not _is_local_custom_stance_id(stance_id):
+		return
+	var class_key := _current_class_key()
+	var class_block: Dictionary = _custom_stances.get(class_key, {})
+	class_block.erase(stance_id)
+	_custom_stances[class_key] = class_block
+	_write_json_dict(CUSTOM_STANCES_FILE, _custom_stances)
+	var selected_v: Variant = _selected_stances.get(class_key, {})
+	if typeof(selected_v) == TYPE_DICTIONARY and String((selected_v as Dictionary).get("stance", "")) == stance_id:
+		_selected_stances.erase(class_key)
+		_write_json_dict(SELECTED_STANCES_FILE, _selected_stances)
+	_stance_idx = 0
+	_load_current(_scrub_time)
+
+func _copy_recommended_stance(source_class: String, source_stance: String,
+		target_class: String, target_stance: String) -> void:
+	var recommended := _read_json_dict("res://tmp/recommended_stances.json")
+	var src_class_v: Variant = recommended.get(source_class, {})
+	if typeof(src_class_v) != TYPE_DICTIONARY:
+		return
+	var src_block_v: Variant = (src_class_v as Dictionary).get(source_stance, {})
+	if typeof(src_block_v) != TYPE_DICTIONARY:
+		return
+	if not recommended.has(target_class):
+		recommended[target_class] = {}
+	recommended[target_class][target_stance] = (src_block_v as Dictionary).duplicate(true)
+	_write_json_dict("res://tmp/recommended_stances.json", recommended)
 
 func _on_use_stance_pressed() -> void:
 	if _stance_ids.is_empty():
@@ -1144,6 +1521,8 @@ func _on_viewport_input(event: InputEvent) -> void:
 			return
 		if mb.pressed:
 			_drag_node = _find_draggable_under(mb.position)
+			if _drag_node != null:
+				_push_undo()
 			_drag_last_mouse = mb.position
 			_drag_last_mouse_prev = mb.position
 		else:
@@ -1197,20 +1576,70 @@ func _force_pin_pass() -> void:
 	if pins == null:
 		return
 	var body: Node2D = _sprite.get_node_or_null(^"Body") as Node2D
+	if body == null:
+		return
 	var cur_anim: StringName = _anim.current_animation if _anim != null else &""
 	HumanRig.apply_pins(_sprite, body, pins, cur_anim)
 
 # Find the closest draggable (Marker2D or *Arm Node2D) within
 # DRAG_HIT_RADIUS of mouse_pos (in container/viewport coords).
 func _find_draggable_under(mouse_pos: Vector2) -> Node2D:
+	var nearest_marker: Node2D = null
+	var marker_d := 8.0
+	for n in _enumerate_draggables(_sprite):
+		if n is Marker2D:
+			var md := mouse_pos.distance_to(n.global_position)
+			if md < marker_d:
+				marker_d = md
+				nearest_marker = n
+	if nearest_marker != null:
+		return nearest_marker
 	var best: Node2D = null
 	var best_d: float = DRAG_HIT_RADIUS
 	for n in _enumerate_draggables(_sprite):
-		var d: float = mouse_pos.distance_to(n.global_position)
+		var d := _draggable_hit_distance(n, mouse_pos)
 		if d < best_d:
 			best_d = d
 			best = n
 	return best
+
+func _draggable_hit_distance(n: Node2D, mouse_pos: Vector2) -> float:
+	var best := mouse_pos.distance_to(n.global_position)
+	if _is_weapon_path(_path_for(n)) or String(n.name) == "ArmAnchor":
+		best = minf(best, _shape_hit_distance(n, mouse_pos))
+	return best
+
+func _shape_hit_distance(node: Node, mouse_pos: Vector2) -> float:
+	var best := INF
+	if node is CanvasItem and not (node as CanvasItem).visible:
+		return best
+	if node is Polygon2D:
+		var poly := (node as Polygon2D).polygon
+		for i in range(poly.size()):
+			var a := (node as Polygon2D).to_global(poly[i])
+			var b := (node as Polygon2D).to_global(poly[(i + 1) % poly.size()])
+			best = minf(best, _distance_to_segment(mouse_pos, a, b))
+	elif node is Line2D:
+		var pts := (node as Line2D).points
+		for i in range(max(0, pts.size() - 1)):
+			var a := (node as Line2D).to_global(pts[i])
+			var b := (node as Line2D).to_global(pts[i + 1])
+			best = minf(best, _distance_to_segment(mouse_pos, a, b))
+	elif node is Marker2D:
+		best = minf(best, mouse_pos.distance_to((node as Marker2D).global_position))
+	for child in node.get_children():
+		if String(child.name).begins_with("_"):
+			continue
+		best = minf(best, _shape_hit_distance(child, mouse_pos))
+	return best
+
+func _distance_to_segment(p: Vector2, a: Vector2, b: Vector2) -> float:
+	var ab := b - a
+	var denom := ab.length_squared()
+	if denom <= 0.0001:
+		return p.distance_to(a)
+	var t := clampf((p - a).dot(ab) / denom, 0.0, 1.0)
+	return p.distance_to(a + ab * t)
 
 # Walk the sprite tree collecting Markers + *Arm Node2Ds + joint
 # pivots (ElbowPivot, KneePivot). Drag behavior diverges:
@@ -1257,6 +1686,15 @@ func _sync_sliders_for(n: Node2D) -> void:
 				controls[0].set_value_no_signal(deg)
 			if controls.size() >= 2:
 				controls[1].set_value_no_signal(deg)
+		elif entry["kind"] == "scale":
+			if controls.size() >= 1:
+				controls[0].set_value_no_signal(n.scale.x)
+			if controls.size() >= 2:
+				controls[1].set_value_no_signal(n.scale.y)
+			if controls.size() >= 3:
+				controls[2].set_value_no_signal(n.scale.x)
+			if controls.size() >= 4:
+				controls[3].set_value_no_signal(n.scale.y)
 		return
 
 func _path_for(n: Node) -> String:
@@ -1354,7 +1792,7 @@ func _score_current(score: int) -> void:
 	var cls: Dictionary = CLASSES[_class_idx]
 	var variant: Dictionary = cls["variants"][_variant_idx]
 	var phase: StringName = _current_phase()
-	var key: String = "%s/%s/%s" % [stance_id, variant["name"], phase]
+	var key: String = _score_key(String(cls["id"]), String(stance_id), String(variant["name"]), String(phase))
 	_load_scores_from_disk()
 	var scores: Dictionary = _scores
 	scores[key] = {
@@ -1401,6 +1839,7 @@ func _save_recommended() -> void:
 	var snap: Dictionary = {
 		"rotations": {},
 		"positions": {},
+		"scales": {},
 		"markers": {},
 	}
 	for entry_v in _slider_entries:
@@ -1417,6 +1856,8 @@ func _save_recommended() -> void:
 			snap["positions"][path] = [n.position.x, n.position.y]
 			if n is Marker2D:
 				snap["markers"][path] = [n.position.x, n.position.y]
+		elif String(entry.get("kind", "")) == "scale":
+			snap["scales"][path] = [n.scale.x, n.scale.y]
 	# Both arms — shoulders + elbow pivots.
 	for arm_path in ["Body/ArmLShoulder", "Body/ArmRShoulder"]:
 		var shoulder: Node2D = _sprite.get_node_or_null(NodePath(arm_path)) as Node2D
@@ -1524,7 +1965,11 @@ func _current_phase() -> StringName:
 # =========================================================================
 
 func _input(event: InputEvent) -> void:
-	if not (event is InputEventKey) or not event.pressed:
+	if not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	if event.ctrl_pressed and event.keycode == KEY_Z:
+		_undo_pose()
+		get_viewport().set_input_as_handled()
 		return
 	match event.keycode:
 		KEY_F1:

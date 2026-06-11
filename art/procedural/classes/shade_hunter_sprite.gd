@@ -132,6 +132,7 @@ func _ready() -> void:
 	_shadow.polygon = HumanRig.shadow_poly()
 	HumanRig.apply(_body, SKIN, SKIN_SHADOW)
 	HumanRig.paint_face(_body, PALE_TEAL, CHARCOAL_DARK)
+	_paint_shadowed_face()
 	_paint_cloak()
 	_paint_hood()
 	_paint_bow()
@@ -287,11 +288,14 @@ func _load_anim_config(anim_name: String, phases: Dictionary) -> void:
 	# Rotations / positions / markers — full per-phase capture.
 	if rest.has("rotations"):    cfg["rest_rotations"] = rest["rotations"]
 	if rest.has("positions"):    cfg["rest_positions"] = rest["positions"]
+	if rest.has("scales"):       cfg["rest_scales"] = rest["scales"]
 	if rest.has("markers"):      cfg["rest_markers"] = rest["markers"]
 	if strike.has("rotations"):  cfg["strike_rotations"] = strike["rotations"]
 	if strike.has("positions"):  cfg["strike_positions"] = strike["positions"]
+	if strike.has("scales"):     cfg["strike_scales"] = strike["scales"]
 	if strike.has("markers"):    cfg["strike_markers"] = strike["markers"]
 	if ending.has("rotations"):  cfg["end_rotations"] = ending["rotations"]
+	if ending.has("scales"):     cfg["end_scales"] = ending["scales"]
 	# Legacy / flat fields — still honored for backward compat.
 	if rest.has("weapon_arm_pos"):
 		var p: Array = rest["weapon_arm_pos"]
@@ -305,7 +309,8 @@ func _load_anim_config(anim_name: String, phases: Dictionary) -> void:
 		var nd: Array = strike["NockMarker"]
 		cfg["nock_drawn"] = Vector2(float(nd[0]), float(nd[1]))
 	# Tag as tuned if ANY phase has rotation data.
-	if rest.has("rotations") or strike.has("rotations") or ending.has("rotations"):
+	if rest.has("rotations") or strike.has("rotations") or ending.has("rotations") \
+			or rest.has("scales") or strike.has("scales") or ending.has("scales"):
 		_tuned_anims[anim_name] = true
 	_per_anim_config[anim_name] = cfg
 
@@ -388,6 +393,12 @@ func _apply_anim_config(anim_name: String) -> void:
 			if n != null:
 				var v: Array = cfg["rest_positions"][path]
 				n.position = Vector2(float(v[0]), float(v[1]))
+	if cfg.has("rest_scales"):
+		for path in cfg["rest_scales"]:
+			var n: Node2D = get_node_or_null(NodePath(String(path))) as Node2D
+			if n != null:
+				var v: Array = cfg["rest_scales"][path]
+				n.scale = Vector2(float(v[0]), float(v[1]))
 	if cfg.has("rest_markers"):
 		for marker_name in cfg["rest_markers"]:
 			var m: Node2D = _bow_arm.get_node_or_null(NodePath(String(marker_name))) as Node2D
@@ -424,6 +435,56 @@ func _apply_pins_and_string() -> void:
 		])
 
 # ---- Cloak / hood -------------------------------------------------------
+
+func _paint_shadowed_face() -> void:
+	var face := _body.get_node_or_null(^"Face") as Node2D
+	if face == null:
+		return
+	face.z_index = 3
+	_hood.z_index = 2
+	var shadow := face.get_node_or_null(^"FaceShadow") as Polygon2D
+	if shadow == null:
+		shadow = Polygon2D.new()
+		shadow.name = "FaceShadow"
+		face.add_child(shadow)
+		face.move_child(shadow, 0)
+	shadow.color = Color(0.015, 0.018, 0.026, 0.96)
+	shadow.polygon = PackedVector2Array([
+		Vector2(-5.6, HumanRig.HEAD_TOP + 3.0),
+		Vector2(5.6, HumanRig.HEAD_TOP + 3.0),
+		Vector2(4.4, HumanRig.NECK_BOTTOM - 1.0),
+		Vector2(-4.4, HumanRig.NECK_BOTTOM - 1.0),
+	])
+	var socket_l := face.get_node_or_null(^"EyeSocketL") as Polygon2D
+	var socket_r := face.get_node_or_null(^"EyeSocketR") as Polygon2D
+	var eye_l := face.get_node_or_null(^"EyeL") as Polygon2D
+	var eye_r := face.get_node_or_null(^"EyeR") as Polygon2D
+	if socket_l != null:
+		socket_l.color = Color(0.0, 0.0, 0.0, 0.92)
+		socket_l.polygon = _small_ellipse(Vector2(-2.4, HumanRig.HEAD_MID), 1.7, 1.0)
+	if socket_r != null:
+		socket_r.color = Color(0.0, 0.0, 0.0, 0.92)
+		socket_r.polygon = _small_ellipse(Vector2(2.4, HumanRig.HEAD_MID), 1.7, 1.0)
+	if eye_l != null:
+		eye_l.color = Color(0.42, 0.92, 0.95, 1.0)
+		eye_l.polygon = _small_ellipse(Vector2(-2.4, HumanRig.HEAD_MID), 0.7, 0.45)
+	if eye_r != null:
+		eye_r.color = Color(0.42, 0.92, 0.95, 1.0)
+		eye_r.polygon = _small_ellipse(Vector2(2.4, HumanRig.HEAD_MID), 0.7, 0.45)
+	var brow := face.get_node_or_null(^"Brow") as Polygon2D
+	if brow != null:
+		brow.color = Color(0.0, 0.0, 0.0, 0.9)
+		brow.polygon = PackedVector2Array([
+			Vector2(-5.0, HumanRig.HEAD_MID - 2.4), Vector2(5.0, HumanRig.HEAD_MID - 2.4),
+			Vector2(4.4, HumanRig.HEAD_MID - 1.3), Vector2(-4.4, HumanRig.HEAD_MID - 1.3),
+		])
+
+func _small_ellipse(c: Vector2, rx: float, ry: float) -> PackedVector2Array:
+	var pts: PackedVector2Array = []
+	for i in 10:
+		var t := TAU * i / 10
+		pts.append(Vector2(c.x + rx * cos(t), c.y + ry * sin(t)))
+	return pts
 
 func _paint_cloak() -> void:
 	# Cloak drapes from shoulders to mid-calf behind the body. Slight

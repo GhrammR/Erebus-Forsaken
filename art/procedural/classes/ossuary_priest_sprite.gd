@@ -13,8 +13,10 @@ const StanceSelection = preload("res://scripts/systems/stance_selection.gd")
 const WandStances = preload("res://scripts/systems/stances/wand_stances.gd")
 
 @export var stance_id: StringName = WandStances.DEFAULT_STANCE
+@export var show_wand: bool = true
 
 @onready var _shadow: Polygon2D = $Shadow
+@onready var _body: Node2D = $Body
 @onready var _robe: Polygon2D = $Body/Robe
 @onready var _torso: Polygon2D = $Body/Torso
 @onready var _shoulder_l: Polygon2D = $Body/ShoulderLeft
@@ -23,10 +25,10 @@ const WandStances = preload("res://scripts/systems/stances/wand_stances.gd")
 @onready var _hood: Polygon2D = $Body/Hood
 @onready var _eye_l: Polygon2D = $Body/EyeL
 @onready var _eye_r: Polygon2D = $Body/EyeR
-@onready var _wand_arm: Node2D = $WandArm
-@onready var _wand_shaft: Polygon2D = $WandArm/Shaft
-@onready var _wand_glow: Polygon2D = $WandArm/Glow
-@onready var _wand_hand: Polygon2D = $WandArm/GripHand
+@onready var _wand_arm: Node2D = $Body/ArmRShoulder/ElbowPivot/WandArm
+@onready var _wand_shaft: Polygon2D = $Body/ArmRShoulder/ElbowPivot/WandArm/Shaft
+@onready var _wand_glow: Polygon2D = $Body/ArmRShoulder/ElbowPivot/WandArm/Glow
+@onready var _wand_hand: Polygon2D = $Body/ArmRShoulder/ElbowPivot/WandArm/GripHand
 @onready var _anim: AnimationPlayer = $AnimationPlayer
 
 var _wand_attack_apex_rot: float = -0.45
@@ -48,7 +50,12 @@ func _apply_wand_stance() -> void:
 	stance_id = StanceSelection.selected_for_class(
 			&"ossuary_priest", stance_id, WandStances.all_ids())
 	var stance: Dictionary = WandStances.get_stance(stance_id)
-	_wand_arm.position = stance.get("wand_pos", _wand_arm.position)
+	var parent := _wand_arm.get_parent() as Node2D
+	var wand_body_pos: Vector2 = stance.get("wand_pos", Vector2(10, -28))
+	var rest_local := _wand_arm.position
+	if parent != null:
+		rest_local = parent.to_local(_body.to_global(wand_body_pos))
+		_wand_arm.position = rest_local
 	_wand_arm.rotation = float(stance.get("wand_rot", _wand_arm.rotation))
 	_wand_attack_apex_rot = float(stance.get("attack_apex_rot", _wand_attack_apex_rot))
 	_wand_cast_apex_rot = float(stance.get("cast_apex_rot", _wand_cast_apex_rot))
@@ -56,7 +63,7 @@ func _apply_wand_stance() -> void:
 	_wand_cast_len = float(stance.get("cast_len", _wand_cast_len))
 	set_meta(&"wand_stance", {
 		"stance_id": String(stance_id),
-		"rest_pos": _wand_arm.position,
+		"rest_pos": rest_local,
 		"rest_rot": _wand_arm.rotation,
 		"attack_apex_rot": _wand_attack_apex_rot,
 		"cast_apex_rot": _wand_cast_apex_rot,
@@ -89,6 +96,10 @@ func _paint() -> void:
 		sh.append(Vector2(14.0 * cos(t), 2.0 + 4.0 * sin(t)))
 	_shadow.color = SHADOW
 	_shadow.polygon = sh
+	HumanRig.paint_leg($Body/LegLHip, BONE_DARK)
+	HumanRig.paint_leg($Body/LegRHip, BONE_DARK)
+	HumanRig.paint_arm($Body/ArmLShoulder, BONE)
+	HumanRig.paint_arm($Body/ArmRShoulder, BONE)
 	_paint_robed_leg(^"Body/LegLHip", -1.0)
 	_paint_robed_leg(^"Body/LegRHip", 1.0)
 
@@ -147,6 +158,7 @@ func _paint() -> void:
 		Vector2(-3.0, -2.0), Vector2(3.0, -2.0),
 		Vector2(3.0, 2.0), Vector2(-3.0, 2.0),
 	])
+	_wand_arm.visible = show_wand
 
 func _paint_robed_leg(root_path: NodePath, side: float) -> void:
 	var hip := get_node_or_null(root_path) as Node2D
@@ -163,9 +175,7 @@ func _paint_robed_leg(root_path: NodePath, side: float) -> void:
 	if knee == null:
 		return
 	var shin := knee.get_node_or_null(^"Shin") as Polygon2D
-	var foot := knee.get_node_or_null(^"FootL") as Polygon2D
-	if foot == null:
-		foot = knee.get_node_or_null(^"FootR") as Polygon2D
+	var foot := knee.get_node_or_null(^"Foot") as Polygon2D
 	if shin != null:
 		shin.color = ROBE_DARK.darkened(0.38)
 		shin.polygon = PackedVector2Array([
@@ -203,9 +213,9 @@ func _track(a: Animation, path: NodePath) -> int:
 	return idx
 
 func _key_wand_rest(a: Animation, t: float) -> void:
-	var tp := _track(a, NodePath("WandArm:position"))
+	var tp := _track(a, NodePath("Body/ArmRShoulder/ElbowPivot/WandArm:position"))
 	a.track_insert_key(tp, t, _wand_arm.position)
-	var tr := _track(a, NodePath("WandArm:rotation"))
+	var tr := _track(a, NodePath("Body/ArmRShoulder/ElbowPivot/WandArm:rotation"))
 	a.track_insert_key(tr, t, _wand_arm.rotation)
 
 func _anim_idle() -> Animation:
@@ -229,10 +239,10 @@ func _anim_idle() -> Animation:
 	a.track_insert_key(tsh, 0.0, Vector2.ONE)
 	a.track_insert_key(tsh, 0.7, Vector2(0.92, 0.82))
 	a.track_insert_key(tsh, 1.4, Vector2.ONE)
-	var twp := _track(a, NodePath("WandArm:position"))
+	var twp := _track(a, NodePath("Body/ArmRShoulder/ElbowPivot/WandArm:position"))
 	a.track_insert_key(twp, 0.0, _wand_arm.position)
 	a.track_insert_key(twp, 1.4, _wand_arm.position)
-	var twr := _track(a, NodePath("WandArm:rotation"))
+	var twr := _track(a, NodePath("Body/ArmRShoulder/ElbowPivot/WandArm:rotation"))
 	a.track_insert_key(twr, 0.0, _wand_arm.rotation)
 	a.track_insert_key(twr, 1.4, _wand_arm.rotation)
 	return a
@@ -269,10 +279,10 @@ func _anim_walk() -> Animation:
 	a.track_insert_key(tsh, 0.0, Vector2.ONE)
 	a.track_insert_key(tsh, 0.23, Vector2(0.94, 0.82))
 	a.track_insert_key(tsh, 0.46, Vector2.ONE)
-	var twp := _track(a, NodePath("WandArm:position"))
+	var twp := _track(a, NodePath("Body/ArmRShoulder/ElbowPivot/WandArm:position"))
 	a.track_insert_key(twp, 0.0, _wand_arm.position)
 	a.track_insert_key(twp, 0.46, _wand_arm.position)
-	var twr := _track(a, NodePath("WandArm:rotation"))
+	var twr := _track(a, NodePath("Body/ArmRShoulder/ElbowPivot/WandArm:rotation"))
 	a.track_insert_key(twr, 0.0, _wand_arm.rotation)
 	a.track_insert_key(twr, 0.23, _wand_arm.rotation + 0.08)
 	a.track_insert_key(twr, 0.46, _wand_arm.rotation)
@@ -283,11 +293,11 @@ func _anim_attack() -> Animation:
 	a.length = _wand_attack_len
 	a.loop_mode = Animation.LOOP_NONE
 	var t_hit := a.length * 0.45
-	var tr := _track(a, NodePath("WandArm:rotation"))
+	var tr := _track(a, NodePath("Body/ArmRShoulder/ElbowPivot/WandArm:rotation"))
 	a.track_insert_key(tr, 0.0, _wand_arm.rotation)
 	a.track_insert_key(tr, t_hit, _wand_attack_apex_rot)
 	a.track_insert_key(tr, a.length, _wand_arm.rotation)
-	var tp := _track(a, NodePath("WandArm:position"))
+	var tp := _track(a, NodePath("Body/ArmRShoulder/ElbowPivot/WandArm:position"))
 	a.track_insert_key(tp, 0.0, _wand_arm.position)
 	a.track_insert_key(tp, t_hit, _wand_arm.position + Vector2(2, -1))
 	a.track_insert_key(tp, a.length, _wand_arm.position)
@@ -298,15 +308,15 @@ func _anim_cast() -> Animation:
 	a.length = _wand_cast_len
 	a.loop_mode = Animation.LOOP_NONE
 	var t_peak := a.length * 0.38
-	var tr := _track(a, NodePath("WandArm:rotation"))
+	var tr := _track(a, NodePath("Body/ArmRShoulder/ElbowPivot/WandArm:rotation"))
 	a.track_insert_key(tr, 0.0, _wand_arm.rotation)
 	a.track_insert_key(tr, t_peak, _wand_cast_apex_rot)
 	a.track_insert_key(tr, a.length, _wand_arm.rotation)
-	var tg := _track(a, NodePath("WandArm/Glow:modulate"))
+	var tg := _track(a, NodePath("Body/ArmRShoulder/ElbowPivot/WandArm/Glow:modulate"))
 	a.track_insert_key(tg, 0.0, Color(1, 1, 1, 1))
 	a.track_insert_key(tg, t_peak, Color(2.0, 2.5, 1.0, 1))
 	a.track_insert_key(tg, a.length, Color(1, 1, 1, 1))
-	var ts := _track(a, NodePath("WandArm/Glow:scale"))
+	var ts := _track(a, NodePath("Body/ArmRShoulder/ElbowPivot/WandArm/Glow:scale"))
 	a.track_insert_key(ts, 0.0, Vector2.ONE)
 	a.track_insert_key(ts, t_peak, Vector2(1.55, 1.55))
 	a.track_insert_key(ts, a.length, Vector2.ONE)

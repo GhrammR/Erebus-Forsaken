@@ -226,6 +226,97 @@ const STANCES: Dictionary = {
 		"walk_len": 0.76, "walk_bob": -1.1, "walk_sway": 0.026,
 		"attack_len": 0.50, "attack_rot": -0.36, "cast_len": 0.84, "cast_pulse": 1.35,
 	},
+	&"player_idle_guard": {
+		"id": &"player_idle_guard", "description": "Player unarmed idle: compact guard with readable shoulders.",
+		"idle_len": 1.55, "idle_bob": -1.0, "idle_sway": 0.016,
+		"walk_len": 0.54, "walk_bob": -1.8, "walk_sway": 0.052,
+		"attack_len": 0.40, "attack_rot": -0.78, "cast_len": 0.68, "cast_pulse": 1.45,
+	},
+	&"player_idle_low": {
+		"id": &"player_idle_low", "description": "Player unarmed idle: lower stance with ready knees.",
+		"idle_len": 1.70, "idle_bob": -0.8, "idle_sway": 0.026,
+		"walk_len": 0.56, "walk_bob": -1.9, "walk_sway": 0.064,
+		"attack_len": 0.38, "attack_rot": -0.92, "cast_len": 0.70, "cast_pulse": 1.40,
+	},
+	&"player_idle_focus": {
+		"id": &"player_idle_focus", "description": "Player unarmed idle: caster focus with calmer legs.",
+		"idle_len": 1.85, "idle_bob": -0.7, "idle_sway": 0.010,
+		"walk_len": 0.62, "walk_bob": -1.4, "walk_sway": 0.035,
+		"attack_len": 0.44, "attack_rot": -0.62, "cast_len": 0.84, "cast_pulse": 1.80,
+	},
+	&"player_walk_advance": {
+		"id": &"player_walk_advance", "description": "Player unarmed walk: direct advance with balanced leg swing.",
+		"idle_len": 1.60, "idle_bob": -0.9, "idle_sway": 0.014,
+		"walk_len": 0.50, "walk_bob": -2.1, "walk_sway": 0.070,
+		"attack_len": 0.40, "attack_rot": -0.80, "cast_len": 0.68, "cast_pulse": 1.45,
+	},
+	&"player_walk_stalk": {
+		"id": &"player_walk_stalk", "description": "Player unarmed walk: slower stalking step.",
+		"idle_len": 1.70, "idle_bob": -0.8, "idle_sway": 0.018,
+		"walk_len": 0.64, "walk_bob": -1.5, "walk_sway": 0.045,
+		"attack_len": 0.42, "attack_rot": -0.72, "cast_len": 0.72, "cast_pulse": 1.50,
+	},
+	&"player_walk_quick": {
+		"id": &"player_walk_quick", "description": "Player unarmed walk: fast short-stride footwork.",
+		"idle_len": 1.45, "idle_bob": -1.0, "idle_sway": 0.020,
+		"walk_len": 0.42, "walk_bob": -2.4, "walk_sway": 0.090,
+		"attack_len": 0.34, "attack_rot": -0.95, "cast_len": 0.60, "cast_pulse": 1.38,
+	},
+	&"player_attack_jab": {
+		"id": &"player_attack_jab", "description": "Player unarmed attack: fast outward jab.",
+		"idle_len": 1.55, "idle_bob": -0.9, "idle_sway": 0.014,
+		"walk_len": 0.52, "walk_bob": -1.9, "walk_sway": 0.058,
+		"attack_len": 0.30, "attack_rot": -1.10, "cast_len": 0.66, "cast_pulse": 1.40,
+	},
+	&"player_attack_cross": {
+		"id": &"player_attack_cross", "description": "Player unarmed attack: committed cross from the shoulder.",
+		"idle_len": 1.55, "idle_bob": -0.9, "idle_sway": 0.014,
+		"walk_len": 0.54, "walk_bob": -1.9, "walk_sway": 0.060,
+		"attack_len": 0.40, "attack_rot": -1.32, "cast_len": 0.68, "cast_pulse": 1.45,
+	},
+	&"player_attack_hook": {
+		"id": &"player_attack_hook", "description": "Player unarmed attack: arcing hook that still strikes away from body.",
+		"idle_len": 1.60, "idle_bob": -0.9, "idle_sway": 0.016,
+		"walk_len": 0.54, "walk_bob": -1.8, "walk_sway": 0.062,
+		"attack_len": 0.46, "attack_rot": -1.18, "cast_len": 0.70, "cast_pulse": 1.50,
+	},
+	&"player_cast_focus": {
+		"id": &"player_cast_focus", "description": "Player unarmed cast: hands gather energy close to chest.",
+		"idle_len": 1.80, "idle_bob": -0.7, "idle_sway": 0.010,
+		"walk_len": 0.62, "walk_bob": -1.4, "walk_sway": 0.036,
+		"attack_len": 0.42, "attack_rot": -0.64, "cast_len": 0.72, "cast_pulse": 1.85,
+	},
+	&"player_cast_reach": {
+		"id": &"player_cast_reach", "description": "Player unarmed cast: outward hand release.",
+		"idle_len": 1.75, "idle_bob": -0.8, "idle_sway": 0.012,
+		"walk_len": 0.60, "walk_bob": -1.5, "walk_sway": 0.040,
+		"attack_len": 0.42, "attack_rot": -0.68, "cast_len": 0.86, "cast_pulse": 2.05,
+	},
+	&"player_cast_ground": {
+		"id": &"player_cast_ground", "description": "Player unarmed cast: grounded ritual pulse.",
+		"idle_len": 1.90, "idle_bob": -0.6, "idle_sway": 0.008,
+		"walk_len": 0.66, "walk_bob": -1.2, "walk_sway": 0.030,
+		"attack_len": 0.44, "attack_rot": -0.58, "cast_len": 0.96, "cast_pulse": 2.20,
+	},
+	&"player_die_fall": {
+		"id": &"player_die_fall", "description": "Player death: clean fall with physical weight.",
+		"idle_len": 1.60, "idle_bob": -0.8, "idle_sway": 0.012,
+		"walk_len": 0.55, "walk_bob": -1.7, "walk_sway": 0.050,
+		"attack_len": 0.42, "attack_rot": -0.70, "cast_len": 0.70, "cast_pulse": 1.35,
+	},
+	&"player_die_kneel": {
+		"id": &"player_die_kneel", "description": "Player death: knees fold before collapse.",
+		"idle_len": 1.70, "idle_bob": -0.7, "idle_sway": 0.010,
+		"walk_len": 0.58, "walk_bob": -1.5, "walk_sway": 0.045,
+		"attack_len": 0.40, "attack_rot": -0.64, "cast_len": 0.74, "cast_pulse": 1.40,
+	},
+	&"player_die_collapse": {
+		"id": &"player_die_collapse", "description": "Player death: full-body collapse variant.",
+		"idle_len": 1.55, "idle_bob": -0.9, "idle_sway": 0.014,
+		"walk_len": 0.54, "walk_bob": -1.8, "walk_sway": 0.052,
+		"attack_len": 0.42, "attack_rot": -0.72, "cast_len": 0.70, "cast_pulse": 1.35,
+	},
+
 }
 
 const DEFAULT_STANCE: StringName = &"idle_breathe"
@@ -239,6 +330,8 @@ static func all_ids() -> Array:
 static func ids_for_context(bucket: StringName, _sprite_id: StringName, anim_name: StringName) -> Array:
 	if bucket == &"npcs":
 		return _ids_for_prefix("npc", String(anim_name))
+	if bucket == &"classes":
+		return _ids_for_prefix("player", String(anim_name))
 	return _ids_for_prefix("enemy", String(anim_name))
 
 static func _ids_for_prefix(prefix: String, anim_name: String) -> Array:
@@ -257,24 +350,34 @@ static func _ids_for_prefix(prefix: String, anim_name: String) -> Array:
 static func _idle_ids(prefix: String) -> Array:
 	if prefix == "npc":
 		return [&"npc_idle_merchant_watch", &"npc_idle_oracle_vigil", &"npc_idle_sage_breath"]
+	if prefix == "player":
+		return [&"player_idle_guard", &"player_idle_low", &"player_idle_focus"]
 	return [&"enemy_idle_watch", &"enemy_idle_crouch", &"enemy_idle_haunt"]
 
 static func _walk_ids(prefix: String) -> Array:
 	if prefix == "npc":
 		return [&"npc_walk_market_step", &"npc_walk_ceremonial_step", &"npc_walk_camp_pace"]
+	if prefix == "player":
+		return [&"player_walk_advance", &"player_walk_stalk", &"player_walk_quick"]
 	return [&"enemy_walk_lurch", &"enemy_walk_hover", &"enemy_walk_stalk"]
 
 static func _attack_ids(prefix: String) -> Array:
 	if prefix == "npc":
 		return [&"npc_attack_panic_swing", &"npc_attack_spirit_rebuke", &"npc_attack_staffless_shove"]
+	if prefix == "player":
+		return [&"player_attack_jab", &"player_attack_cross", &"player_attack_hook"]
 	return [&"enemy_attack_rake", &"enemy_attack_lunge", &"enemy_attack_burst"]
 
 static func _cast_ids(prefix: String) -> Array:
 	if prefix == "npc":
 		return [&"npc_cast_trade_gesture", &"npc_cast_quest_omen", &"npc_cast_blessing"]
+	if prefix == "player":
+		return [&"player_cast_focus", &"player_cast_reach", &"player_cast_ground"]
 	return [&"enemy_cast_channel", &"enemy_cast_hex", &"enemy_cast_summon"]
 
 static func _die_ids(prefix: String) -> Array:
 	if prefix == "npc":
 		return [&"npc_die_old_man_fall", &"npc_die_veil_collapse", &"npc_die_kneel"]
+	if prefix == "player":
+		return [&"player_die_fall", &"player_die_kneel", &"player_die_collapse"]
 	return [&"enemy_die_collapse", &"enemy_die_dissolve", &"enemy_die_shatter"]

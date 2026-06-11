@@ -181,10 +181,13 @@ func _verify_stance_catalog_filters() -> void:
 				"WandStances exposes >=3 %s stance variants" % anim_name)
 		var enemy_ids := SpriteMotionStances.ids_for_context(&"enemies", &"bog_caller", anim_name)
 		var npc_ids := SpriteMotionStances.ids_for_context(&"npcs", &"kallias", anim_name)
+		var player_ids := SpriteMotionStances.ids_for_context(&"classes", &"pythia", anim_name)
 		_expect(enemy_ids.size() >= 3 and _ids_have_prefix(enemy_ids, "enemy_"),
 				"enemy motion catalog exposes role-specific %s variants" % anim_name)
 		_expect(npc_ids.size() >= 3 and _ids_have_prefix(npc_ids, "npc_"),
 				"npc motion catalog exposes role-specific %s variants" % anim_name)
+		_expect(player_ids.size() >= 3 and _ids_have_prefix(player_ids, "player_"),
+				"player unarmed motion catalog exposes role-specific %s variants" % anim_name)
 
 func _ids_have_prefix(ids: Array, prefix: String) -> bool:
 	for id in ids:
@@ -234,10 +237,11 @@ func _verify_current_sprite_animation_surface() -> void:
 func _verify_sprite_detail_contract() -> void:
 	var detail_sprites: Array = [
 		{ "id": &"training_dummy", "path": "res://art/procedural/enemies/dummy_sprite.tscn", "eyes": true, "arms": 2, "shadow": true },
+		{ "id": &"bone_servant", "path": "res://art/procedural/enemies/bone_servant_sprite.tscn", "legs": true, "shadow": true },
 		{ "id": &"shade_wretch", "path": "res://art/procedural/enemies/shade_wretch_sprite.tscn", "eyes": true, "arms": 2, "shadow": true },
 		{ "id": &"bog_caller", "path": "res://art/procedural/enemies/bog_caller_sprite.tscn", "eyes": true, "arms": 2, "shadow": true },
-		{ "id": &"act_boss", "path": "res://art/procedural/enemies/act_boss_sprite.tscn", "eyes": true, "arms": 6, "shadow": true },
-		{ "id": &"ossuary_priest", "path": "res://art/procedural/classes/ossuary_priest_sprite.tscn", "eyes": true, "legs": true, "shadow": true },
+		{ "id": &"act_boss", "path": "res://art/procedural/enemies/act_boss_sprite.tscn", "eyes": true, "arms": 6, "legs": true, "shadow": true },
+		{ "id": &"ossuary_priest", "path": "res://art/procedural/classes/ossuary_priest_sprite.tscn", "eyes": true, "arms": 2, "legs": true, "shadow": true },
 		{ "id": &"kallias", "path": "res://art/procedural/npcs/kallias_sprite.tscn", "eyes": true, "arms": 2, "legs": true, "shadow": true },
 		{ "id": &"eurynome", "path": "res://art/procedural/npcs/eurynome_sprite.tscn", "eyes": true, "arms": 2, "legs": true, "shadow": true },
 	]
@@ -272,6 +276,12 @@ func _verify_sprite_detail_contract() -> void:
 					"%s has knee pivots" % rec["id"])
 			_expect(int(counts["feet"]) >= 2,
 					"%s has visible feet under robe" % rec["id"])
+			var leg_l := body.get_node_or_null(^"LegLHip") as Node2D
+			var leg_r := body.get_node_or_null(^"LegRHip") as Node2D
+			_expect(leg_l != null and _vec_close(leg_l.position, HumanRig.LEG_L_HIP),
+					"%s left leg uses HumanRig hip position" % rec["id"])
+			_expect(leg_r != null and _vec_close(leg_r.position, HumanRig.LEG_R_HIP),
+					"%s right leg uses HumanRig hip position" % rec["id"])
 		if rec["id"] == &"act_boss":
 			_expect(int(counts["fingers"]) >= 6,
 					"act_boss has six middle-finger taunt controls")
@@ -325,7 +335,28 @@ func _verify_pose_editor_authoring_contract() -> void:
 	_expect(src.contains("controls[2].set_value_no_signal")
 			and src.contains("controls[3].set_value_no_signal"),
 			"pose_tuner syncs drag edits back into numeric slider fields")
-	_expect(src.contains("player_pythia_idle_oracle_staff")
-			and src.contains("enemy_bog_caller_walk_swamp_drift")
-			and src.contains("npc_kallias_idle_merchant_watch"),
-			"pose_tuner variants are role-specific and pre-authored")
+	_expect(src.contains("GRADE: UNSCORED") and src.contains("_score_card"),
+			"pose_tuner exposes a prominent scorecard rating")
+	_expect(src.contains("KEY_Z") and src.contains("_undo_pose"),
+			"pose_tuner supports Ctrl+Z undo")
+	_expect(src.contains("CUSTOM_STANCES_FILE")
+			and src.contains("_on_save_stance_pressed")
+			and src.contains("_on_delete_stance_pressed"),
+			"pose_tuner can save/edit/delete custom stances")
+	_expect(src.contains("_custom_import_warning")
+			and src.contains("replicate grip/attack transforms")
+			and src.contains("_copy_recommended_stance"),
+			"pose_tuner warns and imports cross-sprite custom stances softly")
+	_expect(src.contains("Idle Unarmed") and src.contains("\"show_staff\": false")
+			and src.contains("\"show_bow\": false")
+			and src.contains("\"show_spear\": false")
+			and src.contains("\"show_wand\": false"),
+			"pose_tuner exposes unarmed player animation variants")
+	_expect(not src.contains("npc_kallias_die_old_man_fall")
+			and not src.contains("enemy_bog_caller_walk_swamp_drift")
+			and not src.contains("player_pythia_idle_oracle_staff"),
+			"pose_tuner variant labels are short editor labels")
+	_expect(src.contains("\"scales\": {}") and src.contains("_add_scale_sliders"),
+			"pose_tuner saves scale/shape edits for sprite layers")
+	_expect(src.contains("_shape_hit_distance") and src.contains("Line2D") and src.contains("Polygon2D"),
+			"pose_tuner hit-tests visible weapon geometry for click-drag")
