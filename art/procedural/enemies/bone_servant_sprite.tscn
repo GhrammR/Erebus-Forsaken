@@ -1,9 +1,9 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://art/procedural/baseline_white_sprite.gd" id="1_base"]
+[ext_resource type="Script" path="res://art/procedural/enemies/bone_servant_sprite.gd" id="1_bs"]
 
 [node name="BoneServantSprite" type="Node2D"]
-script = ExtResource("1_base")
+script = ExtResource("1_bs")
 sprite_id = &"bone_servant"
 stance_bucket = &"enemies"
 
@@ -52,9 +52,6 @@ position = Vector2(0, 10)
 
 [node name="Hand" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
 
-[node name="Buckler" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
-visible = false
-
 [node name="ArmRShoulder" type="Node2D" parent="Body"]
 position = Vector2(9, -44)
 
@@ -67,53 +64,8 @@ position = Vector2(0, 10)
 
 [node name="Hand" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot"]
 
-[node name="SpearArm" type="Node2D" parent="Body/ArmRShoulder/ElbowPivot"]
-visible = false
-position = Vector2(0, 10)
-
-[node name="Shaft" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/SpearArm"]
-
-[node name="Grip" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/SpearArm"]
-
-[node name="Tip" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot/SpearArm"]
-
-[node name="StaffArm" type="Node2D" parent="Body"]
-visible = false
-
-[node name="Shaft" type="Polygon2D" parent="Body/StaffArm"]
-
-[node name="Grip" type="Polygon2D" parent="Body/StaffArm"]
-
-[node name="RightGripMarker" type="Marker2D" parent="Body/StaffArm"]
-
-[node name="LeftGripMarker" type="Marker2D" parent="Body/StaffArm"]
-
-[node name="Orb" type="Polygon2D" parent="Body/StaffArm"]
-
-[node name="BowArm" type="Node2D" parent="Body"]
-visible = false
-
-[node name="Bow" type="Polygon2D" parent="Body/BowArm"]
-
-[node name="Bowstring" type="Line2D" parent="Body/BowArm"]
-
-[node name="RiserMarker" type="Marker2D" parent="Body/BowArm"]
-
-[node name="NockMarker" type="Marker2D" parent="Body/BowArm"]
-
-[node name="BowTipTop" type="Marker2D" parent="Body/BowArm"]
-
-[node name="BowTipBot" type="Marker2D" parent="Body/BowArm"]
-
 [node name="Neck" type="Polygon2D" parent="Body"]
 
 [node name="Head" type="Polygon2D" parent="Body"]
-
-[node name="WandArm" type="Node2D" parent="."]
-visible = false
-
-[node name="Shaft" type="Polygon2D" parent="WandArm"]
-
-[node name="Glow" type="Polygon2D" parent="WandArm"]
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]

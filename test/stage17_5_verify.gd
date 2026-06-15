@@ -20,6 +20,21 @@ const BESPOKE_SPRITES: Array[StringName] = [
 	&"act_boss", &"hekate_marked",
 ]
 
+# Stage 17.6 re-authored these as the UNDEAD wraith sub-variant rig
+# (enemy_sprite_palette / SpriteRuntime2D, no legs, floating). They are
+# intentionally NO LONGER the baseline white biped, so they are excluded
+# from the baseline-conformance loops below. Their wraith contract is
+# asserted in test/stage17_6_verify.gd instead. Registry membership
+# (UNDEAD / WRAITH) is still checked here.
+# Re-authored beyond the white baseline (wraith/skeleton rigs + Phase 2
+# HUMAN skins). Excluded from the white-baseline conformance loops; each
+# has its own contract in stage17_6_verify.
+const REAUTHORED_17_6: Array[StringName] = [
+	&"shade_wretch", &"bog_caller", &"bone_servant",
+	&"myrmidon", &"pythia", &"shade_hunter", &"ossuary_priest",
+	&"kallias", &"eurynome",
+]
+
 const SpriteMotionStances = preload("res://scripts/systems/stances/sprite_motion_stances.gd")
 
 const BASELINE_SCRIPT := "res://art/procedural/baseline_white_sprite.gd"
@@ -89,7 +104,7 @@ func _ready() -> void:
 	_verify_stance_catalog_filters()
 	await _verify_current_sprite_animation_surface()
 	await _verify_baseline_sprite_contract()
-	_verify_pose_editor_authoring_contract()
+	await _verify_pose_editor_authoring_contract()
 	print("--- Stage 17.5 verify: %s ---" % ("ALL PASS" if _fail == 0 else "%d FAIL" % _fail))
 	get_tree().quit(_fail)
 
@@ -190,7 +205,10 @@ func _verify_archived_sprite_sources() -> void:
 
 func _verify_stance_catalog_filters() -> void:
 	for anim_name in [&"idle", &"walk", &"attack", &"cast", &"die"]:
-		var enemy_ids := SpriteMotionStances.ids_for_context(&"enemies", &"bog_caller", anim_name)
+		# Use a non-drift enemy here — drift sprites (wraiths) are
+		# intentionally pruned to fewer, float-only stances and are
+		# asserted separately in stage17_6_verify.
+		var enemy_ids := SpriteMotionStances.ids_for_context(&"enemies", &"bone_servant", anim_name)
 		var npc_ids := SpriteMotionStances.ids_for_context(&"npcs", &"kallias", anim_name)
 		var player_ids := SpriteMotionStances.ids_for_context(&"classes", &"pythia", anim_name)
 		_expect(enemy_ids.size() >= 3 and _ids_have_prefix(enemy_ids, "enemy_"),
@@ -220,11 +238,12 @@ func _verify_current_sprite_animation_surface() -> void:
 			sprite.stance_bucket = rec["bucket"]
 		add_child(sprite)
 		await get_tree().process_frame
-		_expect(_scene_uses_baseline_script(String(rec["path"])),
-				"%s active scene uses baseline script" % rec["id"])
-		_expect(sprite.get_script() != null
-				and String(sprite.get_script().resource_path) == BASELINE_SCRIPT,
-				"%s instantiated script is baseline" % rec["id"])
+		if not (rec["id"] in REAUTHORED_17_6):
+			_expect(_scene_uses_baseline_script(String(rec["path"])),
+					"%s active scene uses baseline script" % rec["id"])
+			_expect(sprite.get_script() != null
+					and String(sprite.get_script().resource_path) == BASELINE_SCRIPT,
+					"%s instantiated script is baseline" % rec["id"])
 		var anim := sprite.get_node_or_null(^"AnimationPlayer") as AnimationPlayer
 		_expect(anim != null, "%s exposes AnimationPlayer" % rec["id"])
 		if anim != null:
@@ -236,6 +255,8 @@ func _verify_current_sprite_animation_surface() -> void:
 func _verify_baseline_sprite_contract() -> void:
 	for rec_v in SPRITE_SCENES:
 		var rec: Dictionary = rec_v
+		if rec["id"] in REAUTHORED_17_6:
+			continue  # wraith rig — geometry asserted in stage17_6_verify
 		var packed := load(String(rec["path"])) as PackedScene
 		if packed == null:
 			_expect(false, "%s baseline scene loads" % rec["id"])
@@ -307,7 +328,9 @@ func _has_node_name_token(node: Node, token: String) -> bool:
 func _visible_polygons_are_white(node: Node) -> bool:
 	if node is Polygon2D:
 		var item := node as Polygon2D
-		if item.visible and item.color != Color.WHITE:
+		# is_visible_in_tree, not .visible — weapon arms are painted up
+		# front but hidden; their children's own .visible is still true.
+		if item.is_visible_in_tree() and item.color != Color.WHITE:
 			return false
 	for child in node.get_children():
 		if not _visible_polygons_are_white(child):
@@ -365,3 +388,35 @@ func _verify_pose_editor_authoring_contract() -> void:
 			"pose_tuner saves scale/shape edits for sprite layers")
 	_expect(src.contains("_shape_hit_distance") and src.contains("Line2D") and src.contains("Polygon2D"),
 			"pose_tuner hit-tests visible weapon geometry for click-drag")
+	# Regression guard: editor chrome must sit behind ALL sprite content.
+	# An opaque background at z=0 once hid the bone_servant's z=-1 injected
+	# legs in the editor while they rendered in-game. The BG/floor must use
+	# a deeply-negative z so the tuner shows what ships.
+	_expect(src.contains("const BG_Z: int = -100"),
+			"pose_tuner BG_Z is deeply negative (-100)")
+	_expect(src.contains("bg.z_index = BG_Z"),
+			"pose_tuner background uses BG_Z (behind all sprite parts)")
+	# And no live sprite part may sit at/below the chrome z, or it would
+	# vanish behind the editor background.
+	await _verify_sprite_parts_above_editor_bg()
+
+func _verify_sprite_parts_above_editor_bg() -> void:
+	const BG_Z := -100
+	for rec_v in SPRITE_SCENES:
+		var rec: Dictionary = rec_v
+		var packed := load(String(rec["path"])) as PackedScene
+		if packed == null:
+			continue
+		var sprite := packed.instantiate() as Node2D
+		if &"sprite_id" in sprite:
+			sprite.sprite_id = rec["id"]
+		if &"stance_bucket" in sprite:
+			sprite.stance_bucket = rec["bucket"]
+		add_child(sprite)
+		await get_tree().process_frame
+		var min_z := 9999
+		for poly in sprite.find_children("*", "Polygon2D", true, false):
+			min_z = mini(min_z, (poly as Polygon2D).z_index)
+		_expect(min_z > BG_Z,
+				"%s has no part at/below editor BG z (min part z=%d > %d)" % [rec["id"], min_z, BG_Z])
+		sprite.queue_free()

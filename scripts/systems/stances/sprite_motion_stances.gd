@@ -18,7 +18,8 @@ const STANCES: Dictionary = {
 		"id": &"wraith_lunge",
 		"description": "Fast spectral lunge with sharper arm/claw arcs and a tighter hover loop.",
 		"idle_len": 1.2, "idle_bob": -1.8, "idle_sway": 0.035,
-		"walk_len": 0.40, "walk_bob": -2.4, "walk_sway": 0.10,
+		"walk_len": 0.90, "walk_bob": -2.4, "walk_sway": 0.10,
+		"hover_height": 13.0, "drift_swell": -1.8, "drift_lean": 0.025,
 		"attack_len": 0.34, "attack_rot": -1.25,
 		"cast_len": 0.45, "cast_pulse": 1.35,
 	},
@@ -26,7 +27,8 @@ const STANCES: Dictionary = {
 		"id": &"caster_channel",
 		"description": "Measured caster motion with pronounced glow pulses and slower attacks.",
 		"idle_len": 1.8, "idle_bob": -1.0, "idle_sway": 0.02,
-		"walk_len": 0.62, "walk_bob": -1.8, "walk_sway": 0.045,
+		"walk_len": 1.05, "walk_bob": -1.8, "walk_sway": 0.045,
+		"hover_height": 6.0, "drift_swell": -1.4, "drift_lean": 0.018,
 		"attack_len": 0.48, "attack_rot": -0.95,
 		"cast_len": 0.80, "cast_pulse": 1.9,
 	},
@@ -70,10 +72,11 @@ const STANCES: Dictionary = {
 		"walk_len": 0.52, "walk_bob": -2.2, "walk_sway": 0.090,
 		"attack_len": 0.42, "attack_rot": -0.90, "cast_len": 0.65, "cast_pulse": 1.5,
 	},
-	&"enemy_walk_hover": {
-		"id": &"enemy_walk_hover", "description": "Enemy walk: ground-skimming hover with a pulsing shadow.",
+	&"enemy_drift_hover": {
+		"id": &"enemy_drift_hover", "description": "Wraith drift: weightless float above the ground, slow vertical swell, no footed gait.",
 		"idle_len": 1.35, "idle_bob": -1.6, "idle_sway": 0.030,
-		"walk_len": 0.44, "walk_bob": -3.0, "walk_sway": 0.130,
+		"walk_len": 1.00, "walk_bob": -3.0, "walk_sway": 0.130,
+		"hover_height": 13.0, "drift_swell": -1.8, "drift_lean": 0.022,
 		"attack_len": 0.38, "attack_rot": -1.05, "cast_len": 0.70, "cast_pulse": 1.75,
 	},
 	&"enemy_walk_stalk": {
@@ -327,12 +330,40 @@ static func get_stance(id: StringName) -> Dictionary:
 static func all_ids() -> Array:
 	return STANCES.keys()
 
-static func ids_for_context(bucket: StringName, _sprite_id: StringName, anim_name: StringName) -> Array:
+# Sprites whose locomotion is a drift, not a walk (UNDEAD wraith
+# sub-variant — see AnatomyFamilies). They are offered float/drift
+# stances ONLY: no footed gaits (lurch/stalk), no grounded death.
+const DRIFT_SPRITES: Array[StringName] = [&"shade_wretch", &"bog_caller"]
+# Drift sprites that actually cast. A non-caster wraith (shade_wretch)
+# is offered NO cast stance — its only ranged-looking pose would be
+# unused. bog_caller is a ranged caster (scripts/enemies/bog_caller.gd).
+const CASTER_DRIFTERS: Array[StringName] = [&"bog_caller"]
+
+static func ids_for_context(bucket: StringName, sprite_id: StringName, anim_name: StringName) -> Array:
 	if bucket == &"npcs":
 		return _ids_for_prefix("npc", String(anim_name))
 	if bucket == &"classes":
 		return _ids_for_prefix("player", String(anim_name))
+	if sprite_id in DRIFT_SPRITES:
+		return _drift_ids(sprite_id, String(anim_name))
 	return _ids_for_prefix("enemy", String(anim_name))
+
+# Pruned stance menu for a drifting wraith. Locomotion is drift-only;
+# idle floats; death dissolves; cast appears only for caster drifters.
+static func _drift_ids(sprite_id: StringName, anim_name: String) -> Array:
+	match anim_name:
+		"walk":
+			return [&"enemy_drift_hover"]
+		"attack":
+			return [&"enemy_attack_lunge", &"enemy_attack_rake"]
+		"cast":
+			if sprite_id in CASTER_DRIFTERS:
+				return [&"enemy_cast_hex", &"enemy_cast_channel"]
+			return []
+		"die":
+			return [&"enemy_die_dissolve"]
+		_:
+			return [&"enemy_idle_haunt"]
 
 static func _ids_for_prefix(prefix: String, anim_name: String) -> Array:
 	match anim_name:
@@ -359,7 +390,7 @@ static func _walk_ids(prefix: String) -> Array:
 		return [&"npc_walk_market_step", &"npc_walk_ceremonial_step", &"npc_walk_camp_pace"]
 	if prefix == "player":
 		return [&"player_walk_advance", &"player_walk_stalk", &"player_walk_quick"]
-	return [&"enemy_walk_lurch", &"enemy_walk_hover", &"enemy_walk_stalk"]
+	return [&"enemy_walk_lurch", &"enemy_drift_hover", &"enemy_walk_stalk"]
 
 static func _attack_ids(prefix: String) -> Array:
 	if prefix == "npc":

@@ -182,6 +182,37 @@ func assign_class(cd: ClassData) -> void:
 
 	EventBus.stats_changed.emit(self)
 
+## Dev preview (pose tuner "Launch in Maw"): replace the visible avatar
+## with an arbitrary sprite scene while keeping this player's class
+## mechanics (movement, attack, skills). The sprite must expose the
+## canonical AnimationPlayer anims (idle/walk/attack/cast/hit/die) so
+## gameplay drives them. Equipment paper-doll is dropped — enemy/NPC
+## sprites do not take overlays (rules/sprite-animation.md). Lets you
+## play AS a wraith/boss and trigger its animations in real combat.
+func set_avatar_sprite(scene: PackedScene) -> void:
+	if scene == null:
+		return
+	# Drop the paper-doll first so its deferred bind can't fire on the
+	# sprite we are about to free.
+	if _paperdoll != null:
+		_paperdoll.queue_free()
+		_paperdoll = null
+	for child in _sprite_anchor.get_children():
+		if child == _hitbox:
+			continue
+		child.queue_free()
+	var inst := scene.instantiate()
+	_sprite_anchor.add_child(inst)
+	_sprite_root = inst
+	_sprite_anim = inst.get_node_or_null(^"AnimationPlayer") as AnimationPlayer
+	if _sprite_anim == null:
+		push_warning("Player.set_avatar_sprite: scene has no AnimationPlayer")
+	elif _sprite_anim.has_animation(&"idle"):
+		_sprite_anim.play(&"idle")
+	if DebugLog.is_enabled(&"sprite"):
+		DebugLog.write(&"sprite", "player avatar -> %s (anim=%s)" % [
+				inst.name, "yes" if _sprite_anim != null else "NO"])
+
 var _phys_watch_prev: Vector2 = Vector2.ZERO
 var _phys_watch_first: bool = true
 

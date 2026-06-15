@@ -77,6 +77,40 @@ func tier_color(tier: int) -> Color:
 		1: return TIER_NORMAL
 	return TIER_DULL
 
+# ---- overlay polish (matches the base-skin look) -------------------------
+const _OL_PX: float = 1.0
+const _OL_COLOR: Color = Color(0.06, 0.05, 0.07)
+
+## Finish an equipment-overlay polygon to match the base-skin polish:
+## sit it at z (above base clothing), add a dark outline child (follows
+## the part's animation), and shade it top-light/bottom-dark for form.
+static func _finish(p: Polygon2D, z: int) -> void:
+	if p == null:
+		return
+	p.z_index = z
+	var poly := p.polygon
+	if poly.size() >= 3:
+		var ymin := poly[0].y
+		var ymax := poly[0].y
+		for v in poly:
+			ymin = minf(ymin, v.y)
+			ymax = maxf(ymax, v.y)
+		if ymax - ymin >= 0.5:
+			var base := p.color
+			var vc := PackedColorArray()
+			for v in poly:
+				var f := lerpf(1.12, 0.82, inverse_lerp(ymin, ymax, v.y))
+				vc.append(Color(base.r * f, base.g * f, base.b * f, base.a))
+			p.vertex_colors = vc
+		var expanded := Geometry2D.offset_polygon(poly, _OL_PX)
+		if not expanded.is_empty():
+			var ol := Polygon2D.new()
+			ol.name = p.name + "_OL"
+			ol.polygon = expanded[0]
+			ol.color = _OL_COLOR
+			ol.z_index = -1   # relative → behind its part
+			p.add_child(ol)
+
 ## Returns a Polygon2D overlay for the given (slot, class) pair, tinted
 ## by item tier. Returns null when the slot has no visual for this
 ## class (e.g. RING, AMULET — Act 1 has no jewelry visuals).
@@ -101,20 +135,26 @@ func build_overlay(slot: int, class_id: StringName, item: ItemData) -> Polygon2D
 func build_overlay_parts(slot: int, class_id: StringName, item: ItemData) -> Array:
 	if item == null:
 		return []
+	# z per slot keeps armor above the base clothing (tunic/robe ~z2) and
+	# under the eye glints (z6); _finish adds outline + shading to match
+	# the base-skin polish. LEGS finish themselves in _make_leg_part.
 	match slot:
 		EquipmentSlot.Slot.HEAD:
 			var head := _build_head(class_id, item)
 			if head == null: return []
+			_finish(head, 5)
 			return [{ "mount": NodePath("Body"), "poly": head }]
 		EquipmentSlot.Slot.CHEST:
 			var chest := _build_chest(class_id, item)
 			if chest == null: return []
+			_finish(chest, 4)
 			return [{ "mount": NodePath("Body"), "poly": chest }]
 		EquipmentSlot.Slot.LEGS:
 			return _build_legs_parts(class_id, item)
 		EquipmentSlot.Slot.OFFHAND:
 			var oh := _build_offhand(class_id, item)
 			if oh == null: return []
+			_finish(oh, 4)
 			return [{ "mount": NodePath("Body"), "poly": oh }]
 	return []
 
@@ -180,8 +220,8 @@ func _build_chest(class_id: StringName, item: ItemData) -> Polygon2D:
 			# (pectoral plate / better-quality cuirass) over the
 			# muscled bronze.
 			p.polygon = PackedVector2Array([
-				Vector2(-8, -42), Vector2(8, -42),
-				Vector2(7, -30),  Vector2(-7, -30),
+				Vector2(-9.5, -44), Vector2(9.5, -44),
+				Vector2(9, -37), Vector2(8, -29), Vector2(-8, -29), Vector2(-9, -37),
 			])
 		&"pythia":
 			# Mantle over the violet torso y=-30..-40
@@ -274,6 +314,7 @@ static func _make_leg_part(part_name: StringName, pts: PackedVector2Array,
 	p.name = String(part_name)
 	p.polygon = pts
 	p.color = color
+	_finish(p, 3)   # over shins/boots (z2); outline + shading
 	return p
 
 # ---- OFFHAND overlays -----------------------------------------------------

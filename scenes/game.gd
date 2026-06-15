@@ -205,7 +205,24 @@ func _consume_editor_launch() -> Dictionary:
 		return {}
 	return parsed as Dictionary
 
+## True when the pose-tuner heartbeat file is missing or hasn't been
+## touched within _LAUNCH_HEARTBEAT_STALE seconds — i.e. the launcher
+## has exited. The heartbeat holds a unix timestamp written ~2 Hz.
+func _launcher_is_gone() -> bool:
+	if not FileAccess.file_exists(_launcher_heartbeat_path):
+		return true
+	var f := FileAccess.open(_launcher_heartbeat_path, FileAccess.READ)
+	if f == null:
+		return true
+	var beat := f.get_as_text().strip_edges().to_float()
+	f.close()
+	return Time.get_unix_time_from_system() - beat > _LAUNCH_HEARTBEAT_STALE
+
 func _apply_editor_launch(launch: Dictionary) -> void:
+	DebugLog.write(&"sprite", "editor launch begin: %s" % JSON.stringify(launch))
+	# Tie this preview window's lifetime to the pose tuner that spawned
+	# it — _process polls a heartbeat file and quits if it goes stale.
+	_launcher_heartbeat_path = String(launch.get("heartbeat_file", ""))
 	var zone_id := StringName(launch.get("zone_id", "forsaken_depths"))
 	var arrival := StringName(launch.get("arrival_marker", "DepthsEntry"))
 	if not EndlessRun.active:
@@ -214,7 +231,35 @@ func _apply_editor_launch(launch: Dictionary) -> void:
 	if bool(launch.get("input_lock_until_click", true)):
 		_player.get_input().lock_gameplay_until_mouse_click()
 	_do_transit.call_deferred(zone_id, true, arrival, true)
-	_set_status("Editor launch: %s in The Maw. Click the game window to unlock combat input." % String(launch.get("class_id", DEFAULT_CLASS)), true)
+	# Play AS the selected sprite. A player class rides in normally
+	# (assign_class already ran in _ready). An enemy/NPC sprite swaps
+	# the player's avatar to that procedural sprite so you control it,
+	# trigger its anims through real movement/attacks, and fight the
+	# Maw's own wave-spawned monsters.
+	var bucket := String(launch.get("bucket", "classes"))
+	var sprite_id := StringName(launch.get("sprite_id", launch.get("class_id", DEFAULT_CLASS)))
+	var sprite_scene := String(launch.get("sprite_scene", ""))
+	if bucket != "classes" and sprite_scene != "":
+		_apply_preview_avatar.call_deferred(sprite_id, sprite_scene)
+		_set_status("Editor launch: playing AS %s in The Maw. Click the window to unlock input." % sprite_id, true)
+	else:
+		_set_status("Editor launch: %s in The Maw. Click the game window to unlock combat input." % String(launch.get("class_id", DEFAULT_CLASS)), true)
+
+## Pose-tuner preview: swap the player's avatar to a non-class sprite so
+## the dev plays AS a wraith / boss / NPC and drives its canonical anims
+## from real gameplay. Deferred after the transit so the player has
+## settled in the Maw. Best-effort — a missing scene just reports.
+func _apply_preview_avatar(sprite_id: StringName, sprite_scene: String) -> void:
+	DebugLog.write(&"sprite", "preview avatar: %s (%s) zone=%s" % [
+			sprite_id, sprite_scene, _zone.zone_id if _zone != null else &"<null>"])
+	if not ResourceLoader.exists(sprite_scene):
+		_set_status("Preview: no sprite scene at %s." % sprite_scene, false)
+		return
+	var packed := load(sprite_scene) as PackedScene
+	if packed == null:
+		_set_status("Preview: failed to load %s." % sprite_scene, false)
+		return
+	_player.set_avatar_sprite(packed)
 
 func _maybe_show_tutorial() -> void:
 	# First-launch only: skip if the player has already dismissed it
@@ -1050,7 +1095,29 @@ func _set_status(msg: String, ok: bool) -> void:
 	_status.text = msg
 	_status.modulate = Color(0.85, 0.95, 0.65, 1) if ok else Color(0.95, 0.55, 0.45, 1)
 
-func _process(_delta: float) -> void:
+## Editor-launch watchdog. The pose tuner that spawned this preview
+## window touches a heartbeat file ~2 Hz; if it goes stale, the launcher
+## is gone (Ctrl+C, crash, window close) and we close too. A PID check
+## won't work — OS.is_process_running only tracks our OWN children, not
+## a parent, so it always reports the launcher "dead". The file is the
+## reliable cross-process liveness signal.
+var _launcher_heartbeat_path: String = ""
+var _launcher_watch_accum: float = 0.0
+var _launcher_uptime: float = 0.0
+const _LAUNCH_WATCH_GRACE: float = 1.5   ## let startup settle before watching
+const _LAUNCH_HEARTBEAT_STALE: float = 1.5  ## launcher beats ~2 Hz; 3 missed = gone
+
+func _process(delta: float) -> void:
+	# Editor-launch watchdog (see _launcher_heartbeat_path above).
+	if _launcher_heartbeat_path != "":
+		_launcher_uptime += delta
+		if _launcher_uptime > _LAUNCH_WATCH_GRACE:
+			_launcher_watch_accum += delta
+			if _launcher_watch_accum >= 0.5:
+				_launcher_watch_accum = 0.0
+				if _launcher_is_gone():
+					get_tree().quit()
+					return
 	# Stage 9.5 — kill counter is cumulative; the fade is on the
 	# label's modulate alpha only, driven by the _kill_fade_tween
 	# below. Nothing to tick here per-frame.

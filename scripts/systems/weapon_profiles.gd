@@ -80,25 +80,17 @@ func install(sprite_root: Node2D, weapon_item: ItemData, offhand_item: ItemData)
 ## bare-hands snapshot by install().
 func _build_weapon_anims(sprite_root: Node2D, weapon_type: int, has_shield: bool) -> Dictionary:
 	match weapon_type:
-		ItemData.WeaponType.SPEAR:
-			return { &"attack": _build_spear(sprite_root, has_shield) }
-		ItemData.WeaponType.STAFF:
-			# Two-handed grip has to hold across idle/walk/cast too —
-			# the bare-hands rest pose has arms at sides, which would
-			# leave the staff dangling weirdly.
-			return {
-				&"idle":   _build_staff_idle(sprite_root),
-				&"walk":   _build_staff_walk(sprite_root),
-				&"attack": _build_staff_attack(sprite_root),
-				&"cast":   _build_staff_cast(sprite_root),
-			}
+		# SIMPLE ONE-HAND HOLDS (2026-06-15): spear/staff/wand are now
+		# held in one hand and animated by the baseline sprite itself
+		# (the weapon arm is painted + positioned at the grip, and the
+		# baseline idle/walk/attack/cast drive its swing). Returning {}
+		# tells install() to restore the baseline anims from the snapshot
+		# instead of imposing the old two-handed WeaponProfiles grip — so
+		# the in-game weapon matches the editor one-hand hold.
+		ItemData.WeaponType.SPEAR, \
+		ItemData.WeaponType.STAFF, \
 		ItemData.WeaponType.WAND:
-			return {
-				&"idle":   _build_wand_idle(sprite_root),
-				&"walk":   _build_wand_walk(sprite_root),
-				&"attack": _build_wand_attack(sprite_root),
-				&"cast":   _build_wand_cast(sprite_root),
-			}
+			return {}
 		ItemData.WeaponType.BOW, \
 		ItemData.WeaponType.NONE:
 			return { &"attack": _build_unarmed_fallback() }
