@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_cd")
 id = &"shade_hunter"
+character_id = &"shade_hunter"
 display_name = "Shade-Hunter"
 primary_attribute = &"dexterity"
 base_strength = 15

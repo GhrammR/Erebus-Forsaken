@@ -3,7 +3,12 @@ class_name Enemy extends CharacterBody2D
 ## via HealthComponent, plays the canonical AD-11 anim names through
 ## the sprite scene assigned in the subclass's .tscn.
 
+const CharacterRegistry = preload("res://scripts/systems/character_registry.gd")
+
 @export var enemy_id: StringName = &""  ## Stage 7 — save persistence key
+## Stage 17.7 — preferred: resolve the sprite via CharacterRegistry by
+## this id; falls back to `sprite_scene` when empty/unregistered.
+@export var character_id: StringName = &""
 @export var display_name: String = ""
 @export var max_hp: int = 100
 @export var defense_value: int = 0
@@ -71,8 +76,13 @@ func _ready() -> void:
 	_health.set_stats(current_stats)
 	_health.damaged.connect(_on_damaged)
 	_health.died.connect(_on_died)
-	if sprite_scene != null:
-		var inst := sprite_scene.instantiate()
+	# Stage 17.7 — resolve via CharacterRegistry by character_id; fall
+	# back to the subclass's sprite_scene when unset/unregistered.
+	var _scene: PackedScene = sprite_scene
+	if character_id != &"" and CharacterRegistry.has(character_id):
+		_scene = CharacterRegistry.scene_for(character_id)
+	if _scene != null:
+		var inst := _scene.instantiate()
 		# Stage 13 — palette swap MUST be set before add_child so the
 		# sprite's _ready picks up the variant on its first tint pass.
 		if "palette_variant" in inst:

@@ -1,4 +1,6 @@
 class_name Player extends CharacterBody2D
+
+const CharacterRegistry = preload("res://scripts/systems/character_registry.gd")
 ## AD-02 — one Player scene. Class identity comes from a ClassData
 ## resource assigned at runtime via assign_class(). Sprite, stats, and
 ## class metadata all flow from that one call.
@@ -152,8 +154,13 @@ func assign_class(cd: ClassData) -> void:
 		child.queue_free()
 	_sprite_anim = null
 	_sprite_root = null
-	if cd.sprite_scene != null:
-		var inst := cd.sprite_scene.instantiate()
+	# Stage 17.7 — resolve the sprite through the CharacterRegistry by
+	# character_id; fall back to the class's sprite_scene when unset.
+	var class_scene: PackedScene = cd.sprite_scene
+	if cd.character_id != &"" and CharacterRegistry.has(cd.character_id):
+		class_scene = CharacterRegistry.scene_for(cd.character_id)
+	if class_scene != null:
+		var inst := class_scene.instantiate()
 		_sprite_anchor.add_child(inst)
 		_sprite_root = inst
 		_sprite_anim = inst.get_node_or_null(^"AnimationPlayer") as AnimationPlayer

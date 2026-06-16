@@ -107,9 +107,21 @@ This replaces the per-entity `sprite_scene` PackedScene pattern.
 PackedScene field may remain as a transitional fallback during the
 migration stage, then be removed.)
 
-Registry lives at `data/characters/` as `.tres` resources, one per
-character, loaded through a `CharacterRegistry` autoload/static. Single
-source of truth for "who can be displayed."
+**Implemented (Stage 17.7):** `CharacterRegistry`
+(`scripts/systems/character_registry.gd`) is the single source of truth
+"who can be displayed." It is a **code registry** — a `CHARACTERS` dict
+keyed by `character_id` — consistent with `AnatomyFamilies` /
+`SkinLibrary` / `SpriteMotionStances` (NOT per-character `.tres`; the
+original `.tres` plan was dropped to match the codebase's registry
+pattern). It holds only `{ scene, bucket, weapon, equipment_slots }` per
+id and **aggregates** the rest: species / sub_variant / anim_set from
+`AnatomyFamilies`, skin presence from `SkinLibrary` — no duplication.
+`CharacterRegistry.def(id)` returns the full aggregated CharacterDef;
+`scene_for(id)` / `instantiate(id)` build the sprite. `ClassData` and
+`Enemy` carry a `character_id` that resolves through the registry, with
+the legacy `sprite_scene` export as the transitional fallback. Verified
+by `test/stage17_7_verify.tscn` (roster, scene resolution + six anims,
+def consistency, equipment-slots HUMAN-player-only, ClassData wiring).
 
 ---
 

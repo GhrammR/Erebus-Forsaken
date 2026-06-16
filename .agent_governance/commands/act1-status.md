@@ -1912,23 +1912,30 @@ Governed by `rules/sprite-animation.md`. Build the **data layer** that
 selects what is displayed for any sprite slot. A character is a
 `CharacterDef` record, not a scene.
 
-* \[ ] `CharacterDef` resource + `CharacterRegistry` (autoload/static)
-  loading `data/characters/*.tres`. Fields: `id`, `species`,
-  `sub_variant`, `skin` (palette + accoutrement layer), `anim_set`,
-  `stance_id`, `weapon_flags`, `equipment_slots` (HUMAN-only).
-* \[ ] Runtime resolves an `id` → instantiate species rig → apply skin
-  → build named anim_set → select stance → show declared weapon arms.
-  Swapping the `CharacterDef` for a slot swaps **data only**, never a
-  scene file.
-* \[ ] Author `CharacterDef`s for the Act 1 cast: 4 player classes
-  (HUMAN skins — bronze hoplite / oracle / hooded hunter / ash priest),
-  2 NPCs (Kallias, Eurynome), current enemies (Bone Servant skeleton,
-  Shade Wretch + Bog Caller wraith). Class identity comes from skin
-  only — same HUMAN rig.
-* \[ ] Migrate `ClassData.sprite_scene` + `Enemy.sprite_scene` →
-  `character_id: StringName` resolved through the registry. PackedScene
-  field kept as transitional fallback this stage, removed at stage
-  close.
+* \[x] `CharacterRegistry` (`scripts/systems/character_registry.gd`) —
+  **code registry** (a `CHARACTERS` dict, consistent with
+  AnatomyFamilies/SkinLibrary; the `.tres`-per-character plan was
+  dropped to match the codebase). Holds `{scene,bucket,weapon,
+  equipment_slots}` per id and **aggregates** species/sub_variant/
+  anim_set (AnatomyFamilies) + skin (SkinLibrary). `def(id)` returns the
+  full CharacterDef.
+* \[x] Runtime resolves an `id` → `scene_for/instantiate`; the scene's
+  `sprite_id` drives the skin (SkinLibrary), anim_set, and stance on
+  `_ready`, so resolution is one call. (Full data-only instantiation
+  without a per-character scene is a later optimization.)
+* \[x] All 11 Act-1 characters registered (4 classes + 2 NPCs + bone_
+  servant/revenant/shade_wretch/bog_caller + act_boss). Each resolves to
+  a buildable sprite with the six canonical anims (verified).
+* \[x] `ClassData.character_id` + `Enemy.character_id` added; Player +
+  Enemy resolve the sprite through the registry, with the `sprite_scene`
+  export as transitional fallback. The 4 class `.tres` carry
+  `character_id`. (Enemy `.tres` still use `sprite_scene`; registry
+  covers them and they migrate later. `sprite_scene` removed at stage
+  close.)
+* \[x] `--verify17_7` (`test/stage17_7_verify.{gd,tscn}`): roster, scene
+  resolution + six anims, def consistency with AnatomyFamilies, skin
+  presence == HUMAN, equipment_slots == player-class-only, ClassData
+  wiring. Game boots clean; 13/15/17.5/17.6/17.7 + QA all green.
 * \[ ] `EquipmentVisuals.OVERLAYS` re-anchored to the HUMAN rig part
   set; overlays resolve on every HUMAN character; enemies/NPCs never
   receive them.

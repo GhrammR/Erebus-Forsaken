@@ -1,0 +1,4 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://test/stage17_7_verify.gd" id="1_v177"]
+[node name="Stage17_7Verify" type="Node"]
+script = ExtResource("1_v177")
