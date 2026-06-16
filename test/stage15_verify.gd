@@ -45,12 +45,12 @@ func _verify_autoload_registered(fail: int) -> int:
 func _verify_visuals_weapon_arm_table(fail: int) -> int:
 	fail = _expect(EquipmentVisuals.weapon_arm_for(&"myrmidon") == &"Body/ArmRShoulder/ElbowPivot/SpearArm",
 			"Myrmidon weapon arm path = Body/ArmRShoulder/ElbowPivot/SpearArm", fail)
-	fail = _expect(EquipmentVisuals.weapon_arm_for(&"pythia") == &"Body/StaffArm",
-			"Pythia weapon arm path = Body/StaffArm", fail)
+	fail = _expect(EquipmentVisuals.weapon_arm_for(&"pythia") == &"Body/ArmRShoulder/ElbowPivot/StaffArm",
+			"Pythia weapon arm path = right-hand StaffArm", fail)
 	fail = _expect(EquipmentVisuals.weapon_arm_for(&"shade_hunter") == &"Body/BowArm",
-			"ShadeHunter weapon arm = Body/BowArm", fail)
-	fail = _expect(EquipmentVisuals.weapon_arm_for(&"ossuary_priest") == &"WandArm",
-			"OssuaryPriest weapon arm = WandArm", fail)
+			"ShadeHunter weapon arm = body-level BowArm (pinned model)", fail)
+	fail = _expect(EquipmentVisuals.weapon_arm_for(&"ossuary_priest") == &"Body/ArmRShoulder/ElbowPivot/WandArm",
+			"OssuaryPriest weapon arm = right-hand WandArm", fail)
 	fail = _expect(EquipmentVisuals.weapon_arm_for(&"unknown_class") == &"",
 			"Unknown class returns empty StringName", fail)
 	return fail

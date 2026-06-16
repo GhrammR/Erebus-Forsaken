@@ -1954,6 +1954,130 @@ selects what is displayed for any sprite slot. A character is a
 * \[ ] Screenshot pass: idle for every authored character, attached to
   the closing commit.
 
+## Stage 17.8 — Weapon mount contract + DEMON rig (Phase 3)
+
+* \[x] **Weapon mount contract** (`rules/sprite-animation.md` §5b): every
+  held weapon is welded under its wielding hand's `ElbowPivot` at the
+  grip `(0,10)` by `baseline_white_sprite._mount_weapons()`, so the grip
+  tracks the hand through every animation. Fixed the Pythia staff (was
+  floating free in walk + detaching on attack — it lived at body level)
+  and the Myrmidon spear (attack is now a tip-first forward lunge via a
+  Body step + weapon-local couch rotation, instead of the old arm-fling
+  that led with the butt). Bow now held in the **left** hand at the
+  riser; `EquipmentVisuals.WEAPON_ARMS` + `WeaponProfiles._has_builtin_
+  weapon` + `stage15_verify` updated to the welded paths.
+* \[x] **QA gate:** `test/sprite_qa.gd` hard-fails any sprite whose weapon
+  arm isn't welded under an `ElbowPivot`, carries a `:position` track, or
+  whose grip leaves its hand (> 0.75 px) when sampling all six anims
+  across their timelines. New failure-mode entry recorded. No more
+  per-sprite weapon-attachment fixes — caught once, structurally.
+* \[x] **Phase 3 — DEMON rig (lean fiend):**
+  `art/procedural/enemies/fiend_sprite.{gd,tscn}` — HUMAN anatomy
+  re-skinned infernal (crimson hide, charcoal extremities), with the
+  locked DEMON parts: back-swept **horns**, cloven **hooves**, vestigial
+  tucked **wing-anchors**, a tapering **tail**, and **ember** eye-glow in
+  dark sockets. Registered `&"fiend"` DEMON in `AnatomyFamilies.ENTRIES`
+  + `CharacterRegistry.CHARACTERS` (enemies bucket, no equipment slots).
+  Added to `sprite_qa` + `wraith_render` + `stage17_7_verify` roster.
+  Six canonical anims build; rendered to `docs/sprites/fiend/`. The
+  shared DEMON baseline other demons derive from.
+* \[x] All verifiers (13/15/17.5/17.6/17.7) + Sprite QA green; game boots
+  clean.
+### Stage 17.8b — sprite polish pass (8 reported issues)
+
+* \[x] **Bow attack restored** (#1): the bow is now a two-handed PINNED
+  weapon (body-level `Body/BowArm`, un-welded). Right hand pins the riser
+  always; left hand draws the nock during the attack; bowstring rebuilt
+  `tip→nock→tip` each frame (`_apply_bow_rig`). Draw-and-loose attack +
+  bow-specific cast (left arm gestures, bow stays held). Sprite QA gained
+  a bow grip check (riser rides the right hand across all anims).
+* \[x] **Wand** (#2): held near the base; attack is a tip-down chop (was
+  a backward flick leading with the handle).
+* \[x] **Weapon cast reworked** (#3): overhead invocation — arms raise
+  up-and-out; no more inward fold that buried arms/weapon behind the body.
+* \[x] **Bone Servant gait** (#4): enemy walk counter-swings the arms and
+  the attack is a single-arm reach (shared `SpriteRuntime2D` rework) —
+  mirrors the human baseline instead of the old every-joint flail.
+* \[~] **Multi-directional sprites** (#5): DEFERRED to the Stage 11 AI
+  pipeline (locked scope — procedural stays side-view + L/R flip).
+  Recorded in `rules/sprite-animation.md` §5b "Out of scope".
+* \[x] **Wraith hover in editor** (#6): hover height is seated as the
+  Body's resting position, so a static editor preview floats with a
+  shadow gap instead of standing on the ground.
+* \[x] **Wraith upper body** (#7): the flailing attack is gone — wraiths
+  use the same humanoid single-arm reach (articulated arms already
+  present; claws retained).
+* \[x] **Off-centred wraith anims** (#8): drift `die` is a centred
+  fade+sink (no feet-pivot topple); the drift cast pins the Body to its
+  hover rest so the channel stays on-axis.
+* \[x] Governance: `rules/sprite-animation.md` §5b (two grip models +
+  pose rules + directional deferral) and a `failure-modes.md` entry.
+  All verifiers (13/15/17.5/17.6/17.7) + Sprite QA green; boots clean.
+
+### Stage 17.8c — second sprite polish pass (8 reported issues)
+
+* \[x] **Cast holds weapon vertical** (#1): staff/spear/wand are
+  counter-rotated when raised so they stay upright (held high to cast)
+  instead of tipping at the ground.
+* \[x] **Bow welded** (#2/#3/#5): the bow's primary grip now WELDS to the
+  right hand (structural — can't detach; the QA weld check covers it,
+  which is why the old pin-only bow "on the ground" slipped past). The
+  left hand pins to the nock only during the draw; the draw elbow bends
+  the right way; the cast raises the bow high + vertical.
+* \[x] **Arms above clothing** (#4/#6): free-arm parts render at z4 (above
+  robe/tunic) via `_layer_free_arms`; new `sprite_qa` arm-layering check
+  fails a skinned HUMAN whose arms render behind the skin.
+* \[x] **Bone Servant gait** (#7): enemy walk now swings a full ±0.26 hip
+  stride with a real per-leg knee fold (4-key cycle) so knees bend and
+  feet lift instead of sliding rigidly.
+* \[x] **Maw launch replaces, not floods** (#8):
+  `pose_tuner._on_launch_game_pressed` kills the prior preview before
+  spawning, so at most one Maw window exists (close it + relaunch to swap
+  sprites) — no more window stacking / OOM.
+* \[x] Governance: `rules/sprite-animation.md` §5b (welded-primary rule,
+  raised-weapon-vertical, arm-layering) + `failure-modes.md` entry.
+  All verifiers + Sprite QA green; boots clean.
+
+### Stage 17.8d — WeaponRig system + wraith rebuild (6 reported issues)
+
+* \[x] **WeaponRig** (`scripts/systems/weapon_rig.gd`) — the reusable
+  per-weapon hold + attack contract (#4). Each weapon kind declares its
+  geometry/grip/pattern once; any sprite with the shared hand rig mounts
+  it (classes, NPCs, enemies) via `WeaponRig.kind_for/mount/add_attack/
+  add_cast`. Baseline + `SpriteRuntime2D` both delegate to it.
+* \[x] **Bog Caller shares the wand** (#4 example): `bog_caller` is in
+  `WeaponRig.SPRITE_WEAPON` (WAND) — wields + chops + raises the same wand
+  as the Ossuary Priest, under its wraith skin.
+* \[x] **Bow redesign** (#1/#2): curvier recurve limb, string attached to
+  the tips through the nock, hand grips the BOW (riser) not the string,
+  deeper draw, draw-hand elbow bends (left-hand nock pin).
+* \[x] **Wand = downward chop** (#3): overhead chop pattern (arm winds up,
+  strikes down, tip leads) — no longer a forward poke.
+* \[x] **Wraiths rebuilt on HumanRig** (#5/#6): `wraith_sprite.gd` —
+  Shade Wretch + Bog Caller are now the SAME size as characters, with
+  articulated arms that HANG DOWN ending in claws (humanoid waist-up),
+  cloak/hood drape, no legs (drift). Fixes the oversized splayed-arm rig.
+* \[x] Governance: `rules/sprite-animation.md` §5b (WeaponRig single
+  source + wraith-on-HumanRig). All verifiers + Sprite QA green; boots
+  clean.
+
+### Stage 17.8e — chop fixes + stance prune
+
+* \[x] **Staff/wand chop pivots on the hand** (#1/#3): `WeaponRig._chop_attack`
+  now swings the WEAPON about the grip (tip/orb arcs down) with only a
+  small arm lift — the staff stays a vertical staff that chops down (not
+  an "extended arm"); the (lengthened) wand visibly extends from the fist
+  and chops (no longer embedded in the forearm).
+* \[x] **One stance per variant** (#2): `SpriteMotionStances.ids_for_context`
+  pruned to a single canonical stance per (role, anim) — the editor no
+  longer offers the broken/improper extras. Runtime reads
+  `tmp/selected_stances.json` directly, so saved picks are unaffected;
+  `stage17_5_verify` updated (1 canonical stance per anim, still
+  role-namespaced).
+
+* \[ ] Remaining sprite phases: Phase 4 CONSTRUCT rig, Phase 5 BEAST
+  quadruped, Phase 6 bespoke bosses (Hexacheir).
+
 ## Stage 18 — Boss state-machine cleanup + legacy rare-routing audit
 
 Hexacheir, the God-Spurned is now the current first-demon Act Boss.

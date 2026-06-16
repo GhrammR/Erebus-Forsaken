@@ -17,17 +17,16 @@ const TIER_BRIGHT: Color = Color(1.00, 0.90, 0.50)
 ## Class -> weapon arm node name (lives directly under the sprite root).
 ## EquipmentPaperdoll toggles .visible based on whether the WEAPON slot
 ## is occupied. Empty slot = bare hands = arm hidden.
+## Stage 17.8 — every weapon arm is WELDED onto its wielding hand
+## (baseline_white_sprite._mount_weapons), so these paths point under the
+## relevant ElbowPivot. The grip then tracks the hand in every animation.
 const WEAPON_ARMS: Dictionary = {
-	# Stage 17.5 — SpearArm lives under the right hand. Shaft polygon
-	# is HORIZONTAL with grip at the back (spear-local origin = hand),
-	# so the strike rotates the arm forward and the spear translates
-	# with the hand instead of arcing around it.
 	&"myrmidon":       &"Body/ArmRShoulder/ElbowPivot/SpearArm",
-	# Stage 17.9 — StaffArm is body-level; both hands grip stance
-	# markers via IK so StaffStances can drive real geometry.
-	&"pythia":         &"Body/StaffArm",
+	&"pythia":         &"Body/ArmRShoulder/ElbowPivot/StaffArm",
+	# Bow is the two-handed PINNED weapon — stays body-level, both hands
+	# pinned to riser/nock markers (baseline_white_sprite bow rig).
 	&"shade_hunter":   &"Body/BowArm",
-	&"ossuary_priest": &"WandArm",
+	&"ossuary_priest": &"Body/ArmRShoulder/ElbowPivot/WandArm",
 }
 
 ## Default offhand node (already painted on the class sprite). For

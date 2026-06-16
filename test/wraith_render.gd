@@ -12,6 +12,7 @@ const SCENES := [
 	{ "id": &"bog_caller",   "path": "res://art/procedural/enemies/bog_caller_sprite.tscn" },
 	{ "id": &"bone_servant", "path": "res://art/procedural/enemies/bone_servant_sprite.tscn" },
 	{ "id": &"revenant", "path": "res://art/procedural/enemies/revenant_sprite.tscn" },
+	{ "id": &"fiend", "path": "res://art/procedural/enemies/fiend_sprite.tscn" },
 	{ "id": &"myrmidon", "path": "res://art/procedural/classes/myrmidon_sprite.tscn" },
 	{ "id": &"myrmidon_armed", "path": "res://art/procedural/classes/myrmidon_sprite.tscn", "show": &"show_spear" },
 	{ "id": &"pythia", "path": "res://art/procedural/classes/pythia_sprite.tscn" },
@@ -115,6 +116,10 @@ func _render_one(rec: Dictionary) -> void:
 			anim.play(anim_name)
 			var len := anim.get_animation(anim_name).length
 			anim.seek(len * 0.6, true)
+		# Two frames: the first lets per-frame rigs (the bow pin driver on
+		# get_tree().process_frame) pose against the seeked animation before
+		# we capture, so the snapshot reflects the settled pose.
+		await get_tree().process_frame
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		var img := _vp.get_texture().get_image()

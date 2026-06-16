@@ -101,6 +101,7 @@ func _build_weapon_anims(sprite_root: Node2D, weapon_type: int, has_shield: bool
 ## current example — the BowArm subtree is always present and the
 ## sprite's own attack drives the draw via NockMarker translation.
 static func _has_builtin_weapon(sprite_root: Node) -> bool:
+	# Bow is the two-handed pinned weapon — stays body-level.
 	return sprite_root.has_node(^"Body/BowArm")
 
 static func _has_builtin_shield(sprite_root: Node) -> bool:

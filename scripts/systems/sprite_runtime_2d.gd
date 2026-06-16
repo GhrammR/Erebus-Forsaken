@@ -6,6 +6,12 @@ class_name SpriteRuntime2D extends Node2D
 const SpriteMotionStances = preload("res://scripts/systems/stances/sprite_motion_stances.gd")
 const SpriteOverrides = preload("res://scripts/systems/sprite_overrides.gd")
 const StanceSelection = preload("res://scripts/systems/stance_selection.gd")
+const WeaponRigLib = preload("res://scripts/systems/weapon_rig.gd")
+
+# Weapon this enemy/NPC wields (from WeaponRig.SPRITE_WEAPON) — lets any
+# rig with the shared hands carry a weapon (e.g. the Bog Caller's wand,
+# the same one the Ossuary Priest uses).
+var _weapon_kind: int = WeaponRigLib.Kind.NONE
 
 @export var sprite_id: StringName = &""
 @export var stance_bucket: StringName = &""
@@ -32,9 +38,22 @@ func setup_sprite_runtime() -> void:
 		stance_id = StanceSelection.selected_for_key(
 				String(sprite_id), stance_id, SpriteMotionStances.all_ids())
 	_motion = SpriteMotionStances.get_stance(stance_id)
+	# Mount this sprite's weapon (if any) BEFORE building anims so the
+	# attack/cast can reference the welded weapon arm.
+	_weapon_kind = WeaponRigLib.kind_for(sprite_id)
+	if _weapon_kind != WeaponRigLib.Kind.NONE:
+		WeaponRigLib.mount(self, _weapon_kind)
 	_anim = _ensure_animation_player()
 	if auto_build_animations:
 		_install_runtime_animations()
+	# Wraiths hover: seat the Body at its resting hover height so even a
+	# STATIC pose (the sprite editor, a paused frame) floats above the
+	# ground with a shadow gap — the hover previously lived only inside the
+	# animation keys, so an un-animated editor preview sat on the floor.
+	if _is_wraith_sprite():
+		var hover_body := get_node_or_null(^"Body") as Node2D
+		if hover_body != null:
+			hover_body.position = _body_rest()
 	_per_anim_config = SpriteOverrides.load_for_class(sprite_id, stance_id)
 	if not _anim.animation_started.is_connected(_on_anim_started):
 		_anim.animation_started.connect(_on_anim_started)
@@ -196,25 +215,88 @@ func _anim_walk() -> Animation:
 			[Vector2.ZERO, Vector2(0, float(_motion.get("walk_bob", -2.0))), Vector2.ZERO])
 	_key_float(a, NodePath("%s:rotation" % body), [0.0, a.length * 0.25, a.length * 0.5, a.length * 0.75, a.length],
 			[0.0, float(_motion.get("walk_sway", 0.06)), 0.0, -float(_motion.get("walk_sway", 0.06)), 0.0])
+	# Fuller stride + a real knee bend so the gait reads as walking, not a
+	# stiff slide. Hips swing ±0.26; each knee folds on its back-swing and
+	# straightens as the leg passes forward (4 keys = a proper step cycle),
+	# so feet lift and plant instead of rigidly gliding.
 	for path in _paths_matching(["LegLHip"]):
 		_key_float(a, NodePath("%s:rotation" % path), [0.0, a.length * 0.5, a.length],
-				[0.10, -0.12, 0.10])
+				[0.26, -0.26, 0.26])
 	for path in _paths_matching(["LegRHip"]):
 		_key_float(a, NodePath("%s:rotation" % path), [0.0, a.length * 0.5, a.length],
-				[-0.12, 0.10, -0.12])
+				[-0.26, 0.26, -0.26])
 	for path in _paths_matching(["KneePivot"]):
 		if String(path).contains("LegL"):
-			_key_float(a, NodePath("%s:rotation" % path), [0.0, a.length * 0.5, a.length],
-					[0.14, -0.06, 0.14])
+			_key_float(a, NodePath("%s:rotation" % path),
+					[0.0, a.length * 0.25, a.length * 0.5, a.length * 0.75, a.length],
+					[0.10, 0.08, 0.16, 0.46, 0.10])
 		else:
-			_key_float(a, NodePath("%s:rotation" % path), [0.0, a.length * 0.5, a.length],
-					[-0.06, 0.14, -0.06])
+			_key_float(a, NodePath("%s:rotation" % path),
+					[0.0, a.length * 0.25, a.length * 0.5, a.length * 0.75, a.length],
+					[0.16, 0.46, 0.10, 0.08, 0.16])
+	# Arms counter-swing opposite the legs — the human gait read (the old
+	# enemy walk swung legs only, so the skeleton's arms hung dead).
+	var arm_swing := 0.22
+	var r_root := _arm_root("R")
+	var l_root := _arm_root("L")
+	if r_root != "":
+		_key_float(a, NodePath("%s:rotation" % r_root), [0.0, a.length * 0.5, a.length],
+				[-arm_swing, arm_swing, -arm_swing])
+	if l_root != "":
+		_key_float(a, NodePath("%s:rotation" % l_root), [0.0, a.length * 0.5, a.length],
+				[arm_swing, -arm_swing, arm_swing])
 	for path in _shadow_paths():
 		_key_vec2(a, NodePath("%s:scale" % path), [0.0, a.length * 0.5, a.length],
 				[Vector2.ONE, Vector2(0.94, 0.82), Vector2.ONE])
 	return a
 
 func _anim_attack() -> Animation:
+	# Bosses keep the broad multi-arm sweep (Hexacheir has six arms — a
+	# single-arm reach would read as inert). Everyone else gets a clean,
+	# HUMAN-like single-arm strike instead of the old every-arm-node flail.
+	if sprite_id == &"act_boss":
+		return _anim_multi_arm_attack()
+	var a := Animation.new()
+	a.length = float(_motion.get("attack_len", 0.42))
+	a.loop_mode = Animation.LOOP_NONE
+	var body := _body_path()
+	var rest := _body_rest()
+	# Armed enemy: the WeaponRig owns the arm + weapon strike (a Bog Caller
+	# chops with the shared wand). Body holds at its hover/rest so the pose
+	# stays centred; the weapon pattern drives the limbs.
+	if _weapon_kind != WeaponRigLib.Kind.NONE:
+		_key_vec2(a, NodePath("%s:position" % body), [0.0, a.length], [rest, rest])
+		_key_float(a, NodePath("%s:rotation" % body), [0.0, a.length * 0.55, a.length], [0.0, 0.05, 0.0])
+		WeaponRigLib.add_attack(a, self, _weapon_kind, a.length)
+		return a
+	# Step the body forward + a slight lean — the lunge weight (mirrors the
+	# HUMAN baseline attack so the skeleton/wraith read the same as players).
+	_key_vec2(a, NodePath("%s:position" % body), [0.0, a.length * 0.3, a.length * 0.45, a.length],
+			[rest, rest + Vector2(1.5, 0), rest + Vector2(4, -1), rest])
+	_key_float(a, NodePath("%s:rotation" % body), [0.0, a.length * 0.45, a.length],
+			[0.0, 0.06, 0.0])
+	var attack_rot := float(_motion.get("attack_rot", -0.85))
+	# RIGHT arm winds back then drives FORWARD (reach away from the body);
+	# the elbow extends on the strike; the left arm gives a small counter.
+	# Only the shoulder ROOT + its elbow are keyed — claws/hands are leaf
+	# children and follow, so the whole arm reaches instead of every joint
+	# spinning independently (the flail).
+	var r_root := _arm_root("R")
+	var l_root := _arm_root("L")
+	if r_root != "":
+		_key_float(a, NodePath("%s:rotation" % r_root), [0.0, a.length * 0.22, a.length * 0.55, a.length],
+				[0.0, 0.25, attack_rot, 0.0])
+		var r_elbow := "%s/ElbowPivot" % r_root
+		if has_node(NodePath(r_elbow)):
+			_key_float(a, NodePath("%s:rotation" % r_elbow), [0.0, a.length * 0.22, a.length * 0.55, a.length],
+					[0.0, 0.45, 0.15, 0.0])
+	if l_root != "":
+		_key_float(a, NodePath("%s:rotation" % l_root), [0.0, a.length * 0.55, a.length],
+				[0.0, -attack_rot * 0.22, 0.0])
+	return a
+
+# The pre-17.8 every-arm sweep, retained ONLY for the multi-armed boss.
+func _anim_multi_arm_attack() -> Animation:
 	var a := Animation.new()
 	a.length = float(_motion.get("attack_len", 0.42))
 	a.loop_mode = Animation.LOOP_NONE
@@ -235,6 +317,15 @@ func _anim_attack() -> Animation:
 				[0.0, attack_rot * sign, -attack_rot * 0.35 * sign, 0.0])
 	return a
 
+# Resolve the shoulder-root node path for a side ("R"/"L"), covering the
+# HUMAN/skeleton naming (Arm{R,L}Shoulder) and the wraith naming (Arm{R,L}).
+# Returns "" when the rig has no such arm.
+func _arm_root(side: String) -> String:
+	for nm in ["Arm%sShoulder" % side, "Arm%s" % side]:
+		if has_node(NodePath("Body/%s" % nm)):
+			return "Body/%s" % nm
+	return ""
+
 func _anim_cast() -> Animation:
 	if sprite_id == &"act_boss":
 		return _anim_boss_taunt_cast()
@@ -243,8 +334,17 @@ func _anim_cast() -> Animation:
 	a.loop_mode = Animation.LOOP_NONE
 	var pulse := float(_motion.get("cast_pulse", 1.5))
 	var body := _body_path()
+	# Pin the body to its resting (hover) position so the channel reads on
+	# the centre axis — a drifting caster (bog_caller) otherwise appears
+	# off-centred when the cast inherits a stray offset from the prior anim.
+	var rest := _body_rest()
+	_key_vec2(a, NodePath("%s:position" % body), [0.0, a.length * 0.5, a.length],
+			[rest, rest + Vector2(0, -1), rest])
 	_key_color(a, NodePath("%s:modulate" % body), [0.0, a.length * 0.35, a.length * 0.72, a.length],
 			[Color(1, 1, 1, 1), Color(1.2, 1.25, 1.45, 1), Color(1.2, 1.25, 1.45, 1), Color(1, 1, 1, 1)])
+	# Armed caster (Bog Caller): raise the weapon to channel (WeaponRig).
+	if _weapon_kind != WeaponRigLib.Kind.NONE:
+		WeaponRigLib.add_cast(a, self, _weapon_kind, a.length)
 	for path in _glow_paths():
 		_key_vec2(a, NodePath("%s:scale" % path), [0.0, a.length * 0.35, a.length],
 				[Vector2.ONE, Vector2.ONE * pulse, Vector2.ONE])
@@ -291,6 +391,18 @@ func _anim_die() -> Animation:
 	a.length = 0.75
 	a.loop_mode = Animation.LOOP_NONE
 	var body := _body_path()
+	if _is_wraith_sprite():
+		# DISSOLVE in place — a hovering wraith doesn't topple. The body
+		# fades while sinking toward the ground, staying on the centre axis.
+		# (The topple below rotates about the FEET pivot, which throws a
+		# floating body far off-centre — the "off-centred dissolve/collapse"
+		# bug for shade_wretch + bog_caller.)
+		var rest := _body_rest()
+		_key_vec2(a, NodePath("%s:position" % body), [0.0, a.length],
+				[rest, rest + Vector2(0, _wraith_hover() * 0.7)])
+		_key_color(a, NodePath("%s:modulate" % body), [0.0, a.length * 0.35, a.length],
+				[Color(1, 1, 1, 1), Color(1.1, 1.1, 1.2, 0.7), Color(0.4, 0.4, 0.55, 0.0)])
+		return a
 	_key_float(a, NodePath("%s:rotation" % body), [0.0, a.length], [0.0, 1.45])
 	_key_color(a, NodePath("%s:modulate" % body), [0.0, a.length],
 			[Color(1, 1, 1, 1), Color(0.4, 0.4, 0.45, 0.0)])

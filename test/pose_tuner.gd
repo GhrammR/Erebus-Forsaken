@@ -1529,6 +1529,12 @@ func _on_use_stance_pressed() -> void:
 	_refresh_score_panel()
 
 func _on_launch_game_pressed() -> void:
+	# REPLACE, don't flood: close any Maw window we previously spawned
+	# before opening a new one. Repeated launches used to stack a new game
+	# process+window each click until the machine ran out of memory; now
+	# there is at most one preview window at a time (close it and launch
+	# again to swap sprites).
+	_kill_spawned_previews()
 	# Launch ANY sprite into The Maw — player class, enemy, or NPC.
 	# Non-class sprites spawn next to a default-Myrmidon observer so a
 	# wraith can be watched drifting / a boss looming in real engine

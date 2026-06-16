@@ -165,7 +165,7 @@ func _verify_sub_variant_naming() -> void:
 # canonical anims and resolves to wraith_float.
 const WRAITH_SCENES: Array = [
 	{ "id": &"shade_wretch", "path": "res://art/procedural/enemies/shade_wretch_sprite.tscn", "robe": &"Cloak" },
-	{ "id": &"bog_caller",   "path": "res://art/procedural/enemies/bog_caller_sprite.tscn",   "robe": &"Robe" },
+	{ "id": &"bog_caller",   "path": "res://art/procedural/enemies/bog_caller_sprite.tscn",   "robe": &"Cloak" },
 ]
 
 func _verify_wraith_rig_scenes() -> void:
@@ -192,8 +192,10 @@ func _verify_wraith_rig_scenes() -> void:
 		_expect(sprite.get_node_or_null(^"Body/FaceVoid") != null, "%s has FaceVoid" % id)
 		_expect(body != null and body.get_node_or_null(NodePath(String(rec["robe"]))) != null,
 				"%s has %s drape layer" % [id, rec["robe"]])
-		_expect(sprite.get_node_or_null(^"Body/ArmL") != null
-				and sprite.get_node_or_null(^"Body/ArmR") != null,
+		# Rebuilt on the shared HUMAN rig (Stage 17.8d): articulated arms
+		# that hang down like a character's, ending in claws.
+		_expect(sprite.get_node_or_null(^"Body/ArmLShoulder/ElbowPivot/Forearm") != null
+				and sprite.get_node_or_null(^"Body/ArmRShoulder/ElbowPivot/Forearm") != null,
 				"%s has both articulated arms" % id)
 		# All six canonical anims build on the wraith.
 		var anim := sprite.get_node_or_null(^"AnimationPlayer") as AnimationPlayer
