@@ -232,20 +232,22 @@ static func eye_pupil_r_poly() -> PackedVector2Array:
 	return _ellipse_at(Vector2(2.2, HEAD_MID), 0.8, 0.7)
 
 static func brow_poly() -> PackedVector2Array:
-	# Single horizontal bar above the eyes for a grim expression.
+	# Thin brow line above the eyes (subtle, not a heavy bar).
 	return PackedVector2Array([
-		Vector2(-4.0, HEAD_MID - 2.2),
-		Vector2(4.0, HEAD_MID - 2.2),
-		Vector2(4.0, HEAD_MID - 1.6),
-		Vector2(-4.0, HEAD_MID - 1.6),
+		Vector2(-3.2, HEAD_MID - 2.4),
+		Vector2(3.2, HEAD_MID - 2.4),
+		Vector2(3.2, HEAD_MID - 2.05),
+		Vector2(-3.2, HEAD_MID - 2.05),
 	])
 
 static func mouth_poly() -> PackedVector2Array:
+	# Small, subtle mouth line low on the face (2c) — a slim mark, not a
+	# rectangle floating below the eyes. Slightly tapered at the corners.
 	return PackedVector2Array([
-		Vector2(-1.6, CHIN - 2.8),
-		Vector2(1.6, CHIN - 2.8),
-		Vector2(1.6, CHIN - 2.2),
-		Vector2(-1.6, CHIN - 2.2),
+		Vector2(-1.1, CHIN - 1.9),
+		Vector2(1.1, CHIN - 1.9),
+		Vector2(0.8, CHIN - 1.5),
+		Vector2(-0.8, CHIN - 1.5),
 	])
 
 ## Paint face sub-parts on a Face node under Body. Per-sprite scripts

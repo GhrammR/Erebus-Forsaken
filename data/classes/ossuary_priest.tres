@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_cd")
 id = &"ossuary_priest"
+character_id = &"ossuary_priest"
 display_name = "Ossuary Priest"
 primary_attribute = &"pneuma"
 base_strength = 12

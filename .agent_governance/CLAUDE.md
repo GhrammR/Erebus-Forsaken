@@ -84,6 +84,7 @@ Rules — read when relevant:
 - `rules/stat-system.md` — single source of truth for stats and formulas
 - `rules/scope-lock.md` — Act 1 definition, what is forbidden
 - `rules/asset-pipeline.md` — procedural sprites vs bitmap, integration rules
+- `rules/sprite-animation.md` — base rig, 5-species roster, data-driven character registry
 - `rules/testing.md` — what must be tested before a feature is "done"
 - `rules/failure-modes.md` — known collapse vectors and prevention
 - `rules/feel-pass.md` — sound + visual cue contract for every player-affecting event

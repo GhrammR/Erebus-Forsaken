@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_cd")
 id = &"myrmidon"
+character_id = &"myrmidon"
 display_name = "Myrmidon"
 primary_attribute = &"strength"
 base_strength = 30

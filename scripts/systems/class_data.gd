@@ -28,5 +28,8 @@ class_name ClassData extends Resource
 @export var pne_per_mp: float = 0.0
 
 @export_group("Visuals")
-## Populated in Stage 2 with the procedural sprite scene.
+## Stage 17.7 — preferred: resolve the sprite through CharacterRegistry
+## by this id. Falls back to `sprite_scene` when empty/unregistered.
+@export var character_id: StringName = &""
+## Populated in Stage 2 with the procedural sprite scene (fallback).
 @export var sprite_scene: PackedScene

@@ -1,0 +1,11 @@
+  PASS  myrmidon
+  PASS  pythia
+  PASS  shade_hunter
+  PASS  ossuary_priest
+  PASS  kallias
+  PASS  eurynome
+  PASS  bone_servant
+  PASS  revenant
+  PASS  shade_wretch
+  PASS  bog_caller
+  PASS  act_boss

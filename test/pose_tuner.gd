@@ -27,6 +27,10 @@ extends Control
 const VIEW_SIZE: Vector2i = Vector2i(360, 360)
 const SPRITE_SCALE: float = 3.0
 const FEET_POS := Vector2(180, 320)
+## Editor background z. Must be below the most-negative sprite part z so
+## chrome never occludes sprite content (the legs-behind-bg bug). Sprite
+## parts live around z -1..+100; -100 keeps the BG safely behind all.
+const BG_Z: int = -100
 
 # Class catalog — id, scene path, available variants.
 # Variants are {name, anim, equip} — equip drives WeaponProfiles like
@@ -132,7 +136,8 @@ const CLASSES: Array = [
 			{ "name": "Hover", "anim": &"idle", "equip": {} },
 			{ "name": "Drift", "anim": &"walk", "equip": {} },
 			{ "name": "Lunge", "anim": &"attack", "equip": {} },
-			{ "name": "Chill", "anim": &"cast", "equip": {} },
+			# Shade Wretch is a melee clawed wraith — it does not cast,
+			# so there is no cast pose to tune (was the stray "Chill").
 			{ "name": "Dissolve", "anim": &"die", "equip": {} },
 		],
 	},
@@ -255,11 +260,50 @@ var _selected_stances: Dictionary = {}
 var _custom_stances: Dictionary = {}
 var _undo_stack: Array = []
 var _restoring_undo: bool = false
+## PIDs of "Launch in Maw" preview windows spawned this session. Killed
+## when the tuner closes gracefully (window X / quit). Ctrl+C can't run
+## _exit_tree, so the spawned window ALSO self-closes via the
+## launcher_pid watchdog in game.gd — belt and suspenders.
+var _spawned_preview_pids: Array[int] = []
 # Per-node slider references for the "Dump Pose" extractor.
 # Each entry: { "kind": "rot"|"pos", "node_path": String, "controls": [Range...] }
 var _slider_entries: Array = []
 
+## Liveness heartbeat for spawned "Launch in Maw" preview windows. The
+## game polls this file's timestamp and self-closes when it goes stale,
+## which is how Ctrl+C (no clean shutdown) still takes the window down.
+const HEARTBEAT_FILE: String = "res://tmp/pose_tuner_heartbeat.txt"
+
+func _exit_tree() -> void:
+	_kill_spawned_previews()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_kill_spawned_previews()
+
+## Graceful close (window X / quit): kill any preview windows directly.
+## Ctrl+C can't reach this — the heartbeat watchdog covers that case.
+func _kill_spawned_previews() -> void:
+	for pid in _spawned_preview_pids:
+		if OS.is_process_running(pid):
+			OS.kill(pid)
+	_spawned_preview_pids.clear()
+
+func _write_heartbeat() -> void:
+	var f := FileAccess.open(HEARTBEAT_FILE, FileAccess.WRITE)
+	if f != null:
+		f.store_string(str(Time.get_unix_time_from_system()))
+		f.close()
+
 func _ready() -> void:
+	# Beat ~2 Hz so spawned preview windows can tell we're still alive.
+	var hb := Timer.new()
+	hb.name = "HeartbeatTimer"
+	hb.wait_time = 0.5
+	hb.autostart = true
+	hb.timeout.connect(_write_heartbeat)
+	add_child(hb)
+	_write_heartbeat()
 	_load_scores_from_disk()
 	_load_selected_stances_from_disk()
 	_load_custom_stances_from_disk()
@@ -485,16 +529,24 @@ func _build_ui() -> void:
 	_vp = SubViewport.new()
 	_vp.size = VIEW_SIZE
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	# Editor chrome MUST sit behind ALL sprite content. Sprites can place
+	# parts at negative z_index (e.g. SpriteRuntime2D pins injected leg
+	# hips to z=-1 so they read behind the torso) — an opaque background
+	# at z=0 silently hid the bone_servant's legs in the editor while they
+	# rendered fine in-game (no full-screen overlay there). Keep BG_Z far
+	# below any plausible sprite part so the tuner shows what ships.
+	# (failure-modes: "editor chrome occluding negative-z sprite parts".)
 	var bg := ColorRect.new()
 	bg.color = Color(0.12, 0.10, 0.14)
 	bg.size = VIEW_SIZE
+	bg.z_index = BG_Z
 	_vp.add_child(bg)
 	var floor := Polygon2D.new()
 	floor.name = "_EditorShadowGuide"
 	floor.position = FEET_POS + Vector2(0, 4)
 	floor.polygon = _ellipse_points(Vector2.ZERO, 58.0, 13.0, 28)
 	floor.color = Color(0.02, 0.015, 0.025, 0.72)
-	floor.z_index = -20
+	floor.z_index = BG_Z + 50   # above the flat BG, still behind the sprite
 	_vp.add_child(floor)
 	vp_container.add_child(_vp)
 
@@ -656,14 +708,24 @@ func _load_current(scrub_time: float = 0.0) -> void:
 	_sprite.scale = Vector2(SPRITE_SCALE, SPRITE_SCALE)
 	_vp.add_child(_sprite)
 	_boost_editor_shadows()
+	# Bind the equipment paper-doll ONLY when the variant equips armor.
+	# For weapon-only / unarmed variants the weapon is shown via the
+	# show_* flags (baseline's simple one-hand hold) and is fully tunable
+	# with the weapon-arm sliders — binding the paper-doll would install
+	# WeaponProfiles IK pins that re-pose the weapon every frame and stomp
+	# slider edits (issue 1A). Armor variants still use the paper-doll.
 	if bucket == &"classes":
-		_paperdoll = EquipmentPaperdoll.new()
-		add_child(_paperdoll)
-		_paperdoll.bind(_sprite, _inv, cls["id"])
-		for slot in ["weapon", "offhand", "head", "chest", "legs"]:
-			if variant["equip"].has(slot):
-				_inv.add_item(variant["equip"][slot])
-				_inv.equip(variant["equip"][slot])
+		var equip: Dictionary = variant.get("equip", {})
+		var has_armor: bool = equip.has("head") or equip.has("chest") \
+				or equip.has("legs") or equip.has("offhand")
+		if has_armor:
+			_paperdoll = EquipmentPaperdoll.new()
+			add_child(_paperdoll)
+			_paperdoll.bind(_sprite, _inv, cls["id"])
+			for slot in ["weapon", "offhand", "head", "chest", "legs"]:
+				if equip.has(slot):
+					_inv.add_item(equip[slot])
+					_inv.equip(equip[slot])
 	await get_tree().process_frame
 	_anim = _sprite.get_node(^"AnimationPlayer") as AnimationPlayer
 	_anim.play(variant["anim"])
@@ -1456,7 +1518,9 @@ func _on_use_stance_pressed() -> void:
 		_selected_stances[class_key] = selected_record
 	else:
 		var bucket_key := String(bucket)
-		if typeof(_selected_stances.get(bucket_key, {})) != TYPE_DICTIONARY:
+		# has() gate — see _on_launch_game_pressed: `.get(k,{})` masks a
+		# missing key and the direct index below would then crash.
+		if not _selected_stances.has(bucket_key) or typeof(_selected_stances[bucket_key]) != TYPE_DICTIONARY:
 			_selected_stances[bucket_key] = {}
 		(_selected_stances[bucket_key] as Dictionary)[class_key] = selected_record
 	_write_json_dict(SELECTED_STANCES_FILE, _selected_stances)
@@ -1465,32 +1529,65 @@ func _on_use_stance_pressed() -> void:
 	_refresh_score_panel()
 
 func _on_launch_game_pressed() -> void:
-	if _current_bucket() != &"classes":
-		print("[pose_tuner] launch blocked: select a player class target")
-		return
-	var class_key: String = _current_class_key()
+	# Launch ANY sprite into The Maw — player class, enemy, or NPC.
+	# Non-class sprites spawn next to a default-Myrmidon observer so a
+	# wraith can be watched drifting / a boss looming in real engine
+	# motion, not just the static pose-tuner viewport.
+	var bucket := _current_bucket()
+	var sprite_key: String = _current_class_key()
 	var stance_id: String = _current_stance_key()
-	_selected_stances[class_key] = {
-		"class": class_key,
-		"bucket": "classes",
+	var record := {
+		"class": sprite_key,
+		"bucket": String(bucket),
 		"stance": stance_id,
 		"debug_launch": true,
 		"timestamp": Time.get_datetime_string_from_system(),
 	}
+	if bucket == &"classes":
+		_selected_stances[sprite_key] = record
+	else:
+		var bk := String(bucket)
+		# NOTE: `.get(bk, {})` returns the default {} when the key is
+		# MISSING, so a typeof check alone passes without creating the
+		# key — then the direct `[bk]` read below crashes. Gate on
+		# has() so the bucket truly exists before we index it.
+		if not _selected_stances.has(bk) or typeof(_selected_stances[bk]) != TYPE_DICTIONARY:
+			_selected_stances[bk] = {}
+		(_selected_stances[bk] as Dictionary)[sprite_key] = record
 	_write_json_dict(SELECTED_STANCES_FILE, _selected_stances)
+	# class_id is the observer's class; for a class target it IS the
+	# target, otherwise a default Myrmidon stands in.
+	var class_id := sprite_key if bucket == &"classes" else "myrmidon"
+	# The procedural sprite scene to PLAY AS (non-class sprites swap the
+	# player avatar to this; class sprites ride in via assign_class).
+	var sprite_scene := String(CLASSES[_class_idx].get("scene", ""))
 	_write_json_dict(LAUNCH_FILE, {
-		"class_id": class_key,
+		"sprite_id": sprite_key,
+		"bucket": String(bucket),
+		"class_id": class_id,
+		"sprite_scene": sprite_scene,
 		"stance_id": stance_id,
 		"zone_id": "forsaken_depths",
 		"arrival_marker": "DepthsEntry",
 		"source": "pose_tuner",
 		"input_lock_until_click": true,
+		# The spawned window watches this heartbeat file and self-closes
+		# when it goes stale — covers Ctrl+C, which can't run _exit_tree.
+		"heartbeat_file": HEARTBEAT_FILE,
 		"timestamp": Time.get_datetime_string_from_system(),
 	})
+	_write_heartbeat()  # fresh stamp so the new window starts trusting us
 	var exe := OS.get_executable_path()
 	var project_dir := ProjectSettings.globalize_path("res://")
-	var pid := OS.create_process(exe, ["--path", project_dir, "res://scenes/game.tscn"])
-	print("[pose_tuner] launch in Maw class=%s stance=%s pid=%d" % [class_key, stance_id, pid])
+	# Pass --debug=sprite (after the `--` user-arg separator) so the
+	# spawned game prints the editor-launch + preview-spawn breadcrumbs,
+	# making a failed preview diagnosable from its console.
+	var pid := OS.create_process(exe, [
+		"--path", project_dir, "res://scenes/game.tscn", "--", "--debug=sprite",
+	])
+	if pid > 0:
+		_spawned_preview_pids.append(pid)
+	print("[pose_tuner] launch in Maw sprite=%s bucket=%s stance=%s pid=%d" % [sprite_key, bucket, stance_id, pid])
 
 # =========================================================================
 # Click + drag handles

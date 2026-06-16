@@ -1228,6 +1228,142 @@ and act status docs before commit.
 
 ---
 
+## Stage 17.6 Phase 2 — Skin readability: baked armor, ear-accessories, face bars
+
+**Symptoms (from the Pythia review):**
+- A class skin baked in armor/headgear (circlet, helm, cuirass) — then
+  equipped armor would double up / clash, and there was no clean base
+  body to layer onto.
+- Two small accessory polys flanking the skull (laurel leaves) read as
+  **elf ears**.
+- A face "mouth" drawn as a flat full-width bar read as a **floating
+  rectangle** below the eyes, not a mouth.
+
+**Root cause:** procedural skins conflated *base clothing* with
+*equipment*, and detail shapes (face features, head accessories) were
+authored as blocks/edge-flanking pieces without checking how they read
+on the silhouette.
+
+**Prevention (now in `rules/sprite-animation.md` §4):** skins carry
+**base clothing only**; armor + headgear are equipment (Stage-15
+paper-doll). Face features are small tapered shapes, never full-width
+bars. Head accessories never sit at the head's silhouette edge (read as
+ears/horns) — keep them above the brow or inside the silhouette. The
+**Sprite QA harness** (`test/sprite_qa.tscn`, §10) is the standing check;
+issues a machine can catch become QA assertions, the rest are caught on
+the contact-sheet eyeball pass.
+
+**Recovery:** run `res://test/sprite_qa.tscn`, read
+`docs/sprites/_qa_report.txt` + `_contact_sheet.png`. For a "reads as
+X" issue, fix the shape/position in `SkinLibrary` / `HumanRig` face geo
+and re-render.
+
+## Stage 17.6 — Editor chrome occluding negative-z sprite parts
+
+**Symptom:** A sprite renders correctly **in-game** but a body part is
+invisible **in the pose tuner** (the bone_servant's legs vanished below
+the loincloth in the editor while it walked fine in the Maw). Looks like
+"the editor and game are two different sprites."
+
+**Root cause:** `SpriteRuntime2D._ensure_leg_chain` pins injected leg
+hips to `z_index = -1` (so legs read behind the torso). The pose tuner
+drew an **opaque background ColorRect at z = 0**, so anything at negative
+z drew *behind* the background and disappeared. In-game there is no
+full-screen overlay in front of the sprite, so the same z=-1 legs render
+fine. The two paths share ONE sprite — the editor's own chrome was
+hiding part of it.
+
+**Prevention:** Editor/preview chrome MUST sit behind ALL sprite
+content. `pose_tuner.gd` pins its background to `BG_Z = -100` (and the
+floor guide just above it), far below any plausible sprite part (parts
+live ~ -1..+100). `stage17_5_verify` asserts `BG_Z = -100`, that the
+background uses it, AND that no registered sprite has a Polygon2D at or
+below the editor BG z. When a sprite looks different in the editor vs
+in-game, suspect editor-only chrome / transforms first — capture the
+tuner's exact setup (see `test/tuner_capture.gd`) and diff, rather than
+assuming a second code path.
+
+**Recovery:** Run `res://test/tuner_capture.tscn` (replicates the
+tuner's load) and compare to a plain render. If a part is missing,
+check its effective `z_index` against the editor background z.
+
+## Stage 17.6 — Half-built dev tool (write side without read side)
+
+**Symptom:** The pose-tuner "Launch in Maw" button appeared complete —
+it wrote `tmp/pose_tuner_launch.json` and spawned the game process — but
+nothing happened in-game for enemies/NPCs, and the button silently
+did nothing unless a player class was selected. The dev "could not test
+sprites in the Maw."
+
+**Root cause:** The intent file had a **writer but no reader** for
+non-class sprites, and the launch handler was gated to `classes`. A
+verifier that only checks "the button writes a file + calls
+`OS.create_process`" (stage17_5 pose-editor contract) passes even though
+the round trip is broken — writing the file is necessary but not
+sufficient.
+
+**Prevention:** A dev-tool launch/preview path is only "done" when the
+**consumer** exists and is exercised. `game.gd._apply_editor_launch`
+reads `bucket` + `sprite_id` and spawns the previewed enemy
+(`_spawn_preview_enemy`) / NPC (`_spawn_preview_npc`), not just the
+player class. When adding a workbench trigger (debug-instrumentation
+contract), wire and smoke-test both ends before claiming it works — a
+write with no read is the default failure shape for editor→game intent
+files.
+
+**Recovery:** If a sprite won't appear after "Launch in Maw", check the
+launch JSON has `bucket`/`sprite_id`/`sprite_scene`, and that the avatar
+swap (`Player.set_avatar_sprite`) is deferred AFTER `_do_transit` so the
+player has settled in the Maw.
+
+**Related gotcha — `Dictionary.get(k, {})` masks a missing key.** The
+launcher also crashed with "Invalid access to property or key 'enemies'
+on a base object of type 'Dictionary'." The guard was:
+`if typeof(d.get(k, {})) != TYPE_DICTIONARY: d[k] = {}` then
+`(d[k] as Dictionary)[...] = v`. When `k` is **missing**, `.get(k, {})`
+returns the default `{}` (a Dictionary), so the typeof check passes, the
+key is **never created**, and the direct `d[k]` index on the next line
+throws. Gate bucket-creation on `d.has(k)` (not `.get`) before any
+direct index. Reading a missing key with `d[k]` errors; `d.get(k, …)` is
+the only safe read.
+
+## Stage 17.6 — Anim-name drift (`hurt`/`death`) + legacy family re-use
+
+**Symptom (a):** A new sprite or anim_set is authored with animation
+names `hurt`/`death`. It looks fine in isolation but the entity never
+plays a hit-flash or death anim in game, because every caller
+(`player.gd`, `enemy.gd`, `act_boss.gd`, `bone_servant_minion.gd`,
+`sprite_runtime_2d.gd`) plays `hit`/`die` (AD-11). The mismatch is
+silent — `AnimationPlayer.play(&"die")` on a player that only has
+`death` just no-ops.
+
+**Symptom (b):** A new species sprite is registered under the legacy
+`Family.HUMANOID` or `Family.FLYING` enum entries. These survive only
+so the older `stage17_5_verify` keeps resolving; they are not live
+species and have no anim_set default, so `anim_set_for()` silently
+falls back to `human_default` and the intended body type is lost.
+
+**Root cause:** Two parallel name systems (the proposed `hurt/death`
+vs the implemented `hit/die`) and two parallel taxonomies (the old
+six-family enum vs the locked five-species model) coexisted during the
+17.5→17.6 transition.
+
+**Prevention:** `rules/sprite-animation.md` locks the canonical names
+to `idle/walk/attack/cast/hit/die` and the roster to five species.
+`AnatomyFamilies.CANONICAL_ANIMS` is the single source of truth;
+`stage17_6_verify` asserts it never contains `hurt`/`death` and that no
+registered sprite uses a legacy family. New species register to
+`Family.{HUMAN,UNDEAD,BEAST,DEMON,CONSTRUCT}` only; locomotion is a
+sub-variant, never a family.
+
+**Recovery:** Run `res://test/stage17_6_verify.tscn` headless. If a
+sprite plays no hit/die, grep its anim builder for `hurt`/`death` and
+rename to `hit`/`die` in one pass (split renames orphan tracks). If a
+sprite resolves to the wrong anim_set, check it isn't registered to
+HUMANOID/FLYING.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

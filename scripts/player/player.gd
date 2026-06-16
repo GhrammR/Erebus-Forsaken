@@ -1,4 +1,6 @@
 class_name Player extends CharacterBody2D
+
+const CharacterRegistry = preload("res://scripts/systems/character_registry.gd")
 ## AD-02 — one Player scene. Class identity comes from a ClassData
 ## resource assigned at runtime via assign_class(). Sprite, stats, and
 ## class metadata all flow from that one call.
@@ -152,8 +154,13 @@ func assign_class(cd: ClassData) -> void:
 		child.queue_free()
 	_sprite_anim = null
 	_sprite_root = null
-	if cd.sprite_scene != null:
-		var inst := cd.sprite_scene.instantiate()
+	# Stage 17.7 — resolve the sprite through the CharacterRegistry by
+	# character_id; fall back to the class's sprite_scene when unset.
+	var class_scene: PackedScene = cd.sprite_scene
+	if cd.character_id != &"" and CharacterRegistry.has(cd.character_id):
+		class_scene = CharacterRegistry.scene_for(cd.character_id)
+	if class_scene != null:
+		var inst := class_scene.instantiate()
 		_sprite_anchor.add_child(inst)
 		_sprite_root = inst
 		_sprite_anim = inst.get_node_or_null(^"AnimationPlayer") as AnimationPlayer
@@ -181,6 +188,37 @@ func assign_class(cd: ClassData) -> void:
 		_paperdoll.call_deferred(&"bind", _sprite_root, _inventory, cd.id)
 
 	EventBus.stats_changed.emit(self)
+
+## Dev preview (pose tuner "Launch in Maw"): replace the visible avatar
+## with an arbitrary sprite scene while keeping this player's class
+## mechanics (movement, attack, skills). The sprite must expose the
+## canonical AnimationPlayer anims (idle/walk/attack/cast/hit/die) so
+## gameplay drives them. Equipment paper-doll is dropped — enemy/NPC
+## sprites do not take overlays (rules/sprite-animation.md). Lets you
+## play AS a wraith/boss and trigger its animations in real combat.
+func set_avatar_sprite(scene: PackedScene) -> void:
+	if scene == null:
+		return
+	# Drop the paper-doll first so its deferred bind can't fire on the
+	# sprite we are about to free.
+	if _paperdoll != null:
+		_paperdoll.queue_free()
+		_paperdoll = null
+	for child in _sprite_anchor.get_children():
+		if child == _hitbox:
+			continue
+		child.queue_free()
+	var inst := scene.instantiate()
+	_sprite_anchor.add_child(inst)
+	_sprite_root = inst
+	_sprite_anim = inst.get_node_or_null(^"AnimationPlayer") as AnimationPlayer
+	if _sprite_anim == null:
+		push_warning("Player.set_avatar_sprite: scene has no AnimationPlayer")
+	elif _sprite_anim.has_animation(&"idle"):
+		_sprite_anim.play(&"idle")
+	if DebugLog.is_enabled(&"sprite"):
+		DebugLog.write(&"sprite", "player avatar -> %s (anim=%s)" % [
+				inst.name, "yes" if _sprite_anim != null else "NO"])
 
 var _phys_watch_prev: Vector2 = Vector2.ZERO
 var _phys_watch_first: bool = true

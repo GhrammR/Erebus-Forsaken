@@ -138,8 +138,9 @@ func _anim_idle() -> Animation:
 	a.length = float(_motion.get("idle_len", 1.6))
 	a.loop_mode = Animation.LOOP_LINEAR
 	var body := _body_path()
+	var rest := _body_rest()
 	_key_vec2(a, NodePath("%s:position" % body), [0.0, a.length * 0.5, a.length],
-			[Vector2.ZERO, Vector2(0, float(_motion.get("idle_bob", -1.2))), Vector2.ZERO])
+			[rest, rest + Vector2(0, float(_motion.get("idle_bob", -1.2))), rest])
 	_key_float(a, NodePath("%s:rotation" % body), [0.0, a.length * 0.5, a.length],
 			[0.0, float(_motion.get("idle_sway", 0.015)), 0.0])
 	for path in _shadow_paths():
@@ -158,28 +159,38 @@ func _anim_walk() -> Animation:
 	a.loop_mode = Animation.LOOP_LINEAR
 	var body := _body_path()
 	if _is_wraith_sprite():
-		var bob := float(_motion.get("walk_bob", -2.8))
-		var sway := float(_motion.get("walk_sway", 0.12))
+		# DRIFT, not walk. A wraith glides — no foot-plant, no side-to-
+		# side stepping wobble, no rocking gait. The body floats at the
+		# hover height and breathes through a single slow vertical swell
+		# while the cloak/hem trail behind. Forward travel is the entity's
+		# real velocity; the sprite only sells "weightless".
+		var rest := _body_rest()
+		var swell := float(_motion.get("drift_swell", -1.6))  # gentle rise
 		_key_vec2(a, NodePath("%s:position" % body),
-				[0.0, a.length * 0.25, a.length * 0.5, a.length * 0.75, a.length],
-				[Vector2.ZERO, Vector2(2, bob), Vector2(0, bob * 0.35), Vector2(-2, bob), Vector2.ZERO])
+				[0.0, a.length * 0.5, a.length],
+				[rest, rest + Vector2(0, swell), rest])
+		# Near-zero, slow lean (seaweed-in-current), NOT an alternating
+		# left/right step rock.
+		var lean := float(_motion.get("drift_lean", 0.02))
 		_key_float(a, NodePath("%s:rotation" % body),
-				[0.0, a.length * 0.25, a.length * 0.5, a.length * 0.75, a.length],
-				[0.0, sway, 0.0, -sway, 0.0])
+				[0.0, a.length * 0.5, a.length],
+				[-lean, lean, -lean])
+		# Cloak / hem lag behind the swell so the lower silhouette ripples.
 		for path in _paths_matching(["TatteredHem", "CloakInner", "Cloak", "Robe"]):
 			_key_vec2(a, NodePath("%s:position" % path),
 					[0.0, a.length * 0.5, a.length],
-					[Vector2.ZERO, Vector2(0, 1.8), Vector2.ZERO])
+					[Vector2(0, 1.6), Vector2.ZERO, Vector2(0, 1.6)])
 			_key_float(a, NodePath("%s:rotation" % path),
 					[0.0, a.length * 0.5, a.length],
-					[0.0, -sway * 0.45, 0.0])
+					[lean * 0.6, -lean * 0.6, lean * 0.6])
+		# Shadow pulses softly with the swell (no left/right scuttle).
 		for path in _shadow_paths():
 			_key_vec2(a, NodePath("%s:scale" % path),
-					[0.0, a.length * 0.25, a.length * 0.5, a.length * 0.75, a.length],
-					[Vector2(1.05, 0.88), Vector2(0.82, 0.66), Vector2(1.12, 0.92), Vector2(0.82, 0.66), Vector2(1.05, 0.88)])
+					[0.0, a.length * 0.5, a.length],
+					[Vector2(1.0, 0.82), Vector2(0.86, 0.70), Vector2(1.0, 0.82)])
 			_key_color(a, NodePath("%s:modulate" % path),
-					[0.0, a.length * 0.25, a.length * 0.5, a.length * 0.75, a.length],
-					[Color(1, 1, 1, 0.95), Color(1, 1, 1, 0.58), Color(1, 1, 1, 0.90), Color(1, 1, 1, 0.58), Color(1, 1, 1, 0.95)])
+					[0.0, a.length * 0.5, a.length],
+					[Color(1, 1, 1, 0.9), Color(1, 1, 1, 0.62), Color(1, 1, 1, 0.9)])
 		return a
 	_key_vec2(a, NodePath("%s:position" % body), [0.0, a.length * 0.5, a.length],
 			[Vector2.ZERO, Vector2(0, float(_motion.get("walk_bob", -2.0))), Vector2.ZERO])
@@ -208,8 +219,9 @@ func _anim_attack() -> Animation:
 	a.length = float(_motion.get("attack_len", 0.42))
 	a.loop_mode = Animation.LOOP_NONE
 	var body := _body_path()
+	var rest := _body_rest()
 	_key_vec2(a, NodePath("%s:position" % body), [0.0, a.length * 0.42, a.length],
-			[Vector2.ZERO, Vector2(2, -1), Vector2.ZERO])
+			[rest, rest + Vector2(2, -1), rest])
 	_key_float(a, NodePath("%s:rotation" % body), [0.0, a.length * 0.42, a.length],
 			[0.0, 0.04, 0.0])
 	var attack_rot := float(_motion.get("attack_rot", -0.85))
@@ -305,6 +317,21 @@ func _glow_paths() -> Array[String]:
 
 func _is_wraith_sprite() -> bool:
 	return sprite_id == &"shade_wretch" or sprite_id == &"bog_caller" or has_node(^"Body/TatteredHem")
+
+# How far above the ground a wraith's Body floats. The Shadow stays on
+# the ground plane, so this opens a visible gap — a wraith drifts above
+# the earth, it does not stand on it. Non-wraith sprites return 0 (feet
+# planted). Tunable per stance via `hover_height`.
+func _wraith_hover() -> float:
+	if not _is_wraith_sprite():
+		return 0.0
+	return float(_motion.get("hover_height", 11.0))
+
+# Resting Body position for the current sprite — raised by the hover
+# height for wraiths so every anim animates around the floating point
+# instead of the ground.
+func _body_rest() -> Vector2:
+	return Vector2(0.0, -_wraith_hover())
 
 func _shadow_paths() -> Array[String]:
 	var paths: Array[String] = []

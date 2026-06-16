@@ -1432,6 +1432,25 @@ no audio.
 
 ## Stage 17.5 — Procedural sprite anatomy v2
 
+> **PARTIALLY SUPERSEDED 2026-06-13 by `rules/sprite-animation.md`.**
+> The 2026-06-11 baseline reset collapsed every player/enemy/NPC onto
+> the single white `baseline_white_sprite` rig and archived the old
+> per-entity sprites. That changes this stage's premise:
+> - The species roster is now **HUMAN / DEMON / BEAST / UNDEAD /
+>   CONSTRUCT** (5 species). The old `HUMANOID` family collapses into
+>   HUMAN+skin and `FLYING` becomes a locomotion *sub-variant*, not a
+>   family — see the rule.
+> - "Rebuild each existing sprite" is replaced by "**derive each
+>   species rig from the white baseline, then express every named
+>   character as a data-driven `CharacterDef`**" (registry, not scene
+>   files). The execution moves to **Stage 17.6** (species rigs) and
+>   **Stage 17.7** (character registry + selection).
+> - The anatomy-family *part-set sketches* below remain the useful
+>   reference for what each species rig must expose. Read them as rig
+>   contracts, not as a list of sprites to hand-rebuild.
+> - Bespoke unique bosses (Hexacheir) are unchanged — still registered
+>   by id, not as a species skin.
+
 Rebuild the procedural sprite anatomy across all four player
 classes, all NPCs, and every existing enemy archetype around a set
 of **anatomy families**. The Bone Servant's current anatomy is
@@ -1560,7 +1579,7 @@ independent of in-world sprite anatomy, so the order is
   unchanged. Equipment overlays are HUMAN-only by contract;
   enemies and NPCs never receive them.
 * \[ ] All six canonical animations (`idle`, `walk`, `attack`,
-  `cast`, `hurt`, `death` — AD-11) rebuilt on each touched
+  `cast`, `hit`, `die` — AD-11) rebuilt on each touched
   sprite against the new part set: 4 HUMAN players, 2 HUMAN
   NPCs, Shade Wretch (wraith), Bog Caller (wraith). Bone
   Servant animations preserved as-is — its sprite isn't
@@ -1599,6 +1618,341 @@ independent of in-world sprite anatomy, so the order is
   all four classes + both NPCs + both wilderness enemies +
   Bone Servant + Hexacheir, before/after side-by-side for the
   sprites that changed, attached to the commit.
+
+## Stage 17.6 — Species base rigs (derive from baseline)
+
+Governed by `rules/sprite-animation.md`. Author the **five species
+base rigs**, each derived from the white `baseline_white_sprite` /
+`HumanRig` — never from a blank scene. One rig per species; sub-variants
+are derivation modifiers, not new rigs. Procedural only; no bitmaps yet
+(hybrid art policy).
+
+**Progress note (2026-06-13):** the **data spine landed first** — the
+species registry, sub-variant axis, anim_set contract, canonical-anim
+lock, DebugLog roster, and `--verify17_6` (53 PASS) are in. The actual
+new **procedural rig geometry** (DEMON/BEAST/CONSTRUCT parts, wraith
+rebuild) is deliberately deferred to visually-iterated increments at the
+pose-tuner workbench, per `feedback_procedural_is_placeholder` — authoring
+a quadruped/wraith rig blind would produce garbage. Items below are split
+accordingly.
+
+Data spine (done this session):
+* \[x] **HUMAN** — baseline rig registered as the species anchor in
+  `AnatomyFamilies` (no new rig; the baseline *is* HUMAN).
+* \[x] **CONSTRUCT** species added: `Family.CONSTRUCT` + part set
+  (HUMAN joint names + `Faceplate` + `CoreGlow`) so HUMAN anim tracks
+  bind unchanged.
+* \[x] **Sub-variant axis** registered: UNDEAD `skeleton`/`wraith`/
+  `revenant` (REVENANT enum added); `winged`/`quadruped` reserved for
+  BEAST/DEMON. `FLYING`/`HUMANOID` demoted to legacy enum entries (no
+  sprite may register to them).
+* \[x] **anim_sets** declared against the canonical six
+  (`idle/walk/attack/cast/hit/die` — AD-11): `human_default`,
+  `wraith_float`, `quadruped`, `construct_rigid`. Each maps to a real
+  `SpriteMotionStances` stance; `anim_set_for()`/`sub_variant_name()`
+  resolvers added. Shade Wretch + Bog Caller now resolve to
+  `wraith_float`.
+* \[x] **DebugLog** `sprite` flag: `AnatomyFamilies` prints the full
+  roster (species → anim_set per sprite) under `-- --debug=sprite`.
+* \[x] `failure-modes.md` entry: anim-name drift (`hurt`/`death`) +
+  legacy-family re-use, with prevention + recovery.
+* \[x] `--verify17_6` (`test/stage17_6_verify.{gd,tscn}`, 53 PASS):
+  five-species roster; CONSTRUCT part set keeps HUMAN joints; legacy
+  families demoted + unused; canonical anims == AD-11 and never
+  hurt/death; baseline builds all six; anim_set profiles + stances
+  resolve; species defaults; resolver outputs; sub-variant names.
+  `stage17_5_verify` re-run green (no regression).
+
+Rig geometry (pending visual iteration — author at the workbench):
+
+**Production order (binding, 2026-06-13).** Each sprite runs the proven
+loop: derive/restore geometry from the baseline or
+`art/procedural/archive/baseline_reset_2026_06_11/` (modular Polygon2D
+parts) → build the six canonical anims via the species anim_set →
+render strips to `docs/sprites/<id>/` → **Launch in Maw to play as it**
+→ verifier assertions + failure-mode notes → iterate until it reads.
+Most sprites exist archived: restore-and-refine, not author-blind.
+
+- **Phase 1 — finish UNDEAD:** (1a) restore Bone Servant as the
+  `skeleton` anchor; (1b) `revenant` sub-variant (HUMAN rig + decayed
+  skin). Wraith already shipped + polished.
+- **Phase 2 — HUMAN skins** (highest player-facing value): 4 classes
+  (Myrmidon hoplite / Pythia oracle / Shade-Hunter hooded / Ossuary
+  Priest ash) + 2 NPCs (Kallias, Eurynome) as skin/accoutrement layers
+  on the shared baseline HUMAN rig. All archived — restore + refine.
+- **Phase 3 — DEMON rig:** HUMAN base + horns / hooves / wing-anchors /
+  eye-glow. Smallest non-human lift.
+- **Phase 4 — CONSTRUCT rig:** HUMAN base + segmented joints +
+  Faceplate/CoreGlow, `construct_rigid` anim_set.
+- **Phase 5 — BEAST quadruped:** biggest deviation (four-leg gait,
+  `quadruped` anim_set); authored last.
+- **Phase 6 — bespoke bosses:** Hexacheir (act_boss) six-arm DEMON rig,
+  registered by id (not a species skin).
+
+Then **Stage 17.7** (CharacterDef registry + selection) consumes all of
+the above.
+
+* \[x] **UNDEAD wraith** rig geometry: hood + cloak + CloakInner +
+  TatteredHem + FaceVoid + Eyes + articulated arms + claws, **no legs**,
+  floats. Restored the proven archived wraith geometry to the live
+  Shade Wretch + Bog Caller scenes (wired to `enemy_sprite_palette` /
+  `SpriteRuntime2D`, which already carries the legless floating
+  `_is_wraith_sprite()` motion branch); palettes preserved (void-grey /
+  bog-green, staff+orb on Bog Caller). All six canonical anims build;
+  resolves to `wraith_float`. Rendered to `docs/sprites/{shade_wretch,
+  bog_caller}/` via `test/wraith_render.tscn` and reviewed — reads as a
+  hooded floating wraith across idle/walk/attack/cast/hit/die.
+  Asserted in `stage17_6_verify` (no legs, wraith part set, six anims);
+  `stage17_5_verify` narrowed to exclude these two from baseline
+  conformance (failure-mode #17.8 rule honored).
+* \[x] **Wraith drift + hover (review pass 2026-06-13):** the wraith
+  locomotion was rewritten from a stepping walk into a true **drift** in
+  `SpriteRuntime2D` — no side-to-side step wobble, no rocking gait, just
+  a slow vertical swell + trailing cloak/hem. The Body now **floats**
+  (`hover_height`, ~6–7px) while the Shadow stays on the ground, opening
+  a visible gap. Stance menus are **pruned per sprite**: wraiths get a
+  single drift locomotion stance (no `lurch`/`stalk`), `dissolve`-only
+  death, and the non-caster Shade Wretch is offered **no cast** stance
+  (removed the stray "Chill" pose-tuner variant); Bog Caller keeps cast
+  (it is a ranged caster). `stage17_6_verify` asserts the drift-only
+  pruning + the off-ground hover; drift strips rendered to
+  `docs/sprites/{shade_wretch,bog_caller}/_drift_strip.png`.
+* \[x] **Drift-stance rename + all-sprites Maw launch (review pass 2):**
+  the wraith locomotion stance `enemy_walk_hover` was renamed to
+  `enemy_drift_hover` (a legless wraith should not be offered a "walk"
+  stance); `stage17_6_verify` asserts no wraith locomotion stance id
+  contains "walk". Separately, the pose-tuner **"Launch in Maw"** was
+  half-built — it wrote `tmp/pose_tuner_launch.json` and started the
+  game, but nothing consumed it for non-class sprites and the button was
+  gated to player classes, so enemies/NPCs (e.g. the wraith) could not
+  be launched. Now: the launcher writes `sprite_id` + `bucket` for ANY
+  selected sprite, and `game.gd._apply_editor_launch` transits to The
+  Maw so the chosen sprite can be previewed in real engine motion.
+  Player-class launch path is unchanged.
+* \[x] **Launch-in-Maw crash fix + play-AS-sprite (review pass 3):**
+  the launcher crashed at `pose_tuner.gd` `_on_launch_game_pressed`
+  with "Invalid access to key 'enemies' on a Dictionary" — the bucket
+  guard used `_selected_stances.get(bk, {})`, whose default `{}` masks
+  a *missing* key, so the bucket was never created and the next direct
+  `[bk]` index threw. Fixed with a `has()` gate (same latent bug also
+  fixed in the select-for-game handler). Behavior changed per user: a
+  non-class sprite now makes the player **play AS** that sprite —
+  `Player.set_avatar_sprite()` swaps the avatar to the procedural
+  sprite scene (`sprite_scene` in the launch payload) while keeping
+  Myrmidon mechanics, so movement/attacks drive the wraith's canonical
+  anims and you fight the Maw's wave-spawned monsters. Verified
+  end-to-end headless: `editor launch → preview avatar → player avatar
+  -> ShadeWretchSprite (anim=yes)`, zero script errors.
+* \[x] **UNDEAD skeleton** (Phase 1a, anchor): the archived bespoke
+  skeleton was crude (single-polygon legs, one arm) — discarded. Bone
+  Servant is **rebuilt on the shared HUMAN rig** (`HumanRig`, same
+  anatomy as Myrmidon/baseline: two articulated arms with elbows, two
+  legs with knees, real proportions) and **re-skinned as bone** in
+  `bone_servant_sprite.{gd,tscn}`: bone-white limbs, a darkened chest
+  cavity behind a bone-white ribcage + sternum, a tattered loincloth,
+  and sickly-green eye-glow in dark sockets. Uses `SpriteRuntime2D`
+  standard-leg anatomy (legs painted bone via `_standard_leg_color`) and
+  the six canonical anims. This is the "skeleton = HUMAN rig + bone
+  skin" sub-variant the model intends. `stage17_6_verify` asserts the
+  HUMAN-rig parts + bone overlays + six anims + sub-variant=skeleton;
+  `stage17_5_verify` lists bone_servant in the re-authored exclusion.
+  Rendered to `docs/sprites/bone_servant/`.
+* \[x] **UNDEAD revenant** rig (Phase 1b): HUMAN rig (full fleshed
+  limbs) re-skinned as a gaunt risen corpse in `revenant_sprite.{gd,
+  tscn}` — sickly grey-green necrotic flesh, a dirty torn tunic, a rip
+  on the left chest with bone rib-slivers peeking through, a tattered
+  hip rag, sunken sickly-green eye-glow, and one rotted (darker) arm for
+  asymmetry. Registered `&"revenant"` UNDEAD/REVENANT in AnatomyFamilies
+  (anim_set human_default; shamble comes from stance at character
+  level). Six canonical anims via SpriteRuntime2D. `stage17_6_verify`
+  asserts HUMAN-rig parts + decay overlays + six anims + sub-variant +
+  parts-above-editor-BG. Rendered to `docs/sprites/revenant/`. Visual
+  direction chosen by user: gaunt-corpse-in-torn-tunic + grey-green.
+* \[x] **Phase 2 — HUMAN skins (data-driven system + all 6):**
+  per user, built the **data-driven skin system first** —
+  `scripts/systems/skin_library.gd` (`SkinLibrary`): `sprite_id` →
+  `{ palette, parts:[{node,parent,poly,color,z}] }`. `SkinLibrary.apply`
+  paints the shared HUMAN rig with the class palette + layers
+  accoutrement Polygon2Ds (supports arbitrary parent paths, e.g. greaves
+  on the knee pivot). This is the `skin` half of the Stage-17.7
+  CharacterDef, brought forward. `baseline_white_sprite` now applies a
+  SkinLibrary skin when one exists for its `sprite_id`, else the white
+  baseline — so the existing class/NPC scenes auto-skin with **no
+  bespoke scripts**. First skin authored: **Myrmidon** (bronze-age
+  hoplite — bronze cuirass + waist band, shield strap, crested helm with
+  red plume, bronze greaves; tan flesh). `stage17_6_verify` asserts the
+  skin applies (accoutrement parts present, torso not white, six anims);
+  `myrmidon` added to `stage17_5_verify` re-authored exclusion. Rendered
+  to `docs/sprites/myrmidon/`. **All six authored as pure data:**
+  Myrmidon (bronze hoplite), Pythia (violet oracle robe + gold circlet/
+  laurel), Shade-Hunter (charcoal hood/cloak + teal quiver strap +
+  vambraces/boots), Ossuary Priest (ash robe + hood + green chest sigil
+  + bone-fragment hem), Kallias (patched merchant mantle/tunic + belt
+  pouch), Eurynome (indigo ceremonial robe + veil + gold throat sigil).
+  `stage17_6_verify` loops all six (skin registered, torso not white,
+  accoutrements layered, six anims); all six in `stage17_5` re-authored
+  exclusion. Rendered to `docs/sprites/<id>/`.
+* \[~] **Phase 2 polish pass (readability):** user feedback — skins hard
+  to decipher, no eyes, robed-walk looks static in editor.
+  - **Faces/eyes (done):** `baseline_white_sprite._add_face()` adds
+    sockets/eyes/brow/mouth (HumanRig face geo, z4 under helms/hoods) +
+    always-visible eye glints (z6) to every **skinned** human. White
+    placeholders + bespoke act_boss stay faceless (verifier-safe).
+  - **Ossuary editor-walk diagnosed:** the walk anim is identical
+    editor vs in-game (baseline_white_sprite has no IK/_process —
+    `ik_enabled` is unused); the robe just hides the leg-swing and the
+    editor walks in-place. Fix pending (shorten robe / skirt sway).
+  - **Weapon display — all four done:** `baseline_white_sprite` paints +
+    reveals the held weapon per `show_*` flag (tuner) — the same arms
+    the in-game Stage-15 paper-doll reveals, so editor matches game.
+    Spear (Myrmidon, on the arm → swings with attack); staff+violet orb
+    (Pythia), bow+string (Shade-Hunter), wand+green glow (Ossuary)
+    repositioned to the hand grip `_GRIP` and z-bumped (z5) so they
+    aren't hidden behind robes. Render harness `show` flag +
+    `<id>_armed` entries. Verified.
+  - **Robed-walk visibility — done:** shortened the Pythia/Ossuary/
+    Eurynome robes (+ their hem/trim/panel pieces) to mid-calf so the
+    lower legs show and visibly swing during walk — reads as walking
+    even standing in place in the editor, still robed. Verified via
+    `_drift_strip`.
+  - **Outlines + shading — done:** `baseline_white_sprite._apply_polish`
+    adds, for every skinned human, a uniform dark outline behind each
+    body/clothing part (`Geometry2D.offset_polygon`, child node so it
+    follows animation) + a top-light/bottom-shadow vertex gradient for
+    form. Tiny detail/glow parts (eyes/glints/orbs/sigils) skipped to
+    stay crisp. Big decipherability win — parts now pop with clean
+    edges + volume. Verified across the cast.
+
+  **Phase 2 polish pass COMPLETE** — eyes/faces, weapon display (all 4),
+  robed-walk visibility, outlines+shading all done. The HUMAN cast reads
+  clearly, armed, with faces, and walks legibly.
+* \[~] **Phase 2 review round (Pythia focus + QA tooling):**
+  - **Sprite QA harness (3A) — done:** `test/sprite_qa.tscn` checks
+    every registered sprite (anims build, NO orphaned tracks, no empty
+    visible parts, no part below editor-BG z, sane bounds) → writes
+    `docs/sprites/_qa_report.txt` + a labeled `_contact_sheet.png`. 11/11
+    PASS. Documented as `rules/sprite-animation.md` §10; the workflow now
+    grows a QA assertion + a failure-mode entry per new issue.
+  - **Base-clothing vs equipment (2b-A) — rule locked + Pythia cut:**
+    skins carry base clothing only; armor/headgear are equipment.
+    Pythia recut to robe + trim/sash; circlet + laurel removed (→
+    equipment). `rules/sprite-animation.md` §4 updated.
+  - **Pythia face (2c/2d) — done:** elf-ear laurels removed; mouth/brow
+    reshaped from flat bars to small tapered marks (`HumanRig`, shared).
+  - **Editor weapon control (1A) — done:** root cause was the tuner
+    binding the Stage-15 paper-doll for weapon-only variants, which
+    installs `WeaponProfiles` IK pins that re-pose the weapon every frame
+    and stomp slider edits. Fix: the tuner now binds the paper-doll ONLY
+    when the variant equips *armor*; weapon-only/unarmed variants show
+    the weapon via `show_*` (baseline's simple one-hand hold), fully
+    controllable by the existing weapon-arm rotation/position sliders.
+  - **Staff pose (2a-C) — done:** idle is now a vertical one-hand hold
+    (the editor was showing the overridden two-hand `WeaponProfiles`
+    grip; with 1A it uses `_paint_staff`'s vertical pose). Added an
+    overhead chop to the attack anim (`Body/StaffArm:rotation` swing,
+    gated on `show_staff`). Rendered `pythia_armed` idle+attack.
+  - **Base-clothing recut — ALL classes done (2b-A "strip all"):** every
+    skin is now base clothing only. Myrmidon → leather tunic + belt
+    (helm/plume/cuirass/greaves/shield = equipment); Shade-Hunter →
+    hunter tunic + belt + boots (hood/cloak/vambraces/quiver = equip);
+    Ossuary → ash robe + bone hem + sigil (hood = equip); Kallias →
+    tunic + belt + pouch (mantle = equip); Eurynome → ceremonial robe +
+    panel + sigil (veil = equip); Pythia → linen robe + trim/sash
+    (circlet/laurel = equip). All bare-headed with clean faces. QA 11/11,
+    contact sheet refreshed, 17.5/17.6/13 green.
+  - **WeaponProfiles aligned to one-hand holds — done:** fixed a latent
+    bug (equipped weapons were *invisible* in-game — geometry was only
+    painted under the editor's show_* flags). `baseline_white_sprite`
+    now paints + z-bumps ALL weapon arms in `_ready` (so the in-game
+    paper-doll reveals a painted weapon), and the baseline attack anim
+    drives the weapon swings ungated (staff overhead chop, wand flick,
+    spear arm-swing) so editor and game share them. `WeaponProfiles`
+    `_build_weapon_anims` now returns `{}` for spear/staff/wand — it no
+    longer imposes the two-handed grip; `install()` restores the baseline
+    one-hand anims from the snapshot. Bow stays built-in; unarmed keeps
+    the fist fallback.
+  - **Equipment overlays verified — done:** the stripped armor/headgear
+    is supplied by the existing Stage-15 `EquipmentVisuals` per-class
+    overlays (HEAD Corinthian helm/diadem/circlet, CHEST cuirass/mantle/
+    chasuble, LEGS greaves/robe-hem mounted on the knee pivots) + real
+    armor items (`worn_helm`, `bronze_plate`, `simple_greaves`,
+    `silken_robe`, `bone_chasuble`, `linen_wrap`…). Confirmed they layer
+    cleanly over the NEW base clothing via geared renders
+    (`docs/sprites/{myrmidon,pythia,ossuary_priest}_geared/`) through the
+    real Inventory + EquipmentPaperdoll path — armored, robed, and caster
+    classes all show equipped armor on top of base clothing. So 2b-A's
+    "armor attaches later in game" is closed.
+  - **Pending (polish, next):** overlay outlines/shading to match the
+    base polish; fuller cuirass coverage now that it isn't decorating a
+    baked cuirass; helm z over the face; bow-draw polish.
+* \[ ] **DEMON** rig geometry: HUMAN base + horn pair, optional hoof
+  feet, vestigial wing anchors, glowing eye sockets. Shared rig only;
+  Hexacheir stays a bespoke id.
+* \[ ] **BEAST** quadruped rig geometry derived from the baseline joint
+  system (head, trunk, four legs w/ shoulder+hip pivots, tail); `winged`
+  sub-variant adds paired wings. Biggest deviation — verify readability
+  at ~32px. Build `quadruped` anims.
+* \[ ] **CONSTRUCT** rig geometry: segmented/mechanical joints +
+  metallic/stone skin + Faceplate/CoreGlow. Build `construct_rigid`
+  anims (stiff interpolation, mechanical attack arc).
+* \[ ] Modular contract (AD-11) preserved on every new rig — one
+  Polygon2D per part, default-facing right, hit-flash parts under `Body`.
+* \[ ] Extend `--verify17_6`: each new species rig exposes its declared
+  part set; each anim_set builds all six canonical anims with no
+  orphaned tracks; wraith has no legs; Bone Servant skeleton unchanged.
+* \[ ] `failure-modes.md`: sidecar Sprite2D z_index inheritance;
+  applying a species part set to the wrong species (silent structural
+  pass).
+* \[ ] Screenshot pass: idle on all five species + each UNDEAD
+  sub-variant, attached to the closing commit.
+
+## Stage 17.7 — Character registry + selection
+
+Governed by `rules/sprite-animation.md`. Build the **data layer** that
+selects what is displayed for any sprite slot. A character is a
+`CharacterDef` record, not a scene.
+
+* \[x] `CharacterRegistry` (`scripts/systems/character_registry.gd`) —
+  **code registry** (a `CHARACTERS` dict, consistent with
+  AnatomyFamilies/SkinLibrary; the `.tres`-per-character plan was
+  dropped to match the codebase). Holds `{scene,bucket,weapon,
+  equipment_slots}` per id and **aggregates** species/sub_variant/
+  anim_set (AnatomyFamilies) + skin (SkinLibrary). `def(id)` returns the
+  full CharacterDef.
+* \[x] Runtime resolves an `id` → `scene_for/instantiate`; the scene's
+  `sprite_id` drives the skin (SkinLibrary), anim_set, and stance on
+  `_ready`, so resolution is one call. (Full data-only instantiation
+  without a per-character scene is a later optimization.)
+* \[x] All 11 Act-1 characters registered (4 classes + 2 NPCs + bone_
+  servant/revenant/shade_wretch/bog_caller + act_boss). Each resolves to
+  a buildable sprite with the six canonical anims (verified).
+* \[x] `ClassData.character_id` + `Enemy.character_id` added; Player +
+  Enemy resolve the sprite through the registry, with the `sprite_scene`
+  export as transitional fallback. The 4 class `.tres` carry
+  `character_id`. (Enemy `.tres` still use `sprite_scene`; registry
+  covers them and they migrate later. `sprite_scene` removed at stage
+  close.)
+* \[x] `--verify17_7` (`test/stage17_7_verify.{gd,tscn}`): roster, scene
+  resolution + six anims, def consistency with AnatomyFamilies, skin
+  presence == HUMAN, equipment_slots == player-class-only, ClassData
+  wiring. Game boots clean; 13/15/17.5/17.6/17.7 + QA all green.
+* \[ ] `EquipmentVisuals.OVERLAYS` re-anchored to the HUMAN rig part
+  set; overlays resolve on every HUMAN character; enemies/NPCs never
+  receive them.
+* \[ ] Skin bitmap sidecar honored:
+  `res://data/sprites/<character_id>/<part>.png` → Sprite2D renders,
+  Polygon2D hides; absent → procedural ships. Missing bitmap blocks
+  nothing.
+* \[ ] DebugLog flag + workbench trigger to cycle through every
+  registered `CharacterDef` and preview its skin + six anims.
+* \[ ] `--verify17_7`: registry loads all expected ids; each id
+  resolves to a live rig + builds six canonical anims; no live one-off
+  `*_sprite.tscn` outside archive + bespoke bosses; species/sub-variant
+  mismatch assertion; equipment overlays HUMAN-only; sidecar fixture
+  PNG honored. Satisfies the "sprite animations complete" definition of
+  done in `rules/sprite-animation.md` §9.
+* \[ ] Screenshot pass: idle for every authored character, attached to
+  the closing commit.
 
 ## Stage 18 — Boss state-machine cleanup + legacy rare-routing audit
 
