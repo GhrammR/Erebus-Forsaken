@@ -131,6 +131,14 @@ Highlights worth a look:
   whose weapon leaves its hand or whose arms render behind the skin.
   Launching a sprite into The Maw replaces the prior preview window
   (no more window flood).
+- Species rigs (Stages 17.6–17.9): all five locked species now have a
+  built baseline rig derived from the shared white HUMAN rig — HUMAN
+  (player classes + NPCs, skinned), UNDEAD (skeleton Bone Servant,
+  revenant, drifting wraiths), DEMON (the lean `fiend`: horns/hooves/
+  wing-anchors/tail/ember eyes), and CONSTRUCT (the Bronze Sentinel: a
+  riveted bronze juggernaut with a faceplate + molten furnace-core,
+  animated stiff/mechanical via LINEAR re-timing). BEAST quadruped and
+  bespoke bosses are the remaining sprite phases.
 - DebugLog autoload (Stage 9.7): flag-gated logging with file mirror,
   12 categories, `--debug=flag1,flag2` CLI for targeted instrumentation.
 - Sprite render pipeline (Stage 17.5/17.6): `--render-sprites` flag

@@ -105,6 +105,7 @@ func _ready() -> void:
 	await _verify_current_sprite_animation_surface()
 	await _verify_baseline_sprite_contract()
 	await _verify_pose_editor_authoring_contract()
+	_verify_editor_catalog_covers_registry()
 	print("--- Stage 17.5 verify: %s ---" % ("ALL PASS" if _fail == 0 else "%d FAIL" % _fail))
 	get_tree().quit(_fail)
 
@@ -314,6 +315,23 @@ func _count_pose_parts(node: Node, counts: Dictionary) -> void:
 			if n.contains("Finger"):
 				counts["fingers"] = int(counts["fingers"]) + 1
 		_count_pose_parts(child, counts)
+
+# Every registered character (CharacterRegistry) must be reviewable in the
+# sprite editor (pose_tuner CLASSES + STANCE_CATALOGS). A new species rig
+# that is registered but absent from the editor is the "construct not
+# visible in the editor" bug — caught here so it can't recur.
+func _verify_editor_catalog_covers_registry() -> void:
+	const CharacterRegistry = preload("res://scripts/systems/character_registry.gd")
+	var src := FileAccess.get_file_as_string("res://test/pose_tuner.gd")
+	_expect(src.length() > 0, "pose_tuner.gd source present")
+	for id in CharacterRegistry.ids():
+		# Bespoke boss anatomy that isn't a tunable rig is exempt; everything
+		# else must expose a catalog entry AND a stance-catalog mapping.
+		var id_s := String(id)
+		_expect(src.contains('"id": &"%s"' % id_s),
+				"pose_tuner editor lists registered sprite '%s'" % id_s)
+		_expect(src.contains('&"%s":' % id_s),
+				"pose_tuner STANCE_CATALOGS maps '%s'" % id_s)
 
 func _scene_uses_baseline_script(scene_path: String) -> bool:
 	var src := FileAccess.get_file_as_string(scene_path)

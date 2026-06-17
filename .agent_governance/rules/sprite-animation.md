@@ -195,6 +195,16 @@ built for a body type / temperament:
   (`lurch`/`stalk`), and a non-caster wraith is offered no cast pose.
 - `quadruped` — four-leg gait, head-lead.
 - `construct_rigid` — stiff interpolation, mechanical attack arc.
+  **Enforced by the sprite, not the runtime builder.** `SpriteRuntime2D`
+  builds the six anims with organic CUBIC easing for every species; a
+  CONSTRUCT re-times every built track to **LINEAR** after build
+  (`sentinel_sprite._make_rigid()`) so it snaps between poses instead of
+  easing. The `"rigid": true` flag on the anim_set is a declaration the
+  verifier checks — it does not by itself stiffen the motion. A new
+  construct variant must call the same re-time, or it animates organic.
+  (Implemented Stage 17.9: the Bronze Sentinel, `&"bronze_sentinel"` —
+  HUMAN rig re-skinned as a riveted bronze juggernaut with a Faceplate +
+  molten CoreGlow; the shared CONSTRUCT baseline.)
 - (others authored as species land.)
 
 Anim sets are built by `SpriteMotionStances` profiles, tuned per
@@ -377,7 +387,13 @@ bosses by `id`, separate from the species registry.
 1. Derive from `baseline_white_sprite` / `HumanRig` — copy, modify the
    part set, register the species + its base part-name list.
 2. Author its default `anim_set` against the six canonical names.
-3. Add verifier coverage (part set present, anims build, no orphaned
+3. Register it in `CharacterRegistry.CHARACTERS` **and** add it to the
+   sprite editor catalog (`test/pose_tuner.gd` — `CLASSES` with its five
+   anim variants + a `STANCE_CATALOGS` mapping). A registered sprite that
+   is not in the editor cannot be reviewed/tuned — "all new sprites must
+   be available to review in the editor"
+   (`stage17_5_verify._verify_editor_catalog_covers_registry` enforces it).
+4. Add verifier coverage (part set present, anims build, no orphaned
    tracks) + failure-mode entries.
 
 **To add or re-skin a character:**

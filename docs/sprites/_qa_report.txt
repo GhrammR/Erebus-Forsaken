@@ -10,3 +10,4 @@
   PASS  bog_caller
   PASS  act_boss
   PASS  fiend
+  PASS  bronze_sentinel

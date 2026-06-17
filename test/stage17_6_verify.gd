@@ -34,6 +34,7 @@ func _ready() -> void:
 	await _verify_wraith_hovers_off_ground()
 	await _verify_skeleton_rig()
 	await _verify_revenant_rig()
+	await _verify_construct_rig()
 	await _verify_human_skins()
 	print("--- Stage 17.6 verify: %s ---" % ("ALL PASS" if _fail == 0 else "%d FAIL" % _fail))
 	get_tree().quit(_fail)
@@ -305,6 +306,49 @@ func _verify_revenant_rig() -> void:
 	for poly in sprite.find_children("*", "Polygon2D", true, false):
 		min_z = mini(min_z, (poly as Polygon2D).z_index)
 	_expect(min_z > -100, "revenant parts above editor BG z (min=%d)" % min_z)
+	sprite.queue_free()
+
+# CONSTRUCT species (Phase 4): the Bronze Sentinel — HUMAN rig (so the
+# anim tracks bind 1:1) re-skinned as a heavy bronze automaton with a
+# Faceplate + CoreGlow, animated under construct_rigid (LINEAR/stiff).
+func _verify_construct_rig() -> void:
+	var packed := load("res://art/procedural/enemies/sentinel_sprite.tscn") as PackedScene
+	_expect(packed != null, "bronze_sentinel scene loads")
+	if packed == null:
+		return
+	var sprite := packed.instantiate() as Node2D
+	add_child(sprite)
+	await get_tree().process_frame
+	# Full HUMAN rig (articulated arms + legs — the construct keeps the
+	# HUMAN joint names so the shared anim tracks bind).
+	for part in [^"Body/Head", ^"Body/Torso", ^"Body/ArmLShoulder/ElbowPivot",
+			^"Body/ArmRShoulder/ElbowPivot", ^"Body/LegLHip/KneePivot",
+			^"Body/LegRHip/KneePivot"]:
+		_expect(sprite.get_node_or_null(part) != null,
+				"bronze_sentinel has HUMAN-rig part %s" % part)
+	# CONSTRUCT-specific parts (per AnatomyFamilies.PARTS[CONSTRUCT]).
+	for part in [^"Body/Faceplate", ^"Body/CoreGlow"]:
+		_expect(sprite.get_node_or_null(part) != null,
+				"bronze_sentinel has CONSTRUCT part %s" % part)
+	var anim := sprite.get_node_or_null(^"AnimationPlayer") as AnimationPlayer
+	_expect(anim != null, "bronze_sentinel exposes AnimationPlayer")
+	if anim != null:
+		for n in AnatomyFamilies.CANONICAL_ANIMS:
+			_expect(anim.has_animation(n), "bronze_sentinel builds canonical anim '%s'" % n)
+		# construct_rigid = stiff: every track is LINEAR (no organic easing).
+		var all_linear := true
+		for n in AnatomyFamilies.CANONICAL_ANIMS:
+			if not anim.has_animation(n):
+				continue
+			var a := anim.get_animation(n)
+			for t in a.get_track_count():
+				if a.track_get_interpolation_type(t) != Animation.INTERPOLATION_LINEAR:
+					all_linear = false
+		_expect(all_linear, "bronze_sentinel anims are LINEAR (construct_rigid stiffness)")
+	_expect(AnatomyFamilies.family_of(&"bronze_sentinel") == AnatomyFamilies.Family.CONSTRUCT,
+			"bronze_sentinel registered as CONSTRUCT")
+	_expect(AnatomyFamilies.anim_set_for(&"bronze_sentinel") == &"construct_rigid",
+			"bronze_sentinel resolves to construct_rigid")
 	sprite.queue_free()
 
 # HUMAN skins (Phase 2): the data-driven SkinLibrary paints the shared

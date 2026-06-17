@@ -2075,8 +2075,41 @@ selects what is displayed for any sprite slot. A character is a
   `stage17_5_verify` updated (1 canonical stance per anim, still
   role-namespaced).
 
-* \[ ] Remaining sprite phases: Phase 4 CONSTRUCT rig, Phase 5 BEAST
-  quadruped, Phase 6 bespoke bosses (Hexacheir).
+* \[ ] Remaining sprite phases: ~~Phase 4 CONSTRUCT rig~~ (done — Stage
+  17.9 below), Phase 5 BEAST quadruped, Phase 6 bespoke bosses (Hexacheir).
+
+### Stage 17.9 — CONSTRUCT rig (Phase 4): the Bronze Sentinel
+
+* \[x] **CONSTRUCT species baseline:**
+  `art/procedural/enemies/sentinel_sprite.{gd,tscn}` — HUMAN anatomy
+  (same joint names so the shared anim tracks bind 1:1) re-skinned as a
+  heavy bronze **juggernaut**: broadened torso/hips/limbs (~1.2× the
+  player cast), riveted **ChestPlate** + bronze **pauldrons**, verdigris
+  **JointBand** rings at the segmented elbows/knees, a featureless
+  riveted **Faceplate** (no eyes/mouth) with a single ember **eye-slit**,
+  and a molten orange **CoreGlow** furnace-core glowing through the
+  chest. Registered `&"bronze_sentinel"` CONSTRUCT in
+  `AnatomyFamilies.ENTRIES` + `CharacterRegistry.CHARACTERS` (enemies
+  bucket, no equipment slots). Added to `sprite_qa` + `wraith_render` +
+  `stage17_7_verify` roster.
+* \[x] **`construct_rigid` is enforced by the sprite, not the runtime:**
+  `SpriteRuntime2D` builds the six anims with organic CUBIC easing; the
+  sentinel re-times every track to **LINEAR** (`_make_rigid()`) after
+  build, so the construct snaps between poses (mechanical) instead of
+  easing. `stage17_6_verify` asserts all sentinel tracks are LINEAR.
+* \[x] Rendered to `docs/sprites/bronze_sentinel/` (idle reads as a
+  bronze automaton with a glowing core; `die` topples like a felled
+  statue). The shared CONSTRUCT baseline other constructs derive from.
+* \[x] **Editor reviewability:** added `bronze_sentinel` (and the
+  previously-missed `fiend` + `revenant`) to the sprite editor catalog
+  (`pose_tuner.CLASSES` + `STANCE_CATALOGS`) so every registered sprite is
+  selectable/tunable in the editor. New guard
+  `stage17_5_verify._verify_editor_catalog_covers_registry` fails any
+  `CharacterRegistry` id absent from the editor — "all new sprites must be
+  available to review in the editor" (failure-mode + §8 workflow step).
+* \[x] Governance: `rules/sprite-animation.md` §5 (construct_rigid
+  enforcement note) + `failure-modes.md` entry. All verifiers
+  (15/17.5/17.6/17.7) + Sprite QA green; game boots clean.
 
 ## Stage 18 — Boss state-machine cleanup + legacy rare-routing audit
 
