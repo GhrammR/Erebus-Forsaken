@@ -33,6 +33,9 @@ const REAUTHORED_17_6: Array[StringName] = [
 	&"shade_wretch", &"bog_caller", &"bone_servant",
 	&"myrmidon", &"pythia", &"shade_hunter", &"ossuary_priest",
 	&"kallias", &"eurynome",
+	# Stage 17.11 — act_boss is now the bespoke six-arm Hexacheir rig, no
+	# longer the white biped baseline; its contract lives in stage17_6.
+	&"act_boss",
 ]
 
 const SpriteMotionStances = preload("res://scripts/systems/stances/sprite_motion_stances.gd")

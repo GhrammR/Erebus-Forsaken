@@ -15,6 +15,7 @@ const SCENES := [
 	{ "id": &"fiend", "path": "res://art/procedural/enemies/fiend_sprite.tscn" },
 	{ "id": &"bronze_sentinel", "path": "res://art/procedural/enemies/sentinel_sprite.tscn" },
 	{ "id": &"blighted_hound", "path": "res://art/procedural/enemies/hound_sprite.tscn" },
+	{ "id": &"act_boss", "path": "res://art/procedural/enemies/act_boss_sprite.tscn" },
 	{ "id": &"myrmidon", "path": "res://art/procedural/classes/myrmidon_sprite.tscn" },
 	{ "id": &"myrmidon_armed", "path": "res://art/procedural/classes/myrmidon_sprite.tscn", "show": &"show_spear" },
 	{ "id": &"pythia", "path": "res://art/procedural/classes/pythia_sprite.tscn" },
