@@ -1,0 +1,71 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://art/procedural/enemies/sentinel_sprite.gd" id="1_sentinel"]
+
+[node name="SentinelSprite" type="Node2D"]
+script = ExtResource("1_sentinel")
+sprite_id = &"bronze_sentinel"
+stance_bucket = &"enemies"
+
+[node name="Shadow" type="Polygon2D" parent="."]
+z_index = -1
+
+[node name="Body" type="Node2D" parent="."]
+
+[node name="LegLHip" type="Node2D" parent="Body"]
+position = Vector2(-3.5, -22)
+
+[node name="Thigh" type="Polygon2D" parent="Body/LegLHip"]
+
+[node name="KneePivot" type="Node2D" parent="Body/LegLHip"]
+position = Vector2(0, 10)
+
+[node name="Shin" type="Polygon2D" parent="Body/LegLHip/KneePivot"]
+
+[node name="Foot" type="Polygon2D" parent="Body/LegLHip/KneePivot"]
+
+[node name="LegRHip" type="Node2D" parent="Body"]
+position = Vector2(3.5, -22)
+
+[node name="Thigh" type="Polygon2D" parent="Body/LegRHip"]
+
+[node name="KneePivot" type="Node2D" parent="Body/LegRHip"]
+position = Vector2(0, 10)
+
+[node name="Shin" type="Polygon2D" parent="Body/LegRHip/KneePivot"]
+
+[node name="Foot" type="Polygon2D" parent="Body/LegRHip/KneePivot"]
+
+[node name="Hips" type="Polygon2D" parent="Body"]
+
+[node name="Torso" type="Polygon2D" parent="Body"]
+
+[node name="ArmLShoulder" type="Node2D" parent="Body"]
+position = Vector2(-9, -44)
+
+[node name="UpperArm" type="Polygon2D" parent="Body/ArmLShoulder"]
+
+[node name="ElbowPivot" type="Node2D" parent="Body/ArmLShoulder"]
+position = Vector2(0, 10)
+
+[node name="Forearm" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
+
+[node name="Hand" type="Polygon2D" parent="Body/ArmLShoulder/ElbowPivot"]
+
+[node name="ArmRShoulder" type="Node2D" parent="Body"]
+position = Vector2(9, -44)
+
+[node name="UpperArm" type="Polygon2D" parent="Body/ArmRShoulder"]
+
+[node name="ElbowPivot" type="Node2D" parent="Body/ArmRShoulder"]
+position = Vector2(0, 10)
+
+[node name="Forearm" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot"]
+
+[node name="Hand" type="Polygon2D" parent="Body/ArmRShoulder/ElbowPivot"]
+
+[node name="Neck" type="Polygon2D" parent="Body"]
+
+[node name="Head" type="Polygon2D" parent="Body"]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

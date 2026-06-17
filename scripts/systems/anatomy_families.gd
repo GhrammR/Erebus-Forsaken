@@ -165,6 +165,10 @@ const ENTRIES: Dictionary = {
 	# vestigial wings/tail/ember eyes. The species baseline other demons
 	# derive from.
 	&"fiend":          { "family": Family.DEMON },
+	# CONSTRUCT — shared bronze-automaton rig (Phase 4): HUMAN base + rigid
+	# anim profile + metallic plate skin, riveted faceplate, molten core.
+	# The species baseline other constructs derive from.
+	&"bronze_sentinel": { "family": Family.CONSTRUCT },
 	# DEMON — first Act-boss demon, bespoke six-arm rig.
 	&"act_boss": {
 		"family": Family.DEMON,

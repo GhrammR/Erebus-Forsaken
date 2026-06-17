@@ -166,6 +166,42 @@ const CLASSES: Array = [
 		],
 	},
 	{
+		"id": &"revenant",
+		"bucket": &"enemies",
+		"scene": "res://art/procedural/enemies/revenant_sprite.tscn",
+		"variants": [
+			{ "name": "Idle", "anim": &"idle", "equip": {} },
+			{ "name": "Walk", "anim": &"walk", "equip": {} },
+			{ "name": "Attack", "anim": &"attack", "equip": {} },
+			{ "name": "Cast", "anim": &"cast", "equip": {} },
+			{ "name": "Death", "anim": &"die", "equip": {} },
+		],
+	},
+	{
+		"id": &"fiend",
+		"bucket": &"enemies",
+		"scene": "res://art/procedural/enemies/fiend_sprite.tscn",
+		"variants": [
+			{ "name": "Idle", "anim": &"idle", "equip": {} },
+			{ "name": "Walk", "anim": &"walk", "equip": {} },
+			{ "name": "Attack", "anim": &"attack", "equip": {} },
+			{ "name": "Cast", "anim": &"cast", "equip": {} },
+			{ "name": "Death", "anim": &"die", "equip": {} },
+		],
+	},
+	{
+		"id": &"bronze_sentinel",
+		"bucket": &"enemies",
+		"scene": "res://art/procedural/enemies/sentinel_sprite.tscn",
+		"variants": [
+			{ "name": "Idle", "anim": &"idle", "equip": {} },
+			{ "name": "Walk", "anim": &"walk", "equip": {} },
+			{ "name": "Slam", "anim": &"attack", "equip": {} },
+			{ "name": "Charge", "anim": &"cast", "equip": {} },
+			{ "name": "Topple", "anim": &"die", "equip": {} },
+		],
+	},
+	{
 		"id": &"kallias",
 		"bucket": &"npcs",
 		"scene": "res://art/procedural/npcs/kallias_sprite.tscn",
@@ -214,6 +250,9 @@ const STANCE_CATALOGS: Dictionary = {
 	&"shade_wretch":   &"motion",
 	&"bog_caller":     &"motion",
 	&"act_boss":       &"motion",
+	&"revenant":       &"motion",
+	&"fiend":          &"motion",
+	&"bronze_sentinel":&"motion",
 	&"kallias":        &"motion",
 	&"eurynome":       &"motion",
 }

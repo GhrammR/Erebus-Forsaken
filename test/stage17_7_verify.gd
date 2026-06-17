@@ -13,7 +13,7 @@ const EXPECTED: Array = [
 	&"myrmidon", &"pythia", &"shade_hunter", &"ossuary_priest",
 	&"kallias", &"eurynome",
 	&"bone_servant", &"revenant", &"shade_wretch", &"bog_caller", &"act_boss",
-	&"fiend",
+	&"fiend", &"bronze_sentinel",
 ]
 const CLASS_TRES: Array = [
 	{ "id": &"myrmidon", "path": "res://data/classes/myrmidon.tres" },

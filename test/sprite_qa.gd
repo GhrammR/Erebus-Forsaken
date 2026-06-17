@@ -61,6 +61,7 @@ const SPRITES := [
 	{ "id": &"bog_caller", "path": "res://art/procedural/enemies/bog_caller_sprite.tscn" },
 	{ "id": &"act_boss", "path": "res://art/procedural/enemies/act_boss_sprite.tscn" },
 	{ "id": &"fiend", "path": "res://art/procedural/enemies/fiend_sprite.tscn" },
+	{ "id": &"bronze_sentinel", "path": "res://art/procedural/enemies/sentinel_sprite.tscn" },
 ]
 
 var _lines: PackedStringArray = []

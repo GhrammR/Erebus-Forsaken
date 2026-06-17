@@ -1486,6 +1486,65 @@ For the launcher, confirm the kill-before-spawn call is present.
 
 ---
 
+## Stage 17.9 — `anim_set` flag declared but never consumed (construct reads organic)
+
+**Symptom:** A CONSTRUCT sprite (`construct_rigid` anim_set) animates with
+smooth, organic easing — it does not read as a stiff machine — even
+though `AnatomyFamilies.ANIM_SETS["construct_rigid"]["rigid"] == true` and
+the Stage 17.6 verifier passes ("construct_rigid is rigid").
+
+**Root cause:** `SpriteRuntime2D` builds every species' six anims the same
+way, with `INTERPOLATION_CUBIC` on every track. Nothing in the runtime
+reads the `"rigid"` flag — it is a *declaration* the registry/verifier
+checks, not a switch the builder honors. A construct that doesn't take its
+own extra step inherits the organic curves like any other enemy.
+
+**Prevention:** the CONSTRUCT sprite re-times its built tracks to
+`INTERPOLATION_LINEAR` after `setup_sprite_runtime()`
+(`sentinel_sprite._make_rigid()` walks the `""` AnimationLibrary). The
+contract is written in `rules/sprite-animation.md` §5 ("enforced by the
+sprite, not the runtime builder"), and `stage17_6_verify._verify_construct_rig`
+asserts every sentinel track is LINEAR — so a new construct variant that
+forgets the re-time fails the verifier instead of shipping soft-looking.
+General lesson: an anim_set/profile flag is contract metadata; if the
+shared builder doesn't branch on it, the derived sprite must implement the
+behavior the flag promises (and a verifier should assert it does).
+
+**Recovery:** run `res://test/stage17_6_verify.tscn`; "anims are LINEAR
+(construct_rigid stiffness)" FAIL → the sprite didn't call its rigid
+re-time after building anims (or built new anims after calling it).
+
+---
+
+## Stage 17.9 — New sprite registered but not added to the editor catalog
+
+**Symptom:** A newly built species rig (the Bronze Sentinel; earlier the
+`fiend` and `revenant` had the same gap) is registered in
+`CharacterRegistry` and passes every render/QA verifier, but is **not
+selectable in the sprite editor** (`pose_tuner`) — so the dev can't review
+or tune it. "All new sprites must be available to review in the editor."
+
+**Root cause:** the editor (`test/pose_tuner.gd`) keeps its OWN catalog
+(`CLASSES` + `STANCE_CATALOGS`), separate from `CharacterRegistry`.
+Registering a sprite makes it spawn/render in-game, but the editor catalog
+is a hand-maintained list — a new rig is invisible there until added to
+BOTH `CLASSES` (id + scene + the five anim variants) and `STANCE_CATALOGS`
+(usually `&"motion"` for enemies/NPCs, or the weapon catalog for armed
+classes).
+
+**Prevention:** adding a sprite is not done until it's in the editor.
+`stage17_5_verify._verify_editor_catalog_covers_registry` now asserts
+EVERY `CharacterRegistry.ids()` entry appears in both `pose_tuner.CLASSES`
+(`"id": &"<id>"`) and `STANCE_CATALOGS` (`&"<id>":`) — a registered-but-
+unlisted sprite fails the verifier. The species-rig workflow in
+`rules/sprite-animation.md` §8 includes the editor-catalog step.
+
+**Recovery:** run `res://test/stage17_5_verify.tscn`; "pose_tuner editor
+lists registered sprite '<id>'" FAIL → add the `CLASSES` + `STANCE_CATALOGS`
+entries for that id.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.
