@@ -169,6 +169,11 @@ const ENTRIES: Dictionary = {
 	# anim profile + metallic plate skin, riveted faceplate, molten core.
 	# The species baseline other constructs derive from.
 	&"bronze_sentinel": { "family": Family.CONSTRUCT },
+	# BEAST — shared quadruped rig (Phase 5): four-legged frame off the
+	# baseline joint system (not the biped silhouette) + blighted skin.
+	# The species baseline other beasts (and the winged sub-variant)
+	# derive from.
+	&"blighted_hound": { "family": Family.BEAST },
 	# DEMON — first Act-boss demon, bespoke six-arm rig.
 	&"act_boss": {
 		"family": Family.DEMON,

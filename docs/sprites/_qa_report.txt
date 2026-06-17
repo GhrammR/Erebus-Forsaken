@@ -11,3 +11,4 @@
   PASS  act_boss
   PASS  fiend
   PASS  bronze_sentinel
+  PASS  blighted_hound

@@ -193,7 +193,18 @@ built for a body type / temperament:
   on the ground plane. Locomotion stance options are pruned to
   drift-only — a drifting sprite is never offered a footed gait
   (`lurch`/`stalk`), and a non-caster wraith is offered no cast pose.
-- `quadruped` — four-leg gait, head-lead.
+- `quadruped` — four-leg gait, head-lead. **Built by the sprite, not the
+  shared biped builder.** `SpriteRuntime2D`'s `_anim_*` methods animate the
+  HUMAN tracks (`Arm*Shoulder`, `Leg*Hip`) — a quadruped has none of those,
+  so a BEAST sprite OVERRIDES the six builders (except `_anim_hit`, a
+  body-modulate flash that works on any rig) and overrides
+  `_uses_standard_leg_anatomy()` to return `false` so the injected biped
+  legs are never added. The rig is its own four-leg frame
+  (trunk/neck/head, `LegFront{L,R}` + `LegBack{L,R}` each with a knee
+  pivot, tail) laid on the same joint-pivot/rotation-track system, NOT the
+  biped silhouette. (Implemented Stage 17.10: the Blighted Hound,
+  `&"blighted_hound"` — a lean blighted canine; the shared BEAST baseline.
+  A winged sub-variant would add paired wings.)
 - `construct_rigid` — stiff interpolation, mechanical attack arc.
   **Enforced by the sprite, not the runtime builder.** `SpriteRuntime2D`
   builds the six anims with organic CUBIC easing for every species; a

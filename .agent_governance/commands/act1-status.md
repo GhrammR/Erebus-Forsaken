@@ -2076,7 +2076,43 @@ selects what is displayed for any sprite slot. A character is a
   role-namespaced).
 
 * \[ ] Remaining sprite phases: ~~Phase 4 CONSTRUCT rig~~ (done — Stage
-  17.9 below), Phase 5 BEAST quadruped, Phase 6 bespoke bosses (Hexacheir).
+  17.9) · ~~Phase 5 BEAST quadruped~~ (done — Stage 17.10) · Phase 6
+  bespoke bosses (Hexacheir).
+
+### Stage 17.10 — BEAST rig (Phase 5): the Blighted Hound
+
+* \[x] **BEAST species baseline (quadruped):**
+  `art/procedural/enemies/hound_sprite.{gd,tscn}` — the largest deviation
+  from the biped: a four-legged frame laid on the SAME joint-pivot/
+  rotation-track system, not the HUMAN silhouette. A lean low-slung canine
+  facing +x: snouted **Head** on a sloped **NeckBeast**, lean **BodyTrunk**
+  (belly tucked), straight low **Tail**, four legs (`LegFront{L,R}` +
+  `LegBack{L,R}`) each with a knee pivot + paw, near pair light / far pair
+  shaded for depth. Re-skinned **blighted** (grey-green hide, dark mottle,
+  sickly amber eyes) — a Blighted Reach predator. Registered
+  `&"blighted_hound"` BEAST in `AnatomyFamilies.ENTRIES` +
+  `CharacterRegistry.CHARACTERS` (enemies, no equipment). Added to
+  `sprite_qa` + `wraith_render` + `stage17_7` roster + the editor catalog.
+* \[x] **Quadruped anims built by the sprite, not the biped builder:**
+  `SpriteRuntime2D`'s `_anim_*` key HUMAN tracks, so the hound OVERRIDES
+  the six builders (keeps the rig-agnostic `_anim_hit` flash) and overrides
+  `_uses_standard_leg_anatomy()` → `false` so no biped legs are injected.
+  Gait = a 2-beat diagonal trot; attack = lunge-bite (body drives forward,
+  neck thrusts the head down, jaw snaps); cast = a threat snarl (head rears
+  up, eyes flare — beasts don't truly cast); die = legs buckle + collapse.
+* \[x] `stage17_6_verify._verify_beast_rig` asserts the quadruped part set,
+  knee pivots, the ABSENCE of biped arm/leg-hip nodes, and zero orphaned
+  tracks. Rendered to `docs/sprites/blighted_hound/`.
+* \[x] **Tail-disconnect fix + guard (17.10b):** the tail was authored with
+  a gap behind the rump; moved the pivot into the trunk + overlapped the
+  polygon base. New connectivity check point-tests each appendage root
+  (tail, neck, every leg top) against the BodyTrunk polygon and FAILS a gap
+  (`_dist_point_to_polygon`, tol 2px) — so a floating limb can't recur
+  (failure-mode 17.10b).
+* \[x] Governance: `rules/sprite-animation.md` §5 (quadruped builder note),
+  `failure-modes.md` "17.10 — non-biped rig inherits the biped builder",
+  README species-roster line. All verifiers (15/17.5/17.6/17.7) + Sprite
+  QA green; game boots clean.
 
 ### Stage 17.9 — CONSTRUCT rig (Phase 4): the Bronze Sentinel
 

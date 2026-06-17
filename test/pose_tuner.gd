@@ -202,6 +202,18 @@ const CLASSES: Array = [
 		],
 	},
 	{
+		"id": &"blighted_hound",
+		"bucket": &"enemies",
+		"scene": "res://art/procedural/enemies/hound_sprite.tscn",
+		"variants": [
+			{ "name": "Idle", "anim": &"idle", "equip": {} },
+			{ "name": "Trot", "anim": &"walk", "equip": {} },
+			{ "name": "Bite", "anim": &"attack", "equip": {} },
+			{ "name": "Snarl", "anim": &"cast", "equip": {} },
+			{ "name": "Collapse", "anim": &"die", "equip": {} },
+		],
+	},
+	{
 		"id": &"kallias",
 		"bucket": &"npcs",
 		"scene": "res://art/procedural/npcs/kallias_sprite.tscn",
@@ -253,6 +265,7 @@ const STANCE_CATALOGS: Dictionary = {
 	&"revenant":       &"motion",
 	&"fiend":          &"motion",
 	&"bronze_sentinel":&"motion",
+	&"blighted_hound": &"motion",
 	&"kallias":        &"motion",
 	&"eurynome":       &"motion",
 }

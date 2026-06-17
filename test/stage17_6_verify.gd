@@ -35,6 +35,7 @@ func _ready() -> void:
 	await _verify_skeleton_rig()
 	await _verify_revenant_rig()
 	await _verify_construct_rig()
+	await _verify_beast_rig()
 	await _verify_human_skins()
 	print("--- Stage 17.6 verify: %s ---" % ("ALL PASS" if _fail == 0 else "%d FAIL" % _fail))
 	get_tree().quit(_fail)
@@ -307,6 +308,85 @@ func _verify_revenant_rig() -> void:
 		min_z = mini(min_z, (poly as Polygon2D).z_index)
 	_expect(min_z > -100, "revenant parts above editor BG z (min=%d)" % min_z)
 	sprite.queue_free()
+
+# BEAST species (Phase 5): the Blighted Hound — a QUADRUPED off the
+# baseline joint system (not the biped silhouette): trunk + neck + head,
+# four legs with knee pivots, a tail; NO human arm/biped-leg tracks.
+func _verify_beast_rig() -> void:
+	var packed := load("res://art/procedural/enemies/hound_sprite.tscn") as PackedScene
+	_expect(packed != null, "blighted_hound scene loads")
+	if packed == null:
+		return
+	var sprite := packed.instantiate() as Node2D
+	add_child(sprite)
+	await get_tree().process_frame
+	# Quadruped part set (per AnatomyFamilies.PARTS[BEAST]).
+	for part in [^"Body/BodyTrunk", ^"Body/NeckBeast", ^"Body/NeckBeast/Head",
+			^"Body/Tail", ^"Body/LegFrontL", ^"Body/LegFrontR",
+			^"Body/LegBackL", ^"Body/LegBackR"]:
+		_expect(sprite.get_node_or_null(part) != null,
+				"blighted_hound has BEAST part %s" % part)
+	# Each leg has a knee pivot (off the shared joint system).
+	for leg in [^"Body/LegFrontL/KneePivot", ^"Body/LegFrontR/KneePivot",
+			^"Body/LegBackL/KneePivot", ^"Body/LegBackR/KneePivot"]:
+		_expect(sprite.get_node_or_null(leg) != null,
+				"blighted_hound leg has a knee pivot %s" % leg)
+	# A quadruped is NOT a biped: no HUMAN arm/leg-hip nodes.
+	_expect(sprite.get_node_or_null(^"Body/ArmLShoulder") == null
+			and sprite.get_node_or_null(^"Body/ArmRShoulder") == null
+			and sprite.get_node_or_null(^"Body/LegLHip") == null,
+			"blighted_hound has no biped arm/leg-hip nodes")
+	var anim := sprite.get_node_or_null(^"AnimationPlayer") as AnimationPlayer
+	_expect(anim != null, "blighted_hound exposes AnimationPlayer")
+	if anim != null:
+		for n in AnatomyFamilies.CANONICAL_ANIMS:
+			_expect(anim.has_animation(n), "blighted_hound builds canonical anim '%s'" % n)
+		# No orphaned tracks — every quadruped track must resolve to a node.
+		var orphan := ""
+		for n in AnatomyFamilies.CANONICAL_ANIMS:
+			if not anim.has_animation(n):
+				continue
+			var a := anim.get_animation(n)
+			for t in a.get_track_count():
+				var np := String(a.track_get_path(t)).split(":")[0]
+				if np != "" and sprite.get_node_or_null(NodePath(np)) == null:
+					orphan = "%s -> %s" % [n, np]
+		_expect(orphan == "", "blighted_hound has no orphaned anim tracks (%s)" % orphan)
+	_expect(AnatomyFamilies.family_of(&"blighted_hound") == AnatomyFamilies.Family.BEAST,
+			"blighted_hound registered as BEAST")
+	_expect(AnatomyFamilies.anim_set_for(&"blighted_hound") == &"quadruped",
+			"blighted_hound resolves to quadruped")
+	# CONNECTIVITY: every appendage root (tail, neck, each leg top) must
+	# attach to the trunk — its pivot sits inside the BodyTrunk polygon (or
+	# within tolerance of it). Catches a floating/disconnected limb (the
+	# Stage 17.10 tail-gap bug) instead of leaving it to eyeballing.
+	var trunk := sprite.get_node_or_null(^"Body/BodyTrunk") as Polygon2D
+	_expect(trunk != null, "blighted_hound has a BodyTrunk to anchor to")
+	if trunk != null:
+		var trunk_world: PackedVector2Array = []
+		for v in trunk.polygon:
+			trunk_world.append(trunk.to_global(v))
+		for appendage in ["Tail", "NeckBeast", "LegFrontL", "LegFrontR",
+				"LegBackL", "LegBackR"]:
+			var node := sprite.get_node_or_null(NodePath("Body/%s" % appendage)) as Node2D
+			if node == null:
+				continue
+			var d := _dist_point_to_polygon(node.global_position, trunk_world)
+			_expect(d <= 2.0, "blighted_hound '%s' attaches to the trunk (gap=%.1fpx)" % [appendage, d])
+	sprite.queue_free()
+
+# Distance from a point to a polygon: 0 if inside, else the min distance to
+# any edge. Used to verify an appendage root attaches to the body.
+func _dist_point_to_polygon(p: Vector2, poly: PackedVector2Array) -> float:
+	if poly.size() >= 3 and Geometry2D.is_point_in_polygon(p, poly):
+		return 0.0
+	var best := INF
+	for i in poly.size():
+		var a := poly[i]
+		var b := poly[(i + 1) % poly.size()]
+		var c := Geometry2D.get_closest_point_to_segment(p, a, b)
+		best = minf(best, p.distance_to(c))
+	return best
 
 # CONSTRUCT species (Phase 4): the Bronze Sentinel — HUMAN rig (so the
 # anim tracks bind 1:1) re-skinned as a heavy bronze automaton with a
