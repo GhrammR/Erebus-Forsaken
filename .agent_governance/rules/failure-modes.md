@@ -1516,6 +1516,58 @@ re-time after building anims (or built new anims after calling it).
 
 ---
 
+## Stage 17.10 — Non-biped rig inherits the shared biped animation builder
+
+**Symptom:** A BEAST quadruped (the Blighted Hound) built by extending
+`SpriteRuntime2D` either animates nothing (its legs/arms don't exist as
+the builder expects) or sprouts a phantom set of HUMAN biped legs injected
+under its trunk.
+
+**Root cause:** `SpriteRuntime2D` is a HUMAN-biped builder. Its `_anim_*`
+methods key `Body/Arm*Shoulder` + `Body/Leg*Hip` tracks, and
+`setup_sprite_runtime()` calls `_ensure_standard_leg_anatomy()` which
+injects a HUMAN leg chain into any sprite that has a `Body` and isn't a
+wraith. A quadruped has neither those tracks nor those legs — inheriting
+the biped builder unchanged produces orphaned tracks + injected legs.
+
+**Prevention:** a non-biped rig (BEAST quadruped, and any future
+non-humanoid) extends `SpriteRuntime2D` but **overrides the six `_anim_*`
+builders** to key its own joints (it may keep `_anim_hit`, a rig-agnostic
+body-modulate flash) **and overrides `_uses_standard_leg_anatomy()` to
+return `false`** so no biped legs are injected. The contract is in
+`rules/sprite-animation.md` §5 (quadruped anim_set note);
+`stage17_6_verify._verify_beast_rig` asserts the quadruped part set, knee
+pivots, the ABSENCE of biped arm/leg-hip nodes, and zero orphaned tracks.
+
+**Recovery:** run `res://test/stage17_6_verify.tscn`; "has no biped
+arm/leg-hip nodes" FAIL → the leg-anatomy override is missing; "no
+orphaned anim tracks" FAIL → an inherited biped builder is keying tracks
+the quadruped doesn't have (override that `_anim_*`).
+
+### 17.10b — Appendage drawn disconnected from the body (visible gap)
+
+**Symptom:** The Blighted Hound's tail rendered floating behind the rump
+with a visible gap — its pivot was authored just above/behind the trunk,
+and its polygon base didn't overlap the body. A purely-visual break a node
+existence / anim-track check can't see.
+
+**Root cause:** an appendage root pivot placed OUTSIDE the trunk polygon
+(or a part polygon whose attaching edge doesn't overlap the body). An AABB
+overlap check is too loose to catch a 1–2px gap.
+
+**Prevention:** appendage roots must attach to the body — author the pivot
+inside the trunk and start the appendage polygon overlapping it.
+`stage17_6_verify._verify_beast_rig` now point-tests each appendage root
+(tail, neck, every leg top) against the BodyTrunk polygon
+(`_dist_point_to_polygon`, inside = 0, tolerance 2px) and FAILS a gap.
+Apply the same anchor-in-trunk test to any new multi-part rig.
+
+**Recovery:** run `res://test/stage17_6_verify.tscn`; "'<part>' attaches to
+the trunk (gap=Npx)" FAIL → move that pivot into the trunk / extend the
+polygon base to overlap the body.
+
+---
+
 ## Stage 17.9 — New sprite registered but not added to the editor catalog
 
 **Symptom:** A newly built species rig (the Bronze Sentinel; earlier the

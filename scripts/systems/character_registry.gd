@@ -35,6 +35,7 @@ const CHARACTERS: Dictionary = {
 	&"act_boss":       { "scene": "res://art/procedural/enemies/act_boss_sprite.tscn",      "bucket": &"enemies", "weapon": &"",      "equipment_slots": false },
 	&"fiend":          { "scene": "res://art/procedural/enemies/fiend_sprite.tscn",         "bucket": &"enemies", "weapon": &"",      "equipment_slots": false },
 	&"bronze_sentinel":{ "scene": "res://art/procedural/enemies/sentinel_sprite.tscn",      "bucket": &"enemies", "weapon": &"",      "equipment_slots": false },
+	&"blighted_hound": { "scene": "res://art/procedural/enemies/hound_sprite.tscn",         "bucket": &"enemies", "weapon": &"",      "equipment_slots": false },
 }
 
 static func has(character_id: StringName) -> bool:
