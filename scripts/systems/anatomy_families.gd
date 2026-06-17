@@ -161,6 +161,10 @@ const ENTRIES: Dictionary = {
 	&"bog_caller":     { "family": Family.UNDEAD, "subtype": UndeadSubtype.WRAITH, "anim_set": &"wraith_float" },
 	# UNDEAD — revenant subtype (Phase 1b): HUMAN rig + decayed flesh.
 	&"revenant":       { "family": Family.UNDEAD, "subtype": UndeadSubtype.REVENANT },
+	# DEMON — shared lean-fiend rig (Phase 3): HUMAN base + horns/hooves/
+	# vestigial wings/tail/ember eyes. The species baseline other demons
+	# derive from.
+	&"fiend":          { "family": Family.DEMON },
 	# DEMON — first Act-boss demon, bespoke six-arm rig.
 	&"act_boss": {
 		"family": Family.DEMON,

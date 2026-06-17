@@ -209,6 +209,133 @@ names and calling code is untouched.
 
 ---
 
+## 5b. Weapon mount contract (Stage 17.8 — hands stay on weapons)
+
+**`WeaponRig` is the single source of truth** (`scripts/systems/weapon_rig.gd`).
+Each weapon kind (SPEAR / STAFF / WAND / BOW) declares its geometry, grip,
+and attack/cast PATTERN once, and ANY sprite that exposes the shared hand
+rig mounts it the same way — player classes, NPCs, and enemies alike.
+`WeaponRig.kind_for(sprite_id)` maps a sprite to its weapon (so the Bog
+Caller wields the very same wand as the Ossuary Priest, just with a
+wraith skin); `mount()` welds + paints it; `add_attack()` / `add_cast()`
+contribute the pre-designed pattern (spear = couched lunge, staff/wand =
+overhead chop, bow = draw-and-loose). A new sprite that can equip a
+weapon needs **zero** per-sprite weapon authoring. Per-weapon patterns
+live in `WeaponRig`, never copied into individual sprites.
+
+A held weapon's grip must **never leave the wielding hand in any
+animation**. The mechanism is structural, not per-animation authoring:
+
+1. **Weld the weapon under the hand.** A weapon's root node is parented
+   under its wielding hand's `ElbowPivot`
+   (`Body/Arm{R|L}Shoulder/ElbowPivot`) at the grip point
+   `GRIP_LOCAL = (0, 10)` (elbow-local hand centroid). Its geometry is
+   authored grip-local (origin = the hand). Because the weapon is a
+   *descendant* of the hand, it follows the hand rigidly through every
+   frame of every animation — the grip cannot drift off. The shared
+   baseline does this in `baseline_white_sprite._mount_weapons()` (the
+   reset left Staff/Bow/Wand at body/root level — that is the
+   "detaches while walking / when attacking" bug). New weapons get
+   parented the same way; **never** anchor a weapon at body or root
+   level and try to keep it in place with a fixed position.
+2. **Strike = rotation, never translation.** A weapon's swing is the
+   weapon node's own `:rotation` (which pivots about the grip) and/or
+   the wielding arm's rotation. A weapon arm must **never** get a
+   `:position` track — that slides the grip off the hand. Drive a
+   lunge/thrust by stepping the **Body** forward (the hand, and the
+   welded weapon, travel with it), not by translating the weapon.
+3. **Wielding hands.** Spear/staff/wand/**bow** all weld to the **right**
+   hand. A two-hander (the bow) welds its primary grip (riser) to the
+   right hand and pins only its *second* hand (left → nock) during the
+   draw — see the two-model note below.
+4. **Paper-doll paths follow the mount.** `EquipmentVisuals.WEAPON_ARMS`
+   points at the welded path (under the ElbowPivot); the paper-doll only
+   toggles `.visible`, so the welded location is the single source.
+
+**QA gate (enforced, not eyeballed):** `test/sprite_qa.gd` fails any
+sprite whose weapon arm is not welded under an `ElbowPivot`, carries a
+`:position` track, or whose grip origin leaves its hand's grip point
+(> 0.75 px) when each of the six animations is sampled across its
+timeline. "A weapon that doesn't connect to a hand during any animation"
+is a **hard FAIL** — it is caught here once, not hand-fixed per sprite.
+
+### Two sanctioned grip models
+
+1. **Welded** (one-handed: spear / staff / wand). The weapon is parented
+   under the wielding hand's `ElbowPivot`. Sprite QA checks the weld +
+   grip-on-hand.
+2. **Welded primary + pinned draw** (two-handed: the bow). The PRIMARY
+   grip is still **welded** (the bow's riser welds to the right hand) so
+   the weapon is *structurally* held — it can never detach, in any frame,
+   in the editor, or with IK disabled, and the same QA weld/grip check
+   covers it. Only the SECOND hand is runtime-pinned: the left hand pins
+   to the bow's `NockMarker` during the attack draw
+   (`baseline_white_sprite._apply_bow_rig`), the nock animates
+   back→release, and the bowstring is rebuilt each frame `tip→nock→tip`.
+   Do **not** make a two-hander *only* runtime-pinned with no welded grip
+   — a pin that stops (ik off, a paused editor frame, the gap between
+   non-looping anims) drops the weapon, and that fragility is invisible to
+   a static check (this is exactly why the "bow on the ground, separated
+   from the hand" bug slipped past QA the first time).
+
+> Picking a model: weld the primary grip ALWAYS (structural, statically
+> checkable); add a draw/second-hand pin only for the extra hand a
+> two-hander needs. Never rely on a runtime pin for the only grip.
+
+### Animation-pose rules (learned the hard way)
+
+- **Cast never folds the arms inward.** Raising the arms by rotating them
+  *across the torso centre* buries them (and any welded weapon) behind
+  the body/skin. Cast raises arms **up-and-out** (the overhead
+  invocation).
+- **A chop pivots on the HAND, not the arm.** A staff/wand "downward
+  chop" is driven by the WEAPON's own `:rotation` about the grip (tip/orb
+  arcs from upright → wind back → down-forward), with only a small arm
+  lift for power. Driving the chop by swinging the whole arm makes the
+  arm+weapon one long lever — a staff reads as an "extended arm" and a
+  short wand looks buried in the forearm. Keep the implement reading as a
+  held implement; the hand is the pivot.
+- **A raised weapon stays VERTICAL.** When the arm lifts a welded weapon
+  overhead to cast, the arm rotation would otherwise tip the weapon to
+  point at the ground. Counter it on the weapon's own `:rotation` so the
+  weapon reads as held high and upright (the bow is raised the same way,
+  kept vertical via a counter-rotation). Don't leave a raised weapon
+  pointing down.
+- **Free arms render ABOVE the base clothing.** A robe/tunic/cloak
+  (`SkinLibrary` parts at z2–3) must not bury the arms — the free-arm
+  parts sit at z4 (`baseline_white_sprite._layer_free_arms`), under the
+  head/helm (z5) and glints (z6). Sprite QA fails a skinned HUMAN whose
+  arm parts render behind any base-clothing polygon (the "arms behind the
+  skin" guard). Enemies/bosses paint bespoke parts and are exempt.
+- **Enemy/skeleton gait mirrors the HUMAN baseline.** Walk swings the
+  arms opposite the legs; attack is a single-arm *reach* (shoulder +
+  elbow), NOT a rotation on every arm/claw/hand node at once (that reads
+  as a flail). Only the multi-armed boss keeps the broad multi-arm sweep.
+- **Wraiths are humanoid from the waist up.** Shade Wretch + Bog Caller
+  are built on the shared `HumanRig` (`wraith_sprite.gd`) — SAME size as
+  the player cast, articulated shoulder/elbow arms that HANG DOWN like a
+  character's, ending in claws, using the same reach attack as everyone
+  else. A cloak/hood drape the torso; there are NO legs (the only
+  deviation) so the wraith drifts. Do not author a bespoke oversized
+  wraith rig with splayed arms — that is the size/posture bug this
+  rebuild fixed.
+- **A hovering body never topples or animates about the feet pivot.** A
+  wraith's `die` is a fade + sink in place (centred), not the grounded
+  topple — rotating a floating body about the feet throws it off-axis
+  ("off-centred dissolve/collapse"). The hover height is also seated as
+  the Body's **resting** position (not only inside the anim keys) so a
+  static editor preview floats with a shadow gap instead of standing.
+
+### Out of scope until the AI pipeline
+
+Multi-directional / foreshortened poses (front / rear / left / right
+facing) are **deferred to the Stage 11 AI bitmap pipeline**. Procedural
+rigs are required only to be side-view readable (L/R is a flip). Do not
+build a 4-direction procedural rig without an explicit scope override —
+it reshapes the whole rig + animation contract for placeholder art.
+
+---
+
 ## 6. Unique bosses are bespoke, not registry skins
 
 Named unique bosses (Hexacheir, the God-Spurned now; Hekate-Marked as

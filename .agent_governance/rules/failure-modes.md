@@ -1364,6 +1364,128 @@ HUMANOID/FLYING.
 
 ---
 
+## Stage 17.8 — Held weapon detaches from the hand mid-animation
+
+**Symptom:** A weapon reads as held at idle but drifts off the hand once
+the rig animates — the Pythia staff floated free of the hand while
+walking and detached during the attack swing; the Myrmidon spear "hit
+with its butt" instead of lunging tip-first. Looks like a per-sprite
+animation bug, tempting a per-anim tweak on every sprite that holds a
+weapon.
+
+**Root cause:** Two conflicting grip models. The spear was parented
+under the right hand (`Body/ArmRShoulder/ElbowPivot/SpearArm`) so it
+tracked the hand — but staff/bow/wand were left at **body/root level**
+after the baseline reset and held in place by a fixed body-local
+position. A fixed position cannot follow a swinging arm or a bobbing
+body, so the grip separates from the hand the moment anything moves.
+Separately, driving a strike by flinging the **arm** (a large shoulder
+rotation) swings a hand-relative weapon around its far end, so the wrong
+end leads.
+
+**Prevention:** The weapon mount contract
+(`rules/sprite-animation.md` §5b) makes the grip structural: every
+weapon is welded under its wielding hand's `ElbowPivot` at
+`GRIP_LOCAL = (0,10)` (done centrally in
+`baseline_white_sprite._mount_weapons()`), strikes are authored as the
+weapon's own `:rotation` (pivots about the grip) plus a Body-forward
+lunge — never a weapon `:position` track or an arm-fling. `sprite_qa.gd`
+fails any sprite whose weapon isn't welded under an `ElbowPivot`, has a
+`:position` track on a weapon arm, or whose grip leaves the hand
+(> 0.75 px) when sampling all six anims across their timelines.
+
+**Recovery:** Run `res://test/sprite_qa.tscn` headless. A
+"not welded to a hand (parent=Body)" failure means a weapon is still
+body/root level — add it to `_mount_weapons()` and update
+`EquipmentVisuals.WEAPON_ARMS` to the welded path. A "grip left the hand"
+failure means an animation moved the weapon independently — remove the
+`:position` track and re-express the motion as Body translation +
+weapon/arm rotation.
+
+---
+
+## Stage 17.8b — Weapon/animation pose regressions (cast, bow, gait, drift)
+
+**Symptoms (one family of "the animation looks wrong" bugs):**
+- *Cast buries the arms.* Every weapon cast rotated the arms inward
+  across the torso (ArmL −0.72 / ArmR +0.72), so the arms and the welded
+  weapon swung behind the body and vanished.
+- *Bow attacks with the hand.* The Shade-Hunter punched with the bow
+  hand instead of drawing — the bow was treated like a one-handed welded
+  weapon (only one hand can be welded, so the draw hand had nothing to
+  do) and ran the generic melee attack.
+- *Wand strikes with the wrong end.* The wand's attack was a backward
+  flick that led with the handle; the grip also sat mid-rod.
+- *Skeleton/wraith flail.* The enemy attack rotated EVERY arm/claw/hand
+  node at once; the enemy walk swung legs only (dead arms).
+- *Off-centred wraith dissolve/collapse.* The `die` toppled by rotating
+  the Body about the FEET pivot — fine for a grounded body, but a
+  hovering wraith swings far off the centre axis. The hover also only
+  existed inside the anim keys, so a static editor preview sat on the
+  floor.
+
+**Root cause:** animations were authored as broad per-joint rotations
+without a structural contract for (a) which hand owns a weapon, (b) which
+direction arms may rotate, or (c) how a floating body behaves. Two-handed
+weapons had no model at all.
+
+**Prevention:** `rules/sprite-animation.md` §5b now locks: two grip
+models (welded one-handers / pinned two-handers — the bow holds the riser
+always + draws the nock during attack); cast raises arms up-and-out,
+never inward, and never keys a hand committed to a hold pin; enemy gait
+mirrors the human baseline (single-arm reach, arms counter-swing in
+walk); wraiths are humanoid waist-up and `die` by centred fade+sink, with
+hover seated as the Body rest position. `sprite_qa.gd` enforces the
+weapon models (welded grip-on-hand + bow riser-on-hand across all anims).
+
+**Recovery:** run `res://test/sprite_qa.tscn`. A "bow riser left the
+hand" failure means a cast/attack track is fighting the riser pin — leave
+the bow arm unkeyed in that anim. For a flail, confirm the attack keys
+only the shoulder root + elbow (not claws/hands). For an off-centre drift
+anim, confirm the wraith branch (fade+sink, no Body rotation) is taken.
+
+---
+
+## Stage 17.8c — More weapon/layer/tool regressions (cast tilt, buried arms, bow drop, Maw flood)
+
+**Symptoms:**
+- *Raised cast weapon points at the ground.* Lifting the arm overhead to
+  cast rotated the welded weapon with it, so the staff/spear/wand tipped
+  downward instead of being held high + upright.
+- *Arms render behind the skin.* Free arms sat at z0 while the robe/tunic
+  sat at z2–3, so a robed sprite's arms vanished behind the clothing.
+  Neither the cast tilt nor this was caught — there was no z-layer check.
+- *Bow on the ground, separated from the hand.* The bow was held only by
+  a runtime IK pin; with the pin idle (editor, ik off, a frame gap) the
+  body-level bow sat where it was authored while the hand was elsewhere.
+  QA passed because it sampled with the pin active — a runtime-only grip
+  is invisible to a static check.
+- *Maw window flood / OOM.* Each "Launch in Maw" click spawned a new game
+  process+window without closing the old; repeated clicks stacked windows
+  until the machine OOM'd (only Ctrl+C in the terminal stopped it).
+
+**Root cause:** (a) animation authored arm rotation without compensating
+the weapon angle; (b) no contract/check for arm-vs-clothing z-order;
+(c) a two-handed weapon held by a runtime pin alone rather than a
+structural weld; (d) the launcher always created a process and never
+reaped the previous preview.
+
+**Prevention:** `rules/sprite-animation.md` §5b now requires: weld the
+PRIMARY grip always (the bow welds its riser to the right hand; only the
+draw hand is pinned), keep a raised weapon vertical via a counter-
+rotation, and render free arms above base clothing (z4). `sprite_qa.gd`
+adds the arm-layering check (skinned HUMANs) and the welded grip check
+now structurally covers the bow. `pose_tuner._on_launch_game_pressed`
+calls `_kill_spawned_previews()` first, so launching REPLACES the Maw
+window (at most one preview at a time).
+
+**Recovery:** run `res://test/sprite_qa.tscn`. "arm … renders behind
+clothing" → the arm z wasn't lifted (check `_layer_free_arms`); a welded
+grip failure on the bow → it regressed to a body-level pin-only model.
+For the launcher, confirm the kill-before-spawn call is present.
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

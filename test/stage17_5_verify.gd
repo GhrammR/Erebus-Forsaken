@@ -211,12 +211,14 @@ func _verify_stance_catalog_filters() -> void:
 		var enemy_ids := SpriteMotionStances.ids_for_context(&"enemies", &"bone_servant", anim_name)
 		var npc_ids := SpriteMotionStances.ids_for_context(&"npcs", &"kallias", anim_name)
 		var player_ids := SpriteMotionStances.ids_for_context(&"classes", &"pythia", anim_name)
-		_expect(enemy_ids.size() >= 3 and _ids_have_prefix(enemy_ids, "enemy_"),
-				"enemy motion catalog exposes role-specific %s variants" % anim_name)
-		_expect(npc_ids.size() >= 3 and _ids_have_prefix(npc_ids, "npc_"),
-				"npc motion catalog exposes role-specific %s variants" % anim_name)
-		_expect(player_ids.size() >= 3 and _ids_have_prefix(player_ids, "player_"),
-				"player unarmed motion catalog exposes role-specific %s variants" % anim_name)
+		# Stage 17.8e — pruned to ONE proper stance per (role, anim); the
+		# editor no longer offers the broken extras. Still role-namespaced.
+		_expect(enemy_ids.size() == 1 and _ids_have_prefix(enemy_ids, "enemy_"),
+				"enemy motion catalog exposes the canonical %s stance" % anim_name)
+		_expect(npc_ids.size() == 1 and _ids_have_prefix(npc_ids, "npc_"),
+				"npc motion catalog exposes the canonical %s stance" % anim_name)
+		_expect(player_ids.size() == 1 and _ids_have_prefix(player_ids, "player_"),
+				"player motion catalog exposes the canonical %s stance" % anim_name)
 
 func _ids_have_prefix(ids: Array, prefix: String) -> bool:
 	for id in ids:

@@ -9,3 +9,4 @@
   PASS  shade_wretch
   PASS  bog_caller
   PASS  act_boss
+  PASS  fiend

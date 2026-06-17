@@ -113,6 +113,24 @@ Highlights worth a look:
   on every sprite so the eventual bitmap swap is a node-type change, not
   a code rewrite. Player classes, enemies, and NPCs share the same editable
   runtime surface for pose overrides, stance selection, and click-drag parts.
+- Weapon system (Stage 17.8): a shared `WeaponRig` owns each weapon's
+  geometry, grip, and attack/cast pattern (spear = couched lunge, staff/
+  wand = overhead chop, bow = draw-and-loose), so ANY sprite — player,
+  NPC, or enemy — wields a weapon identically with no per-sprite work (the
+  Bog Caller shares the Ossuary Priest's wand under a wraith skin). Every
+  weapon's primary grip is welded to the wielding hand, so it can never
+  detach; a two-hander adds a runtime pin only for its second hand — the
+  bow's left hand draws the nock, bowstring rebuilt per frame. The staff stays in-hand while walking, the spear lunges
+  tip-first, the wand chops tip-first, the bow draws-and-looses, and a
+  raised cast weapon is held high + vertical (not tipped at the ground).
+  Free arms render above the base clothing (no more arms buried behind a
+  robe). Enemy/skeleton gait mirrors the human baseline (arms
+  counter-swing, knees bend, single-arm reach instead of a flail);
+  wraiths are humanoid waist-up, drift with a visible hover gap in the
+  editor, and dissolve in place. `test/sprite_qa.gd` hard-fails any sprite
+  whose weapon leaves its hand or whose arms render behind the skin.
+  Launching a sprite into The Maw replaces the prior preview window
+  (no more window flood).
 - DebugLog autoload (Stage 9.7): flag-gated logging with file mirror,
   12 categories, `--debug=flag1,flag2` CLI for targeted instrumentation.
 - Sprite render pipeline (Stage 17.5/17.6): `--render-sprites` flag

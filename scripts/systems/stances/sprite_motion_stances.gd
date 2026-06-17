@@ -355,10 +355,10 @@ static func _drift_ids(sprite_id: StringName, anim_name: String) -> Array:
 		"walk":
 			return [&"enemy_drift_hover"]
 		"attack":
-			return [&"enemy_attack_lunge", &"enemy_attack_rake"]
+			return [&"enemy_attack_lunge"]
 		"cast":
 			if sprite_id in CASTER_DRIFTERS:
-				return [&"enemy_cast_hex", &"enemy_cast_channel"]
+				return [&"enemy_cast_hex"]
 			return []
 		"die":
 			return [&"enemy_die_dissolve"]
@@ -378,37 +378,43 @@ static func _ids_for_prefix(prefix: String, anim_name: String) -> Array:
 		_:
 			return _idle_ids(prefix)
 
+# Stage 17.8e — ONE proper stance per (role, anim). The extra candidates
+# per variant were either non-functional or off, so the editor no longer
+# offers them; the single canonical stance below is the adopted one
+# (matches the saved selections in tmp/selected_stances.json). Runtime
+# stance resolution reads the saved file directly, so this only trims the
+# editor's per-variant menu — saved picks are unaffected.
 static func _idle_ids(prefix: String) -> Array:
 	if prefix == "npc":
-		return [&"npc_idle_merchant_watch", &"npc_idle_oracle_vigil", &"npc_idle_sage_breath"]
+		return [&"npc_idle_merchant_watch"]
 	if prefix == "player":
-		return [&"player_idle_guard", &"player_idle_low", &"player_idle_focus"]
-	return [&"enemy_idle_watch", &"enemy_idle_crouch", &"enemy_idle_haunt"]
+		return [&"player_idle_guard"]
+	return [&"enemy_idle_watch"]
 
 static func _walk_ids(prefix: String) -> Array:
 	if prefix == "npc":
-		return [&"npc_walk_market_step", &"npc_walk_ceremonial_step", &"npc_walk_camp_pace"]
+		return [&"npc_walk_market_step"]
 	if prefix == "player":
-		return [&"player_walk_advance", &"player_walk_stalk", &"player_walk_quick"]
-	return [&"enemy_walk_lurch", &"enemy_drift_hover", &"enemy_walk_stalk"]
+		return [&"player_walk_advance"]
+	return [&"enemy_walk_lurch"]
 
 static func _attack_ids(prefix: String) -> Array:
 	if prefix == "npc":
-		return [&"npc_attack_panic_swing", &"npc_attack_spirit_rebuke", &"npc_attack_staffless_shove"]
+		return [&"npc_attack_panic_swing"]
 	if prefix == "player":
-		return [&"player_attack_jab", &"player_attack_cross", &"player_attack_hook"]
-	return [&"enemy_attack_rake", &"enemy_attack_lunge", &"enemy_attack_burst"]
+		return [&"player_attack_cross"]
+	return [&"enemy_attack_lunge"]
 
 static func _cast_ids(prefix: String) -> Array:
 	if prefix == "npc":
-		return [&"npc_cast_trade_gesture", &"npc_cast_quest_omen", &"npc_cast_blessing"]
+		return [&"npc_cast_trade_gesture"]
 	if prefix == "player":
-		return [&"player_cast_focus", &"player_cast_reach", &"player_cast_ground"]
-	return [&"enemy_cast_channel", &"enemy_cast_hex", &"enemy_cast_summon"]
+		return [&"player_cast_focus"]
+	return [&"enemy_cast_channel"]
 
 static func _die_ids(prefix: String) -> Array:
 	if prefix == "npc":
-		return [&"npc_die_old_man_fall", &"npc_die_veil_collapse", &"npc_die_kneel"]
+		return [&"npc_die_old_man_fall"]
 	if prefix == "player":
-		return [&"player_die_fall", &"player_die_kneel", &"player_die_collapse"]
-	return [&"enemy_die_collapse", &"enemy_die_dissolve", &"enemy_die_shatter"]
+		return [&"player_die_fall"]
+	return [&"enemy_die_collapse"]

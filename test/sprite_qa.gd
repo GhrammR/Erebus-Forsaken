@@ -23,10 +23,30 @@ extends Node
 ## Run with display for the sheet too (WSLg).
 
 const SpriteMotionStances = preload("res://scripts/systems/stances/sprite_motion_stances.gd")
+const SkinLibrary = preload("res://scripts/systems/skin_library.gd")
 const CANON := [&"idle", &"walk", &"attack", &"cast", &"hit", &"die"]
 const EDITOR_BG_Z := -100
 const SANE_MIN := Vector2(-40, -90)
 const SANE_MAX := Vector2(40, 30)
+
+# Stage 17.8 — weapon-mount contract (see baseline_white_sprite.gd):
+# a held weapon's root is welded under its wielding hand's ElbowPivot at
+# the grip point, so the grip can never leave the hand in any animation.
+const WEAPON_ARM_SUFFIXES := ["SpearArm", "StaffArm", "BowArm", "WandArm"]
+const GRIP_LOCAL := Vector2(0, 10)   # hand centroid, elbow-local
+const GRIP_EPS := 0.75               # px tolerance for "grip on hand"
+const GRIP_PHASES := [0.0, 0.34, 0.67, 1.0]
+# Arm-layering check: free-arm parts must render at/above the base
+# clothing so a robe/cloak can't bury the arms. Face/detail parts above
+# the arms (eyes, glints, emblem) are excluded from the clothing scan.
+const ARM_PART_PATHS := [
+	"Body/ArmLShoulder/UpperArm", "Body/ArmLShoulder/ElbowPivot/Forearm",
+	"Body/ArmLShoulder/ElbowPivot/Hand",
+	"Body/ArmRShoulder/UpperArm", "Body/ArmRShoulder/ElbowPivot/Forearm",
+	"Body/ArmRShoulder/ElbowPivot/Hand",
+]
+const CLOTHING_EXCLUDE_TOKENS := ["Glint", "_OL", "Eye", "Socket", "Brow",
+	"Mouth", "Orb", "Sigil", "Head", "Neck"]
 
 const SPRITES := [
 	{ "id": &"myrmidon", "path": "res://art/procedural/classes/myrmidon_sprite.tscn" },
@@ -40,6 +60,7 @@ const SPRITES := [
 	{ "id": &"shade_wretch", "path": "res://art/procedural/enemies/shade_wretch_sprite.tscn" },
 	{ "id": &"bog_caller", "path": "res://art/procedural/enemies/bog_caller_sprite.tscn" },
 	{ "id": &"act_boss", "path": "res://art/procedural/enemies/act_boss_sprite.tscn" },
+	{ "id": &"fiend", "path": "res://art/procedural/enemies/fiend_sprite.tscn" },
 ]
 
 var _lines: PackedStringArray = []
@@ -126,12 +147,115 @@ func _check_sprite(rec: Dictionary) -> Image:
 	if oob > 0:
 		issues.append("%d part(s) outside sane bounds" % oob)
 
+	await _check_weapon_grips(sprite, anim, issues)
+	# Arm-over-clothing layering applies to the skinned HUMAN cast (robe/
+	# tunic over the shared rig). Enemies/bosses paint bespoke parts
+	# (ribs, horns, loincloth) that are intentionally layered and don't
+	# span the arms, so they are exempt.
+	if SkinLibrary.has(id):
+		_check_arm_layering(sprite, issues)
+
 	_record(id, issues)
 	var img: Image = null
 	if not _headless:
 		img = await _snap(sprite, id)
 	sprite.queue_free()
 	return img
+
+# Stage 17.8 — WEAPON GRIP CHECK. For every weapon arm on the sprite:
+#   1. (structural) it must be welded under a hand (parent = ElbowPivot);
+#   2. it must carry no :position track (that would slide the grip away);
+#   3. (behavioral) across every animation, sampled at several phases, the
+#      weapon's grip origin must stay on its hand's grip point.
+# This is the durable guard for "a weapon that doesn't connect to a hand
+# during any animation FAILS" — body-level weapons drift in walk/attack
+# and are caught here instead of having to be hand-fixed per sprite.
+func _check_weapon_grips(sprite: Node2D, anim: AnimationPlayer, issues: PackedStringArray) -> void:
+	var arms: Array[Node2D] = []
+	for n in sprite.find_children("*", "Node2D", true, false):
+		var nm := String(n.name)
+		for suf in WEAPON_ARM_SUFFIXES:
+			if nm.ends_with(suf):
+				arms.append(n as Node2D)
+				break
+	if arms.is_empty():
+		return
+	# 1 + 2: static structural checks.
+	var live: Array[Node2D] = []
+	for arm in arms:
+		var parent := arm.get_parent()
+		var pname := String(parent.name) if parent != null else "<none>"
+		if pname != "ElbowPivot":
+			issues.append("weapon '%s' not welded to a hand (parent=%s)" % [arm.name, pname])
+			continue
+		live.append(arm)
+		if anim == null:
+			continue
+		var arm_path := String(sprite.get_path_to(arm)) + ":position"
+		for n in CANON:
+			if not anim.has_animation(n):
+				continue
+			var a := anim.get_animation(n)
+			for t in a.get_track_count():
+				if String(a.track_get_path(t)) == arm_path:
+					issues.append("weapon '%s' has a :position track in '%s' (slides grip off hand)" % [arm.name, n])
+					break
+	# 3: behavioral — sample each anim and confirm the grip rides the hand.
+	if anim == null or live.is_empty():
+		return
+	var flagged: Dictionary = {}
+	for n in CANON:
+		if not anim.has_animation(n):
+			continue
+		var length := anim.get_animation(n).length
+		for ph in GRIP_PHASES:
+			anim.play(n)
+			anim.seek(length * float(ph), true)
+			await get_tree().process_frame
+			for arm in live:
+				if flagged.has(arm.name):
+					continue
+				var hand := arm.get_parent() as Node2D
+				var grip_world := hand.to_global(GRIP_LOCAL)
+				var off := arm.global_position.distance_to(grip_world)
+				if off > GRIP_EPS:
+					flagged[arm.name] = true
+					issues.append("weapon '%s' grip left the hand in '%s' @%d%% (%.1fpx)" % [
+							arm.name, n, int(float(ph) * 100.0), off])
+
+# ARM LAYERING (Stage 17.8c). A robe/cloak must not bury the arms: each
+# visible free-arm part must render at or above every base-clothing
+# polygon (Body-parented, excluding face/detail parts above the arms).
+# Catches "arms behind the skin" instead of leaving it to eyeballing.
+func _check_arm_layering(sprite: Node2D, issues: PackedStringArray) -> void:
+	var body := sprite.get_node_or_null(^"Body") as Node2D
+	if body == null:
+		return
+	var clothing_max := -9999
+	var clothing_name := ""
+	for c in body.get_children():
+		if not (c is Polygon2D) or not (c as Polygon2D).is_visible_in_tree():
+			continue
+		var nm := String(c.name)
+		var skip := false
+		for tok in CLOTHING_EXCLUDE_TOKENS:
+			if nm.contains(tok):
+				skip = true
+				break
+		if skip:
+			continue
+		if (c as Polygon2D).z_index > clothing_max:
+			clothing_max = (c as Polygon2D).z_index
+			clothing_name = nm
+	if clothing_max == -9999:
+		return
+	for path in ARM_PART_PATHS:
+		var p := sprite.get_node_or_null(NodePath(path)) as Polygon2D
+		if p == null or not p.is_visible_in_tree():
+			continue
+		if p.z_index < clothing_max:
+			issues.append("arm '%s' (z=%d) renders behind clothing '%s' (z=%d) — buried" % [
+					p.name, p.z_index, clothing_name, clothing_max])
 
 func _record(id: StringName, issues: PackedStringArray) -> void:
 	if issues.is_empty():

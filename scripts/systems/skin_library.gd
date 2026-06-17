@@ -126,7 +126,7 @@ static var SKINS: Dictionary = {
 			{ "node": &"Belt", "parent": "Body", "z": 3, "color": Color(0.24, 0.16, 0.09),
 				"poly": PackedVector2Array([
 					Vector2(-9, -28), Vector2(9, -28), Vector2(9, -25), Vector2(-9, -25)]) },
-			{ "node": &"Pouch", "parent": "Body", "z": 4, "color": Color(0.30, 0.20, 0.11),
+			{ "node": &"Pouch", "parent": "Body", "z": 3, "color": Color(0.30, 0.20, 0.11),
 				"poly": PackedVector2Array([
 					Vector2(4, -28), Vector2(8, -28), Vector2(8, -23), Vector2(4, -23)]) },
 		],
