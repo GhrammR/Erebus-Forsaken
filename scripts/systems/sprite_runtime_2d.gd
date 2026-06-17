@@ -251,11 +251,9 @@ func _anim_walk() -> Animation:
 	return a
 
 func _anim_attack() -> Animation:
-	# Bosses keep the broad multi-arm sweep (Hexacheir has six arms — a
-	# single-arm reach would read as inert). Everyone else gets a clean,
-	# HUMAN-like single-arm strike instead of the old every-arm-node flail.
-	if sprite_id == &"act_boss":
-		return _anim_multi_arm_attack()
+	# A clean, HUMAN-like single-arm strike (the old every-arm-node flail is
+	# gone). The bespoke six-armed boss (Hexacheir) overrides this entirely
+	# in act_boss_sprite.gd — it does not flow through here.
 	var a := Animation.new()
 	a.length = float(_motion.get("attack_len", 0.42))
 	a.loop_mode = Animation.LOOP_NONE
@@ -295,28 +293,6 @@ func _anim_attack() -> Animation:
 				[0.0, -attack_rot * 0.22, 0.0])
 	return a
 
-# The pre-17.8 every-arm sweep, retained ONLY for the multi-armed boss.
-func _anim_multi_arm_attack() -> Animation:
-	var a := Animation.new()
-	a.length = float(_motion.get("attack_len", 0.42))
-	a.loop_mode = Animation.LOOP_NONE
-	var body := _body_path()
-	var rest := _body_rest()
-	_key_vec2(a, NodePath("%s:position" % body), [0.0, a.length * 0.42, a.length],
-			[rest, rest + Vector2(2, -1), rest])
-	_key_float(a, NodePath("%s:rotation" % body), [0.0, a.length * 0.42, a.length],
-			[0.0, 0.04, 0.0])
-	var attack_rot := float(_motion.get("attack_rot", -0.85))
-	var attack_paths := _attack_paths()
-	if attack_paths.is_empty():
-		attack_paths = [body]
-	for path in attack_paths:
-		var path_s := String(path)
-		var sign := -1.0 if path_s.contains("ArmL") or path_s.contains("ClawL") or path_s.contains("HandL") else 1.0
-		_key_float(a, NodePath("%s:rotation" % path), [0.0, a.length * 0.28, a.length * 0.55, a.length],
-				[0.0, attack_rot * sign, -attack_rot * 0.35 * sign, 0.0])
-	return a
-
 # Resolve the shoulder-root node path for a side ("R"/"L"), covering the
 # HUMAN/skeleton naming (Arm{R,L}Shoulder) and the wraith naming (Arm{R,L}).
 # Returns "" when the rig has no such arm.
@@ -327,8 +303,8 @@ func _arm_root(side: String) -> String:
 	return ""
 
 func _anim_cast() -> Animation:
-	if sprite_id == &"act_boss":
-		return _anim_boss_taunt_cast()
+	# The bespoke six-armed boss (Hexacheir) overrides cast in
+	# act_boss_sprite.gd — it does not flow through here.
 	var a := Animation.new()
 	a.length = float(_motion.get("cast_len", 0.65))
 	a.loop_mode = Animation.LOOP_NONE
@@ -352,31 +328,6 @@ func _anim_cast() -> Animation:
 				[Color(1, 1, 1, 1), Color(1.8, 2.0, 1.4, 1), Color(1, 1, 1, 1)])
 	return a
 
-
-func _anim_boss_taunt_cast() -> Animation:
-	var a := Animation.new()
-	a.length = maxf(float(_motion.get("cast_len", 0.90)), 1.05)
-	a.loop_mode = Animation.LOOP_NONE
-	var body := _body_path()
-	_key_color(a, NodePath("%s:modulate" % body), [0.0, a.length * 0.30, a.length * 0.80, a.length],
-			[Color(1, 1, 1, 1), Color(1.45, 1.05, 1.85, 1), Color(1.45, 1.05, 1.85, 1), Color(1, 1, 1, 1)])
-	_key_vec2(a, NodePath("%s:position" % body), [0.0, a.length * 0.32, a.length],
-			[Vector2.ZERO, Vector2(0, -3), Vector2.ZERO])
-	for path in _paths_matching(["ArmL", "ArmR"]):
-		var path_s := String(path)
-		var side := -1.0 if path_s.contains("ArmL") else 1.0
-		var lift := -1.08 if path_s.contains("Top") else (-0.78 if path_s.contains("Mid") else -0.48)
-		_key_float(a, NodePath("%s:rotation" % path), [0.0, a.length * 0.24, a.length * 0.78, a.length],
-				[0.0, lift * side, lift * side, 0.0])
-	for path in _paths_matching(["ElbowPivot"]):
-		var path_s := String(path)
-		var side := -1.0 if path_s.contains("ArmL") else 1.0
-		_key_float(a, NodePath("%s:rotation" % path), [0.0, a.length * 0.24, a.length * 0.78, a.length],
-				[0.0, 0.42 * side, 0.42 * side, 0.0])
-	for path in _paths_matching(["MiddleFinger"]):
-		_key_vec2(a, NodePath("%s:scale" % path), [0.0, a.length * 0.24, a.length * 0.78, a.length],
-				[Vector2.ONE, Vector2(1.0, 1.38), Vector2(1.0, 1.38), Vector2.ONE])
-	return a
 
 func _anim_hit() -> Animation:
 	var a := Animation.new()
@@ -410,14 +361,6 @@ func _anim_die() -> Animation:
 
 func _body_path() -> String:
 	return "Body" if has_node(^"Body") else "."
-
-func _attack_paths() -> Array[String]:
-	var paths: Array[String] = []
-	for token in ["ArmR", "ArmL", "HandR", "HandL", "ClawR", "ClawL", "Staff", "WandArm", "ArmAnchor"]:
-		for path in _paths_matching([token]):
-			if not paths.has(path):
-				paths.append(path)
-	return paths
 
 func _glow_paths() -> Array[String]:
 	var paths: Array[String] = []

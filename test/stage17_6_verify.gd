@@ -36,6 +36,7 @@ func _ready() -> void:
 	await _verify_revenant_rig()
 	await _verify_construct_rig()
 	await _verify_beast_rig()
+	await _verify_boss_rig()
 	await _verify_human_skins()
 	print("--- Stage 17.6 verify: %s ---" % ("ALL PASS" if _fail == 0 else "%d FAIL" % _fail))
 	get_tree().quit(_fail)
@@ -307,6 +308,47 @@ func _verify_revenant_rig() -> void:
 	for poly in sprite.find_children("*", "Polygon2D", true, false):
 		min_z = mini(min_z, (poly as Polygon2D).z_index)
 	_expect(min_z > -100, "revenant parts above editor BG z (min=%d)" % min_z)
+	sprite.queue_free()
+
+# BESPOKE BOSS (Phase 6): Hexacheir, the God-Spurned — a unique six-armed
+# demon idol with its OWN anatomy (six arm pivots in three rows, two hooved
+# legs, horns + ember eyes). Allowed to exceed the species part set (§6).
+func _verify_boss_rig() -> void:
+	var packed := load("res://art/procedural/enemies/act_boss_sprite.tscn") as PackedScene
+	_expect(packed != null, "act_boss scene loads")
+	if packed == null:
+		return
+	var sprite := packed.instantiate() as Node2D
+	add_child(sprite)
+	await get_tree().process_frame
+	# SIX oath-arms, each with an elbow + clawed hand + sigil.
+	for nm in ["ArmUpperL", "ArmUpperR", "ArmMidL", "ArmMidR", "ArmLowerL", "ArmLowerR"]:
+		_expect(sprite.get_node_or_null(NodePath("Body/%s/ElbowPivot/Claw" % nm)) != null,
+				"act_boss has six-arm part %s (claw)" % nm)
+		_expect(sprite.get_node_or_null(NodePath("Body/%s/ElbowPivot/Sigil" % nm)) != null,
+				"act_boss has oath-sigil on %s" % nm)
+	# Two hooved legs + horned head with ember eyes.
+	for part in [^"Body/LegLHip/KneePivot/Hoof", ^"Body/LegRHip/KneePivot/Hoof",
+			^"Body/HornL", ^"Body/HornR", ^"Body/EyeL", ^"Body/EyeR"]:
+		_expect(sprite.get_node_or_null(part) != null, "act_boss has boss part %s" % part)
+	var anim := sprite.get_node_or_null(^"AnimationPlayer") as AnimationPlayer
+	_expect(anim != null, "act_boss exposes AnimationPlayer")
+	if anim != null:
+		for n in AnatomyFamilies.CANONICAL_ANIMS:
+			_expect(anim.has_animation(n), "act_boss builds canonical anim '%s'" % n)
+		var orphan := ""
+		for n in AnatomyFamilies.CANONICAL_ANIMS:
+			if not anim.has_animation(n):
+				continue
+			var a := anim.get_animation(n)
+			for t in a.get_track_count():
+				var np := String(a.track_get_path(t)).split(":")[0]
+				if np != "" and sprite.get_node_or_null(NodePath(np)) == null:
+					orphan = "%s -> %s" % [n, np]
+		_expect(orphan == "", "act_boss has no orphaned anim tracks (%s)" % orphan)
+	_expect(AnatomyFamilies.is_bespoke(&"act_boss"), "act_boss is a bespoke entry")
+	_expect(AnatomyFamilies.family_of(&"act_boss") == AnatomyFamilies.Family.DEMON,
+			"act_boss is a DEMON")
 	sprite.queue_free()
 
 # BEAST species (Phase 5): the Blighted Hound — a QUADRUPED off the

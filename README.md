@@ -131,16 +131,19 @@ Highlights worth a look:
   whose weapon leaves its hand or whose arms render behind the skin.
   Launching a sprite into The Maw replaces the prior preview window
   (no more window flood).
-- Species rigs (Stages 17.6–17.10): all five locked species now have a
+- Species rigs (Stages 17.6–17.11): all five locked species now have a
   built baseline rig — four derived from the shared white HUMAN rig, plus a
-  bespoke quadruple frame for BEAST: HUMAN (player classes + NPCs, skinned),
+  bespoke quadruped frame for BEAST: HUMAN (player classes + NPCs, skinned),
   UNDEAD (skeleton Bone Servant, revenant, drifting wraiths), DEMON (the
   lean `fiend`: horns/hooves/wing-anchors/tail/ember eyes), CONSTRUCT (the
   Bronze Sentinel: a riveted bronze juggernaut with a faceplate + molten
   furnace-core, animated stiff/mechanical via LINEAR re-timing), and BEAST
   (the `blighted_hound`: a four-legged quadruped — trunk/neck/snout + four
   knee-pivoted legs + tail — that trots, lunge-bites, snarls, and collapses).
-  Bespoke bosses (Hexacheir) are the remaining sprite phase.
+  The unique Act boss **Hexacheir, the God-Spurned** has a bespoke six-armed
+  demon rig (three pairs of clawed oath-hands with glowing palm sigils, two
+  hooved legs, horned head + ember eyes) — its attack is a staggered six-arm
+  cascade. Every rig is reviewable/tunable in the in-editor sprite tuner.
 - DebugLog autoload (Stage 9.7): flag-gated logging with file mirror,
   12 categories, `--debug=flag1,flag2` CLI for targeted instrumentation.
 - Sprite render pipeline (Stage 17.5/17.6): `--render-sprites` flag

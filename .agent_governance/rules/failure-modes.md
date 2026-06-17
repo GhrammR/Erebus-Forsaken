@@ -1597,6 +1597,38 @@ entries for that id.
 
 ---
 
+## Stage 17.11 — Boss identity promised in lore/registry but not in the rig
+
+**Symptom:** Hexacheir, the God-Spurned was registered + described
+everywhere as a "bespoke six-arm DEMON" Act boss, and `SpriteRuntime2D`
+even carried a `_anim_multi_arm_attack` / `_anim_boss_taunt_cast` keyed on
+`sprite_id == &"act_boss"` — but the actual `act_boss_sprite.tscn` was
+still the generic two-armed white biped baseline. The boss had two arms;
+the multi-arm anims keyed nodes (`Top`/`Mid`/`MiddleFinger`) that never
+existed, so they animated nothing.
+
+**Root cause:** a registry/lore entry (`display_name`, "six oath-hands")
+and shared-runtime special-casing were written for an anatomy that was
+never actually built — the scene was a placeholder nobody circled back to.
+Anim code referenced the intended rig, not the real one, and no verifier
+asserted the boss's distinguishing parts existed.
+
+**Prevention:** a bespoke boss's defining anatomy must exist in the rig,
+not just in metadata. Hexacheir now has a real six-arm rig
+(`act_boss_sprite.gd`, arms built procedurally) and OWNS its six anim
+builders; the dead `act_boss` branches + `_anim_multi_arm_attack` /
+`_anim_boss_taunt_cast` / `_attack_paths` were removed from
+`SpriteRuntime2D`. `stage17_6_verify._verify_boss_rig` asserts the six arm
+pivots + claws + sigils, the hooved legs, horns, ember eyes, six anims,
+and zero orphaned tracks. General rule: if the registry/lore says a sprite
+is six-armed / winged / oversized, a verifier must assert the rig is.
+
+**Recovery:** run `res://test/stage17_6_verify.tscn`; "act_boss has
+six-arm part …" FAIL → the boss scene regressed to a placeholder; rebuild
+the bespoke rig (don't lean on shared-runtime special-casing).
+
+---
+
 ## When you spot a new failure mode
 
 Add it here with: symptom, prevention, recovery. Future-you will thank you.

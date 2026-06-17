@@ -2075,9 +2075,38 @@ selects what is displayed for any sprite slot. A character is a
   `stage17_5_verify` updated (1 canonical stance per anim, still
   role-namespaced).
 
-* \[ ] Remaining sprite phases: ~~Phase 4 CONSTRUCT rig~~ (done — Stage
-  17.9) · ~~Phase 5 BEAST quadruped~~ (done — Stage 17.10) · Phase 6
-  bespoke bosses (Hexacheir).
+* \[x] Sprite phases COMPLETE: ~~Phase 4 CONSTRUCT~~ (17.9) · ~~Phase 5
+  BEAST quadruped~~ (17.10) · ~~Phase 6 bespoke bosses~~ (17.11). All five
+  species + the bespoke Act boss now have built, editor-reviewable rigs.
+
+### Stage 17.11 — Bespoke boss (Phase 6): Hexacheir, the God-Spurned
+
+* \[x] **Bespoke six-arm boss rig:** `act_boss_sprite.{gd,tscn}` replaces
+  the placeholder — Hexacheir was registered/described as a six-armed
+  DEMON but the scene was still the generic two-armed white biped (and the
+  shared runtime's boss anims keyed nodes that never existed). Now a real
+  towering crimson-charcoal idol: broad torso, two cloven-hooved legs,
+  horned head + ember eyes, and THREE symmetric pairs of clawed oath-hands
+  (`Arm{Upper,Mid,Lower}{L,R}`) each with a glowing palm **sigil**. Arms
+  built procedurally (deterministic names) so the six-arm tree exists
+  before the anims bind. Oversized (~1.4× the cast).
+* \[x] **Owns its six anim builders:** the shared `SpriteRuntime2D` biped
+  builder only drives two arms, so the boss overrides all six (keeps the
+  rig-agnostic `_anim_hit`) + `_uses_standard_leg_anatomy()` → false.
+  Attack = a staggered six-arm cascade (upper→mid→lower converging); cast =
+  a wide taunt with eyes + palm-sigils blazing; die = the idol topples.
+* \[x] **Dead code removed:** the now-superseded `act_boss` branches +
+  `_anim_multi_arm_attack` / `_anim_boss_taunt_cast` / `_attack_paths` were
+  deleted from `SpriteRuntime2D`.
+* \[x] **Verifiers:** `act_boss` excluded from `stage17_5` white-baseline
+  conformance (bespoke, in `REAUTHORED_17_6`); new
+  `stage17_6_verify._verify_boss_rig` asserts the six arm pivots + claws +
+  sigils, hooved legs, horns, ember eyes, six anims, zero orphaned tracks.
+  Added to `wraith_render`; already in `sprite_qa` + `stage17_7` +
+  pose_tuner editor catalog. Rendered to `docs/sprites/act_boss/`.
+* \[x] Hekate-Marked stays metadata-only (legacy rare routing), no live
+  sprite. Governance: `rules/sprite-animation.md` §6, `failure-modes.md`
+  17.11. All verifiers (15/17.5/17.6/17.7) + Sprite QA green; boots clean.
 
 ### Stage 17.10 — BEAST rig (Phase 5): the Blighted Hound
 

@@ -368,6 +368,22 @@ per part) and still builds the six canonically-named animations; it
 just doesn't have to match a species part-name set. Register bespoke
 bosses by `id`, separate from the species registry.
 
+**Implemented (Stage 17.11): Hexacheir, the God-Spurned (`&"act_boss"`).**
+A towering six-armed crimson-charcoal demon idol — broad torso, two
+cloven-hooved legs, horned head with ember eyes, and THREE symmetric pairs
+of clawed oath-hands (upper/mid/lower) each with a glowing palm sigil. Its
+own oversized anatomy (`act_boss_sprite.{gd,tscn}`): the six arms are built
+procedurally (deterministic node names: `Arm{Upper,Mid,Lower}{L,R}` →
+`ElbowPivot` → `Forearm`/`Claw`/`Sigil`) so the six-arm tree exists before
+the anims bind, and the sprite OVERRIDES all six builders (the shared
+`SpriteRuntime2D` biped builder only drives two arms; it keeps the
+rig-agnostic `_anim_hit`) and `_uses_standard_leg_anatomy()` → `false`. The
+attack is a staggered six-arm cascade, cast is a wide taunt with sigils
+blazing. A bespoke boss is NOT the white-baseline biped, so it is excluded
+from the `stage17_5` baseline-conformance loops (in `REAUTHORED_17_6`) and
+asserted by `stage17_6_verify._verify_boss_rig`.
+Hekate-Marked stays metadata-only (legacy rare routing), no live sprite.
+
 ---
 
 ## 7. Invariants (never violate)
