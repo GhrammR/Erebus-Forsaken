@@ -19,11 +19,16 @@ extends "res://scripts/systems/sprite_runtime_2d.gd"
 ## BEAST part set per rules/sprite-animation.md §2 / AnatomyFamilies.PARTS
 ## [BEAST]: Head, NeckBeast, BodyTrunk, Tail, LegFront{L,R}, LegBack{L,R}.
 
-const HIDE: Color      = Color(0.34, 0.40, 0.30)   # blighted grey-green hide
-const HIDE_DARK: Color = Color(0.24, 0.29, 0.22)   # far-side limbs / shade
+const HIDE: Color      = Color(0.36, 0.42, 0.32)   # blighted grey-green hide
+const BELLY: Color     = Color(0.46, 0.50, 0.41)   # pale starved underside
+const HIDE_DARK: Color = Color(0.25, 0.30, 0.23)   # far-side limbs / shade
 const HIDE_BACK: Color = Color(0.27, 0.32, 0.24)   # darker dorsal / tail
-const MOTTLE: Color    = Color(0.18, 0.22, 0.16)   # dark mottled patches
+const DORSAL: Color    = Color(0.20, 0.24, 0.18)   # dark dorsal band
+const MUSCLE: Color    = Color(0.29, 0.34, 0.26)   # shoulder/haunch shading
+const MOTTLE: Color    = Color(0.17, 0.21, 0.15)   # rib shadow / mottle
+const RUFF: Color      = Color(0.30, 0.35, 0.27)   # neck ruff / fur tufts
 const CLAW: Color      = Color(0.13, 0.12, 0.10)   # paws
+const NOSE: Color      = Color(0.07, 0.06, 0.06)   # nose leather
 const EYE: Color       = Color(0.95, 0.75, 0.25)   # sickly amber
 const MAW: Color       = Color(0.22, 0.10, 0.12)   # dark mouth interior
 const SHADOW: Color    = Color(0.0, 0.0, 0.05, 0.45)
@@ -48,61 +53,142 @@ func _uses_standard_leg_anatomy() -> bool:
 # ---- rig paint -----------------------------------------------------------
 
 func _paint_rig() -> void:
+	# Reposition the joints for a gaunt-wolf frame + a staggered (dynamic)
+	# stance: near legs forward, far legs back; hind hocks set low + back.
+	_set_pos("Body/NeckBeast", Vector2(13, -31))
+	_set_pos("Body/NeckBeast/Head", Vector2(10, -7))
+	_set_pos("Body/Tail", Vector2(-20, -29))
+	_set_pos("Body/LegFrontR", Vector2(13, -25))
+	_set_pos("Body/LegFrontL", Vector2(9.5, -24))
+	_set_pos("Body/LegBackR", Vector2(-15, -26))
+	_set_pos("Body/LegBackL", Vector2(-19, -25))
+	for s in ["LegFrontR", "LegFrontL"]:
+		_set_pos("Body/%s/KneePivot" % s, Vector2(0.5, 12))
+	for s in ["LegBackR", "LegBackL"]:
+		_set_pos("Body/%s/KneePivot" % s, Vector2(-1.5, 13))
+
 	var shadow := get_node_or_null(^"Shadow") as Polygon2D
 	if shadow != null:
-		shadow.polygon = _ellipse(Vector2(-3, 1), 22.0, 4.0)
+		shadow.polygon = _ellipse(Vector2(-3, 1), 23.0, 4.0)
 		shadow.color = SHADOW
-	# Trunk — a lean dog body, belly tucked up.
+
+	# --- far (L) legs first, behind the trunk -----------------------------
+	_paint_hind_leg(^"Body/LegBackL", HIDE_DARK)
+	_paint_front_leg(^"Body/LegFrontL", HIDE_DARK)
+
+	# --- trunk: gaunt wolf — deep chest, starved tuck, arched topline -----
 	_paint(^"Body/BodyTrunk", PackedVector2Array([
-		Vector2(15, -30), Vector2(-20, -28), Vector2(-23, -21),
-		Vector2(-12, -19), Vector2(4, -20), Vector2(13, -22), Vector2(16, -27),
+		Vector2(12, -32),    # withers (high)
+		Vector2(-3, -30),    # back dip
+		Vector2(-20, -31),   # croup (rises)
+		Vector2(-23, -27),   # rump
+		Vector2(-15, -24),   # flank
+		Vector2(-2, -25),    # starved belly tuck (pulled up)
+		Vector2(8, -20),     # deep chest bottom
+		Vector2(14, -24),    # brisket front
+		Vector2(15, -30),    # shoulder front
 	]), HIDE)
-	# A mottled patch over the shoulders/back for the blighted read.
-	_overlay(get_node(^"Body"), "Mottle", PackedVector2Array([
-		Vector2(8, -29), Vector2(-12, -27.5), Vector2(-10, -24), Vector2(6, -25),
-	]), MOTTLE, 1)
-	# Tail — straight + low, trailing back-and-down. The base starts INSIDE
-	# the trunk (+x, overlapping the rump) so it reads as attached, not a
-	# floating appendage with a gap (Stage 17.10 tail-disconnect fix).
+	var body := get_node(^"Body") as Node2D
+	# Pale starved underside (chest → tuck).
+	_overlay(body, "Belly", PackedVector2Array([
+		Vector2(13, -23), Vector2(8, -20.5), Vector2(-2, -24.5), Vector2(-14, -23.5),
+		Vector2(-13, -22), Vector2(-2, -22.5), Vector2(7, -19), Vector2(12, -22),
+	]), BELLY, 1)
+	# Dark dorsal band along the arched back.
+	_overlay(body, "Dorsal", PackedVector2Array([
+		Vector2(12, -32), Vector2(-3, -30), Vector2(-20, -31), Vector2(-20, -29.5),
+		Vector2(-3, -28.5), Vector2(11, -30.5),
+	]), DORSAL, 1)
+	# Shoulder + haunch muscle shading.
+	_overlay(body, "ShoulderShade", _ellipse(Vector2(11, -27), 3.6, 4.2), MUSCLE, 1)
+	_overlay(body, "HaunchFar", _ellipse(Vector2(-17, -27), 4.8, 4.6), HIDE_DARK, -2)
+	_overlay(body, "HaunchNear", _ellipse(Vector2(-15, -27), 5.0, 4.8), MUSCLE, 1)
+	# Visible rib shadows on the gaunt chest.
+	for i in 3:
+		var rx := 1.0 + i * 3.2
+		_overlay(body, "Rib%d" % i, PackedVector2Array([
+			Vector2(rx, -25.5), Vector2(rx + 0.9, -25.6),
+			Vector2(rx + 1.6, -21.5), Vector2(rx + 0.7, -21.4),
+		]), MOTTLE, 2)
+	# Neck ruff — a fur fringe hugging the neck/shoulder front, throat to
+	# withers (raised-hackle read), kept tight to the body so it does not
+	# float as a spike.
+	_overlay(body, "Ruff", PackedVector2Array([
+		Vector2(11, -31), Vector2(15, -30), Vector2(16.5, -27),
+		Vector2(15, -27.5), Vector2(15.5, -24), Vector2(13.5, -25.5),
+		Vector2(13.5, -22.5), Vector2(12, -24.5), Vector2(11, -27),
+	]), RUFF, 2)
+
+	# --- tail: bushier, base inside the rump (stays attached) -------------
 	_paint(^"Body/Tail/TailSeg", PackedVector2Array([
-		Vector2(2, -3), Vector2(2, 3), Vector2(-14, 6), Vector2(-13, 4),
+		Vector2(2, -3.5), Vector2(2, 3.5), Vector2(-9, 7),
+		Vector2(-15, 10), Vector2(-17, 7), Vector2(-13, 4),
 	]), HIDE_BACK)
-	# Neck — sloped wedge from the shoulders up to the head base.
+
+	# --- neck + head ------------------------------------------------------
 	_paint(^"Body/NeckBeast/NeckSeg", PackedVector2Array([
-		Vector2(0, 4), Vector2(0, -1), Vector2(11, -6.5), Vector2(9, -3),
+		Vector2(-1, 5), Vector2(-1, -3), Vector2(8, -7), Vector2(11, -6), Vector2(9, -2),
 	]), HIDE)
-	# Head — snouted wedge facing +x.
+	# Head — a proper wolf skull: brow, muzzle, lower jaw line.
 	_paint(^"Body/NeckBeast/Head/HeadShape", PackedVector2Array([
-		Vector2(-4, -3), Vector2(2, -4), Vector2(9, -2), Vector2(11, 0),
-		Vector2(9, 2), Vector2(2, 3), Vector2(-3, 3),
+		Vector2(-5, -1), Vector2(-4, -4),   # back of skull
+		Vector2(1, -5),                      # brow
+		Vector2(7, -4), Vector2(11, -2.5),   # muzzle top
+		Vector2(12.5, -1),                   # nose tip
+		Vector2(11, 0.5), Vector2(7, 1),     # under muzzle
+		Vector2(2, 2.5), Vector2(-3, 3),     # jaw line / throat
 	]), HIDE)
 	_paint(^"Body/NeckBeast/Head/Ear", PackedVector2Array([
-		Vector2(-3, -3), Vector2(-1, -7.5), Vector2(1.5, -2.5),
+		Vector2(-3.5, -3.5), Vector2(-1.5, -9), Vector2(1.5, -3.5),
 	]), HIDE_BACK)
+	_overlay(get_node(^"Body/NeckBeast/Head"), "Brow", PackedVector2Array([
+		Vector2(0, -4.8), Vector2(4, -4.2), Vector2(4, -3.4), Vector2(0, -3.8),
+	]), DORSAL, 1)
 	_paint(^"Body/NeckBeast/Head/Maw", PackedVector2Array([
-		Vector2(2, 1.6), Vector2(10, 0.8), Vector2(10, 2.4), Vector2(2, 3.2),
+		Vector2(3, 0.4), Vector2(11, -0.6), Vector2(11.5, 0.6), Vector2(3, 1.6),
 	]), MAW)
 	_paint(^"Body/NeckBeast/Head/Jaw/JawShape", PackedVector2Array([
-		Vector2(0, 0), Vector2(8, -0.4), Vector2(8.5, 1.3), Vector2(0, 2),
+		Vector2(0, 0), Vector2(9, -0.5), Vector2(10, 1.0), Vector2(0, 2),
 	]), HIDE_DARK)
-	_paint(^"Body/NeckBeast/Head/Eye", _ellipse(Vector2(3.2, -1.0), 1.0, 0.9), EYE)
-	# Four legs — near pair (R) light, far pair (L) shaded for depth.
-	_paint_leg(^"Body/LegFrontR", HIDE)
-	_paint_leg(^"Body/LegBackR", HIDE)
-	_paint_leg(^"Body/LegFrontL", HIDE_DARK)
-	_paint_leg(^"Body/LegBackL", HIDE_DARK)
+	_overlay(get_node(^"Body/NeckBeast/Head"), "Nose",
+			_ellipse(Vector2(12, -1.2), 1.1, 1.0), NOSE, 2)
+	_paint(^"Body/NeckBeast/Head/Eye", _ellipse(Vector2(2.5, -2.2), 1.0, 0.8), EYE)
 
-func _paint_leg(pivot_path: NodePath, color: Color) -> void:
-	var pivot := get_node_or_null(pivot_path) as Node2D
-	if pivot == null:
-		return
-	_paint(pivot_path.get_concatenated_names() + "/Upper",
-			_seg(1.7, 1.3, 12.0), color)
-	_paint(pivot_path.get_concatenated_names() + "/KneePivot/Lower",
-			_seg(1.3, 1.0, 12.0), color.darkened(0.08))
-	_paint(pivot_path.get_concatenated_names() + "/KneePivot/Paw", PackedVector2Array([
-		Vector2(-1.2, 12), Vector2(3.2, 12), Vector2(3.2, 13.6), Vector2(-1.2, 13.6),
+	# --- near (R) legs last, in front of the trunk ------------------------
+	_paint_hind_leg(^"Body/LegBackR", HIDE)
+	_paint_front_leg(^"Body/LegFrontR", HIDE)
+
+# Front leg — humerus/radius + a short pastern, paw set forward.
+func _paint_front_leg(pivot_path: NodePath, color: Color) -> void:
+	var base := pivot_path.get_concatenated_names()
+	_paint(base + "/Upper", PackedVector2Array([
+		Vector2(-1.9, 0), Vector2(2.0, 0), Vector2(1.3, 12), Vector2(-0.9, 12),
+	]), color)
+	_paint(base + "/KneePivot/Lower", _seg(1.1, 0.9, 11.0), color.darkened(0.06))
+	_paint(base + "/KneePivot/Paw", PackedVector2Array([
+		Vector2(-1.3, 11), Vector2(3.4, 11), Vector2(3.6, 13.2), Vector2(-1.3, 13.2),
 	]), CLAW)
+
+# Hind leg — heavy thigh tapering to a low/back hock, metatarsus angling
+# forward to the paw (the digitigrade Z-bend).
+func _paint_hind_leg(pivot_path: NodePath, color: Color) -> void:
+	var base := pivot_path.get_concatenated_names()
+	_paint(base + "/Upper", PackedVector2Array([
+		Vector2(-2.6, 0), Vector2(2.6, 0), Vector2(3.0, 6),
+		Vector2(1.0, 13), Vector2(-2.2, 13), Vector2(-2.8, 6),
+	]), color)
+	# Metatarsus angles down-and-forward (bottom shifted +x) to the paw.
+	_paint(base + "/KneePivot/Lower", PackedVector2Array([
+		Vector2(-1.1, 0), Vector2(1.1, 0), Vector2(2.4, 11), Vector2(0.6, 11),
+	]), color.darkened(0.06))
+	_paint(base + "/KneePivot/Paw", PackedVector2Array([
+		Vector2(0.2, 11), Vector2(4.4, 11), Vector2(4.6, 13.2), Vector2(0.2, 13.2),
+	]), CLAW)
+
+func _set_pos(path: String, pos: Vector2) -> void:
+	var n := get_node_or_null(NodePath(path)) as Node2D
+	if n != null:
+		n.position = pos
 
 # ---- canonical anim overrides (quadruped) --------------------------------
 
